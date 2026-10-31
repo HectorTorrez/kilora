@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kilora · Prototipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F3EF;
+  --surface:#FFFFFF;
+  --surface-2:#ECEBE5;
+  --surface-3:#FAF9F5;
+  --ink:#15181B;
+  --ink-2:#5B6268;
+  --ink-3:#8B9197;
+  --line:#DFDED7;
+  --line-2:#C9C7BE;
+  --accent:#0E5A46;
+  --accent-2:#0A4735;
+  --accent-soft:#E1EDE8;
+  --warn:#A85B12;
+  --warn-soft:#FaF0DF;
+  --danger:#A62B22;
+  --font-head:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-body:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --ease-out:cubic-bezier(.23,1,.32,1);
+  --ease-in-out:cubic-bezier(.77,0,.175,1);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  font-family:var(--font-body);
+  color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+a{color:inherit;text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+::selection{background:var(--accent-soft);color:var(--accent-2)}
+
+.proto-bar{
+  height:48px;display:flex;align-items:center;gap:20px;
+  padding:0 16px;background:#101315;color:#EDECE6;
+  border-bottom:1px solid #000;position:relative;z-index:30;
+}
+.proto-brand{display:flex;align-items:center;gap:10px;font-family:var(--font-head);font-weight:700;font-size:12px;letter-spacing:.22em}
+.proto-brand .dot{width:7px;height:7px;border-radius:50%;background:#3FBF95}
+.proto-tabs{display:flex;gap:2px;margin-left:8px;background:#1B1F22;padding:3px;border-radius:8px}
+.proto-tab{
+  appearance:none;border:0;background:transparent;color:#A9AFB4;
+  font-size:11.5px;font-weight:500;padding:6px 11px;border-radius:6px;
+  transition:color 140ms ease,background-color 140ms ease;
+}
+.proto-tab:hover{color:#EDECE6}
+.proto-tab[aria-selected="true"]{background:#31373B;color:#fff}
+.proto-meta{margin-left:auto;display:flex;align-items:center;gap:14px;font-family:var(--font-mono);font-size:10px;color:#8B9197;letter-spacing:.04em}
+.proto-meta b{color:#C9C7BE;font-weight:500}
+
+.view{display:none}
+.view.active{display:block}
+
+/* ---------- App shell ---------- */
+.app{
+  display:grid;grid-template-columns:236px minmax(0,1fr);
+  height:900px;background:var(--paper);
+  overflow:hidden;
+}
+.side{
+  background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;padding:22px 14px 18px;gap:26px;min-height:0;
+}
+.brand{display:flex;flex-direction:column;gap:4px;padding:0 10px}
+.brand strong{font-family:var(--font-head);font-size:19px;letter-spacing:.2em;font-weight:700}
+.brand span{font-size:10.5px;color:var(--ink-3)}
+.nav{display:flex;flex-direction:column;gap:1px}
+.nav-item{
+  display:flex;align-items:center;gap:10px;height:36px;padding:0 10px;
+  border-radius:6px;border:0;background:transparent;color:var(--ink-2);
+  font-size:12.5px;font-weight:500;text-align:left;width:100%;
+  transition:background-color 150ms ease,color 150ms ease;
+}
+.nav-item svg{flex:none;opacity:.85}
+.nav-item:hover{background:var(--surface-3);color:var(--ink)}
+.nav-item[aria-current="page"]{background:var(--surface-2);color:var(--ink);font-weight:600}
+.nav-item .count{margin-left:auto;font-family:var(--font-mono);font-size:10px;color:var(--ink-3)}
+.nav-item[aria-current="page"] .count{color:var(--accent)}
+.side-spacer{flex:1}
+.shop-card{
+  background:var(--paper);border-radius:8px;padding:11px 10px;
+  display:flex;flex-direction:column;gap:3px;
+}
+.shop-card strong{font-size:12px;font-weight:600}
+.shop-card span{font-size:10.5px;color:var(--ink-3);line-height:1.4}
+.user{display:flex;align-items:center;gap:9px;padding:0 2px}
+.avatar{
+  width:29px;height:29px;border-radius:50%;background:var(--surface-2);
+  display:grid;place-items:center;font-size:10.5px;font-weight:600;color:var(--ink-2);flex:none;
+}
+.user-info{display:flex;flex-direction:column;line-height:1.3;min-width:0}
+.user-info strong{font-size:11.5px;font-weight:600}
+.user-info span{font-size:10.5px;color:var(--ink-3)}
+
+.main{padding:26px 34px 28px;display:flex;flex-direction:column;gap:18px;min-height:0;overflow:hidden}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:24px}
+.eyebrow{font-size:9.5px;font-weight:600;letter-spacing:.14em;color:var(--ink-3);text-transform:uppercase}
+h1{
+  margin:6px 0 0;font-family:var(--font-head);font-size:29px;line-height:1.05;
+  font-weight:700;letter-spacing:-.025em;display:flex;align-items:center;gap:9px;
+}
+.pill-count{font-family:var(--font-mono);font-size:11px;font-weight:400;letter-spacing:0;color:var(--ink-2);background:var(--surface-2);padding:2px 7px;border-radius:4px}
+.head-actions{display:flex;align-items:center;gap:8px;flex:none}
+.search{
+  display:flex;align-items:center;gap:7px;width:210px;height:36px;padding:0 11px;
+  background:var(--surface);border:1px solid var(--line-2);border-radius:6px;
+  transition:border-color 150ms ease,box-shadow 150ms ease;
+}
+.search:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,90,70,.1)}
+.search input{border:0;background:transparent;outline:0;width:100%;font-size:12px}
+.search input::placeholder{color:var(--ink-3)}
+.search svg{flex:none;color:var(--ink-3)}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:36px;padding:0 14px;border-radius:6px;border:1px solid transparent;
+  font-size:12.5px;font-weight:600;white-space:nowrap;
+  transition:transform 160ms var(--ease-out),background-color 150ms ease,border-color 150ms ease,box-shadow 150ms ease;
+}
+.btn:active{transform:scale(.975)}
+.btn-primary{
+  background:var(--accent);color:#fff;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 1px 2px rgba(10,71,53,.28);
+}
+.btn-primary:hover{background:var(--accent-2)}
+.btn-secondary{background:var(--surface);color:var(--ink);border-color:var(--line-2)}
+.btn-secondary:hover{background:var(--surface-3);border-color:#B9B7AD}
+.btn-ghost{background:transparent;color:var(--accent);padding:0 4px;height:auto}
+.btn-sm{height:30px;padding:0 10px;font-size:11.5px}
+
+.stats{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;
+}
+.stat{padding:15px 18px;display:flex;flex-direction:column;gap:4px;border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat b{font-family:var(--font-head);font-size:23px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.stat span{font-size:10.5px;color:var(--ink-3)}
+
+.filters{display:flex;align-items:center;gap:6px}
+.chip{
+  border:1px solid var(--line-2);background:var(--surface);color:var(--ink-2);
+  padding:5px 11px;border-radius:999px;font-size:11.5px;font-weight:500;
+  transition:background-color 150ms ease,color 150ms ease,border-color 150ms ease,transform 160ms var(--ease-out);
+}
+.chip:hover{border-color:#B9B7AD;color:var(--ink)}
+.chip:active{transform:scale(.98)}
+.chip[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:600}
+.filters .right{margin-left:auto;font-size:10.5px;color:var(--ink-3)}
+.filters .right b{font-family:var(--font-mono);font-weight:500;color:var(--ink-2)}
+
+.table-wrap{
+  background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden;
+}
+.thead,.trow{
+  display:grid;
+  grid-template-columns:minmax(190px,1.45fr) minmax(150px,1.15fr) minmax(150px,1.1fr) 92px 108px 20px;
+  gap:14px;align-items:center;padding:0 18px;
+}
+.thead{height:36px;background:var(--surface-3);border-bottom:1px solid var(--line);flex:none}
+.thead span{font-size:9.5px;font-weight:600;letter-spacing:.09em;color:var(--ink-3)}
+.tbody{flex:1;overflow:auto}
+.trow{
+  height:58px;border-bottom:1px solid var(--line);cursor:pointer;
+  transition:background-color 130ms ease;
+}
+.trow:last-child{border-bottom:0}
+.trow:hover{background:var(--surface-3)}
+.trow:active{background:var(--surface-2)}
+.cell{display:flex;flex-direction:column;gap:2px;min-width:0}
+.plate{font-family:var(--font-mono);font-size:12.5px;font-weight:600;letter-spacing:.01em;font-variant-numeric:tabular-nums}
+.sub{font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.name{font-size:12.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.km{font-family:var(--font-mono);font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:right}
+.thead span:nth-child(4){text-align:right}
+.thead span:nth-child(5){text-align:center}
+.status{
+  display:inline-flex;align-items:center;gap:5px;justify-content:center;
+  font-size:10.5px;font-weight:600;padding:4px 8px;border-radius:999px;width:max-content;
+  justify-self:center;
+}
+.status .dot{width:5px;height:5px;border-radius:50%}
+.status.ok{background:var(--accent-soft);color:var(--accent)}
+.status.ok .dot{background:var(--accent)}
+.status.due{background:var(--surface-2);color:var(--ink-2)}
+.status.due .dot{background:var(--ink-3)}
+.status.shop{background:var(--warn-soft);color:var(--warn)}
+.status.shop .dot{background:var(--warn)}
+.trow .chev{color:var(--line-2);transition:transform 150ms var(--ease-out),color 150ms ease}
+.trow:hover .chev{color:var(--ink-3);transform:translateX(2px)}
+.tfoot{
+  height:44px;flex:none;border-top:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;padding:0 18px;
+  font-size:10.5px;color:var(--ink-3);
+}
+.pager{display:flex;gap:2px;align-items:center}
+.pager button{
+  width:24px;height:24px;border:0;background:transparent;border-radius:4px;
+  font-family:var(--font-mono);font-size:10.5px;color:var(--ink-2);
+  transition:background-color 140ms ease,color 140ms ease;
+}
+.pager button:hover{background:var(--surface-2);color:var(--ink)}
+.pager button[aria-current="true"]{background:var(--ink);color:#fff}
+
+.followup{
+  flex:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  display:flex;align-items:center;gap:16px;padding:12px 18px;
+}
+.followup .lead{width:170px;display:flex;flex-direction:column;gap:3px;flex:none}
+.followup .lead b{font-size:13px;font-weight:600}
+.followup .lead span{font-size:9.5px;letter-spacing:.12em;font-weight:600;color:var(--ink-3)}
+.followup .item{display:flex;align-items:center;gap:10px;flex:1;min-width:0;padding-left:16px;border-left:1px solid var(--line)}
+.followup .item .txt{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.followup .item .txt b{font-family:var(--font-mono);font-size:11px;font-weight:600}
+.followup .item .txt span{font-size:10px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-btn{
+  display:inline-flex;align-items:center;gap:5px;border:0;background:var(--paper);
+  border-radius:5px;padding:5px 8px;font-size:10px;font-weight:600;color:var(--ink);
+  transition:background-color 140ms ease,transform 160ms var(--ease-out);flex:none;
+}
+.mini-btn:hover{background:var(--surface-2)}
+.mini-btn:active{transform:scale(.97)}
+
+/* ---------- Order ---------- */
+.order-head{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.crumbs{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--ink-3)}
+.crumbs b{color:var(--ink-2);font-weight:500}
+.timer{
+  display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
+  font-size:10.5px;color:var(--ink-2);border:1px solid var(--line);background:var(--surface);
+  padding:5px 9px;border-radius:999px;
+}
+.order-grid{display:grid;grid-template-columns:minmax(0,1fr) 352px;gap:20px;min-height:0;flex:1}
+.form-col{display:flex;flex-direction:column;gap:12px;min-height:0;overflow:auto;padding-right:2px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.card-head b{font-size:13px;font-weight:600}
+.card-head span{font-size:10px;color:var(--ink-3)}
+.vehicle{flex-direction:row;align-items:center;gap:16px;padding:14px 18px}
+.vehicle .plate{font-size:19px;letter-spacing:.02em}
+.vehicle .meta{font-size:11px;color:var(--ink-2);margin-top:2px}
+.vehicle .hint{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:10px;color:var(--ink-3)}
+.link{color:var(--accent);font-weight:600;font-size:11.5px;background:none;border:0;padding:0}
+.link:hover{text-decoration:underline;text-underline-offset:3px}
+.templates{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.templates>span{font-size:10px;color:var(--ink-3);margin-right:2px}
+.tpl{
+  border:1px solid var(--line);background:var(--surface-3);border-radius:999px;
+  padding:4px 9px;font-size:10.5px;color:var(--ink-2);
+  transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease,transform 160ms var(--ease-out);
+}
+.tpl:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.tpl:active{transform:scale(.97)}
+.items{display:flex;flex-direction:column}
+.item-row{
+  display:grid;grid-template-columns:minmax(0,1fr) 24px 64px 20px;gap:10px;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--line);font-size:12px;
+}
+.item-row:last-child{border-bottom:0}
+.item-row .qty{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-3);text-align:center}
+.item-row .price{font-family:var(--font-mono);font-size:11px;text-align:right;font-variant-numeric:tabular-nums}
+.item-row .x{border:0;background:none;color:var(--line-2);padding:0;display:grid;place-items:center;border-radius:3px;transition:color 130ms ease}
+.item-row .x:hover{color:var(--danger)}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:9.5px;font-weight:600;letter-spacing:.1em;color:var(--ink-3)}
+.input{
+  height:38px;border:1px solid var(--line-2);background:var(--surface);border-radius:6px;
+  padding:0 11px;font-size:12px;outline:0;width:100%;
+  transition:border-color 150ms ease,box-shadow 150ms ease;
+}
+.input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,90,70,.1)}
+.media{display:flex;gap:8px}
+.thumb{
+  width:78px;height:60px;border:1px solid var(--line-2);border-radius:6px;background:var(--paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:8.5px;color:var(--ink-3);
+}
+.drop{
+  flex:1;height:60px;border:1px dashed var(--line-2);border-radius:6px;background:var(--surface-3);
+  display:flex;align-items:center;justify-content:center;gap:6px;font-size:10.5px;color:var(--ink-3);
+  transition:border-color 150ms ease,background-color 150ms ease;
+}
+.drop:hover{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.note{
+  border:1px solid var(--line);background:var(--surface-3);border-radius:6px;
+  padding:9px 11px;font-size:11.5px;color:var(--ink-3);min-height:52px;
+}
+.recent{display:flex;flex-direction:column;gap:6px}
+.recent-row{display:grid;grid-template-columns:78px minmax(0,1fr) 76px auto;gap:10px;align-items:center;font-size:11px}
+.recent-row .d{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3)}
+.recent-row .k{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3);text-align:right}
+.recent-row .tag{font-size:9px;color:var(--ink-3);border:1px solid var(--line);padding:2px 6px;border-radius:4px;white-space:nowrap}
+.recent-row .tag.blind{background:var(--surface-2);border-color:transparent;color:var(--ink-2)}
+
+.summary{display:flex;flex-direction:column;gap:10px;min-height:0}
+.sum-card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.sum-card h2{margin:0;font-size:12.5px;font-weight:600}
+.sum-row{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-2)}
+.sum-row .v{font-family:var(--font-mono);font-size:11px;font-variant-numeric:tabular-nums}
+.rule{height:1px;background:var(--line);margin:2px 0}
+.total{display:flex;align-items:flex-end;justify-content:space-between}
+.total span{font-size:11.5px;font-weight:600}
+.total b{font-family:var(--font-head);font-size:25px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.vis-title{font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--ink-3)}
+.vis-row{display:flex;align-items:center;gap:9px}
+.vis-row svg{flex:none;color:var(--ink-2)}
+.vis-row .t{display:flex;flex-direction:column;gap:1px}
+.vis-row .t b{font-size:11.5px;font-weight:600}
+.vis-row .t span{font-size:10px;color:var(--ink-3)}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.switch{
+  width:34px;height:20px;border-radius:999px;border:0;padding:2px;background:var(--accent);
+  display:flex;justify-content:flex-end;align-items:center;
+  transition:background-color 160ms ease;
+}
+.switch .knob{width:16px;height:16px;border-radius:50%;background:#fff;transition:transform 200ms var(--ease-out)}
+.switch[aria-checked="false"]{background:var(--line-2)}
+.switch[aria-checked="false"] .knob{transform:translateX(-14px)}
+.sum-ctas{display:flex;flex-direction:column;gap:7px}
+.sum-ctas .btn{width:100%}
+.fine{display:flex;gap:6px;font-size:9.5px;line-height:1.5;color:var(--ink-3)}
+.fine svg{flex:none;margin-top:1px}
+.btn-outline-wide{
+  height:36px;border:1px solid var(--line-2);background:transparent;border-radius:6px;
+  font-size:11.5px;color:var(--ink-2);transition:background-color 150ms ease,border-color 150ms ease,transform 160ms var(--ease-out);
+}
+.btn-outline-wide:hover{background:var(--surface);border-color:#B9B7AD}
+.btn-outline-wide:active{transform:scale(.99)}
+
+/* ---------- Mobile ---------- */
+.mobile-stage{
+  min-height:960px;display:grid;place-items:center;padding:48px 20px;
+  background:
+    radial-gradient(900px 420px at 50% -10%,rgba(14,90,70,.07),transparent 70%),
+    var(--paper);
+}
+.phone{
+  width:414px;height:868px;background:#101315;border-radius:46px;padding:12px;
+  box-shadow:0 34px 70px -28px rgba(16,19,21,.5),0 2px 0 rgba(255,255,255,.06) inset;
+}
+.phone-screen{
+  width:390px;height:844px;border-radius:34px;overflow:auto;background:var(--paper);
+  display:flex;flex-direction:column;position:relative;
+  scrollbar-width:none;
+}
+.phone-screen::-webkit-scrollbar{display:none}
+.statusbar{
+  height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 22px;font-size:11.5px;font-weight:600;font-family:var(--font-body);
+}
+.statusbar .sig{display:flex;gap:5px;align-items:center}
+.mnav{height:46px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.mnav .back{display:flex;align-items:center;gap:2px;border:0;background:none;font-size:12.5px;color:var(--ink-2);padding:4px}
+.hero-m{padding:6px 20px 16px;display:flex;flex-direction:column;gap:10px}
+.hero-m .plate{font-size:32px;letter-spacing:.03em;line-height:1}
+.hero-m .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.hero-m .row span{font-size:13px;color:var(--ink-2)}
+.hero-m .row .km{font-size:12px}
+.seal{
+  display:inline-flex;align-items:center;gap:5px;width:max-content;
+  background:var(--accent-soft);color:var(--accent);font-size:10.5px;font-weight:600;
+  padding:4px 8px;border-radius:999px;
+}
+.summary-strip{
+  display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);
+  border:1px solid var(--line);border-radius:8px;padding:11px 14px;
+}
+.summary-strip div{display:flex;flex-direction:column;gap:1px}
+.summary-strip b{font-family:var(--font-head);font-size:17px;font-weight:700;letter-spacing:-.02em}
+.summary-strip span{font-size:9px;color:var(--ink-3)}
+.timeline{padding:0 20px;display:flex;flex-direction:column}
+.year{display:flex;align-items:center;gap:10px;padding:12px 0 6px;font-family:var(--font-mono);font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--ink-3)}
+.year .line{flex:1;height:1px;background:var(--line)}
+.entry{display:grid;grid-template-columns:34px minmax(0,1fr) 50px;gap:11px;padding:10px 0;border-bottom:1px solid var(--line)}
+.entry:last-child{border-bottom:0}
+.date{display:flex;flex-direction:column;gap:0;line-height:1.1}
+.date b{font-family:var(--font-mono);font-size:15px;font-weight:600}
+.date span{font-family:var(--font-mono);font-size:8px;letter-spacing:.1em;color:var(--ink-3)}
+.entry .body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.entry .body b{font-size:12px;font-weight:600;line-height:1.3}
+.entry .shop{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink-2)}
+.entry .meta{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:9px;color:var(--ink-3)}
+.entry .meta .sep{width:2px;height:2px;border-radius:50%;background:var(--ink-3)}
+.entry .thumb-m{
+  width:50px;height:50px;border:1px solid var(--line);border-radius:6px;background:var(--surface);
+  display:grid;place-items:center;color:var(--ink-3);
+}
+.mfoot{padding:14px 20px 10px;text-align:center;font-size:9px;color:var(--ink-3)}
+.specs{margin:14px 20px 0;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:13px 14px;display:flex;flex-direction:column;gap:10px}
+.specs .head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.specs .head b{font-size:11.5px;font-weight:600}
+.specs .head span{font-size:9px;color:var(--ink-3)}
+.specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.specs-grid div{display:flex;flex-direction:column;gap:2px}
+.specs-grid span{font-size:8px;letter-spacing:.1em;font-weight:600;color:var(--ink-3)}
+.specs-grid b{font-family:var(--font-mono);font-size:10.5px;font-weight:500;color:var(--ink)}
+.mbar{
+  position:sticky;bottom:0;margin-top:auto;flex:none;background:var(--surface);
+  border-top:1px solid var(--line);padding:10px 16px 16px;display:flex;gap:8px;
+}
+.mbar .btn{flex:1;height:38px;font-size:12px}
+.icon-btn{
+  width:44px;height:38px;border:1px solid var(--line-2);background:var(--surface);border-radius:6px;
+  display:grid;place-items:center;color:var(--accent);
+  transition:background-color 150ms ease,transform 160ms var(--ease-out);
+}
+.icon-btn:hover{background:var(--surface-3)}
+.icon-btn:active{transform:scale(.97)}
+
+/* ---------- Landing ---------- */
+.landing{background:var(--paper);min-height:1140px}
+.wrap{width:min(1120px,calc(100% - 64px));margin:0 auto}
+.land-nav{display:flex;align-items:center;justify-content:space-between;padding:26px 0;border-bottom:1px solid var(--line)}
+.land-nav .logo{display:flex;align-items:baseline;gap:8px;font-family:var(--font-head);font-size:18px;font-weight:700;letter-spacing:.2em}
+.land-nav .logo small{font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;color:var(--ink-3)}
+.land-links{display:flex;align-items:center;gap:24px;font-size:12.5px;color:var(--ink-2)}
+.land-links a:hover{color:var(--ink)}
+.hero-land{display:grid;grid-template-columns:1.08fr .92fr;gap:56px;align-items:center;padding:64px 0 56px}
+.hero-copy{display:flex;flex-direction:column;gap:20px;max-width:520px}
+.hero-copy h1{font-size:52px;line-height:1.02;letter-spacing:-.035em;margin:0;display:block}
+.hero-copy h1 em{font-style:normal;color:var(--accent)}
+.hero-copy p{margin:0;font-size:15.5px;line-height:1.6;color:var(--ink-2);max-width:440px}
+.lookup{display:flex;gap:8px;padding:6px;background:var(--surface);border:1px solid var(--line-2);border-radius:9px;box-shadow:0 1px 2px rgba(21,24,27,.04)}
+.lookup .tag{display:grid;place-items:center;padding:0 8px;font-family:var(--font-mono);font-size:10px;color:var(--ink-3);border-right:1px solid var(--line);flex:none}
+.lookup input{flex:1;border:0;outline:0;background:transparent;font-family:var(--font-mono);font-size:14px;letter-spacing:.06em;text-transform:uppercase;min-width:0}
+.lookup input::placeholder{color:var(--line-2)}
+.lookup .btn{height:40px;flex:none}
+.micro{font-size:10.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.dossier{position:relative;padding:18px 0 0 18px}
+.dossier::before{
+  content:"";position:absolute;inset:0 0 18px 0;background:var(--surface-2);
+  border:1px solid var(--line);border-radius:10px;transform:translate(0,18px);
+}
+.dossier-card{
+  position:relative;background:var(--surface);border:1px solid var(--line);border-radius:10px;
+  padding:22px;display:flex;flex-direction:column;gap:16px;
+  box-shadow:0 22px 44px -34px rgba(21,24,27,.45);
+}
+.dossier-top{display:flex;justify-content:space-between;align-items:flex-start}
+.dossier-top .plate{font-size:26px}
+.dossier-top .model{font-size:11.5px;color:var(--ink-3);margin-top:3px}
+.dossier-card .seal{margin:0}
+.dossier-list{display:flex;flex-direction:column;border-top:1px solid var(--line);padding-top:4px}
+.dossier-item{display:grid;grid-template-columns:1fr auto;gap:4px 14px;padding:9px 0;border-bottom:1px solid var(--line);font-size:11.5px}
+.dossier-item:last-child{border-bottom:0}
+.dossier-item b{font-weight:500}
+.dossier-item .d{font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3)}
+.dossier-item .p{font-family:var(--font-mono);font-size:10.5px;color:var(--ink-2);text-align:right}
+.dossier-foot{display:flex;align-items:center;justify-content:space-between;font-size:9.5px;color:var(--ink-3)}
+.trust{display:flex;align-items:center;gap:28px;padding:18px 0 0;border-top:1px solid var(--line);font-size:11px;color:var(--ink-2)}
+.trust .t{display:flex;align-items:center;gap:7px}
+.trust svg{color:var(--accent)}
+.trust .sp{margin-left:auto;font-family:var(--font-mono);font-size:9.5px;color:var(--ink-3)}
+.section{padding:64px 0}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:32px;margin-bottom:30px}
+.section-head h2{margin:6px 0 0;font-family:var(--font-head);font-size:30px;letter-spacing:-.025em;line-height:1.1}
+.section-head p{margin:0;max-width:360px;font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line)}
+.step{padding:22px 26px 10px 0;border-right:1px solid var(--line);margin-right:26px}
+.step:last-child{border-right:0;margin-right:0;padding-right:0}
+.step .n{font-family:var(--font-mono);font-size:10px;color:var(--ink-3);letter-spacing:.1em}
+.step h3{margin:12px 0 8px;font-family:var(--font-head);font-size:19px;letter-spacing:-.015em}
+.step p{margin:0;font-size:12.5px;line-height:1.6;color:var(--ink-2)}
+.split{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.split-pane{padding:28px;display:flex;flex-direction:column;gap:14px}
+.split-pane+.split-pane{border-left:1px solid var(--line);background:var(--surface-3)}
+.split-pane .kicker{font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--ink-3)}
+.split-pane h3{margin:0;font-family:var(--font-head);font-size:20px;letter-spacing:-.02em}
+.split-pane p{margin:0;font-size:12px;line-height:1.65;color:var(--ink-2)}
+.mini-list{display:flex;flex-direction:column;gap:8px;margin-top:2px}
+.mini-list div{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-2)}
+.mini-list .masked{color:var(--ink-3)}
+.mini-list .box{width:100%;height:8px;border-radius:2px;background:var(--surface-2);flex:1;max-width:120px}
+.cta-band{
+  background:var(--ink);color:#fff;border-radius:12px;padding:34px 38px;
+  display:flex;align-items:center;justify-content:space-between;gap:32px;
+}
+.cta-band h2{margin:0;font-family:var(--font-head);font-size:27px;letter-spacing:-.025em;max-width:520px;line-height:1.12}
+.cta-band p{margin:8px 0 0;font-size:12.5px;color:#A9AFB4}
+.cta-band .btn{background:#fff;color:var(--ink);box-shadow:none;height:40px}
+.cta-band .btn:hover{background:#EDECE6}
+.land-foot{display:flex;align-items:center;justify-content:space-between;padding:26px 0 34px;font-size:10.5px;color:var(--ink-3);border-top:1px solid var(--line);margin-top:64px}
+.land-foot .logo{font-family:var(--font-head);font-size:13px;font-weight:700;letter-spacing:.2em;color:var(--ink)}
+
+/* ---------- Login ---------- */
+.login{display:grid;grid-template-columns:1.02fr .98fr;height:900px;background:var(--paper);overflow:hidden}
+.login-aside{background:var(--ink);color:#F4F3EF;padding:44px 52px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.login-aside::after{
+  content:"";position:absolute;width:520px;height:520px;right:-190px;bottom:-200px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,rgba(28,138,105,.5),rgba(14,90,70,0) 68%);
+  pointer-events:none;
+}
+.login-aside .logo{font-family:var(--font-head);font-size:18px;font-weight:700;letter-spacing:.2em}
+.login-aside .mid{margin-top:auto;margin-bottom:auto;display:flex;flex-direction:column;gap:22px;max-width:420px;position:relative;z-index:1}
+.login-aside h2{margin:0;font-family:var(--font-head);font-size:38px;line-height:1.08;letter-spacing:-.03em;font-weight:700}
+.login-aside p{margin:0;font-size:13px;line-height:1.7;color:#B9BFB9;max-width:360px}
+.login-checks{display:flex;flex-direction:column;gap:10px;margin-top:4px}
+.login-checks div{display:flex;align-items:center;gap:9px;font-size:12px;color:#D9DCD6}
+.login-checks svg{color:#3FBF95;flex:none}
+.quote{border-top:1px solid rgba(244,243,239,.14);padding-top:18px;font-size:11.5px;line-height:1.7;color:#A9AFB4;position:relative;z-index:1}
+.quote b{display:block;color:#EDECE6;font-weight:600;margin-top:8px;font-size:10.5px;letter-spacing:.04em}
+.login-main{display:grid;place-items:center;padding:40px}
+.login-card{width:100%;max-width:352px;display:flex;flex-direction:column;gap:18px}
+.login-card .kicker{font-size:9.5px;font-weight:600;letter-spacing:.12em;color:var(--ink-3)}
+.login-card h1{font-family:var(--font-head);font-size:28px;letter-spacing:-.025em;margin:0;display:block}
+.login-card>p{margin:0;font-size:12px;color:var(--ink-2);line-height:1.6}
+.login-form{display:flex;flex-direction:column;gap:13px;margin-top:2px}
+.login-form .field label{letter-spacing:.08em}
+.login-form .input{height:42px}
+.row-between{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--ink-2)}
+.check{display:flex;align-items:center;gap:7px}
+.check input{accent-color:var(--accent);width:14px;height:14px}
+.login-form .btn{height:42px;margin-top:2px}
+.divider{display:flex;align-items:center;gap:10px;font-size:9.5px;color:var(--ink-3);letter-spacing:.06em}
+.divider::before,.divider::after{content:"";height:1px;background:var(--line);flex:1}
+.alt-action{text-align:center;font-size:11px;color:var(--ink-2)}
+.alt-action a{color:var(--accent);font-weight:600}
+
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translate(-50%,14px);
+  background:var(--ink);color:#F4F3EF;border-radius:8px;padding:10px 14px;
+  font-size:12px;display:flex;align-items:center;gap:8px;
+  box-shadow:0 16px 34px -18px rgba(0,0,0,.6);
+  opacity:0;pointer-events:none;
+  transition:opacity 200ms ease,transform 240ms var(--ease-out);
+  z-index:60;
+}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast svg{color:#3FBF95}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition-duration:.01ms!important;animation-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<div class="proto-bar">
+  <div class="proto-brand"><span class="dot"></span>KILORA</div>
+  <div class="proto-tabs" role="tablist" aria-label="Vistas del prototipo">
+    <button class="proto-tab" role="tab" data-view="vehiculos" aria-selected="true">Vehículos</button>
+    <button class="proto-tab" role="tab" data-view="orden" aria-selected="false">Nueva orden</button>
+    <button class="proto-tab" role="tab" data-view="historial" aria-selected="false">Propietario · móvil</button>
+    <button class="proto-tab" role="tab" data-view="landing" aria-selected="false">Landing</button>
+    <button class="proto-tab" role="tab" data-view="login" aria-selected="false">Login</button>
+  </div>
+  <div class="proto-meta"><span>PROTOTIPO <b>v1</b></span><span>ES · USD</span></div>
+</div>
+
+<!-- ============ VEHÍCULOS ============ -->
+<section class="view active" id="view-vehiculos" role="tabpanel" aria-label="Vehículos">
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><strong>KILORA</strong><span>Historial del vehículo</span></div>
+      <nav class="nav">
+        <button class="nav-item" aria-current="page">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Vehículos <span class="count">128</span>
+        </button>
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 4h6a2 2 0 0 1 2 2v14l-5-3-5 3V6a2 2 0 0 1 2-2Z"/><path d="M9 9h6"/></svg>
+          Órdenes
+        </button>
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.6c2.6-.2 4.4 1.4 5 4.4"/></svg>
+          Clientes
+        </button>
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>
+          Recordatorios <span class="count">12</span>
+        </button>
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.3a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a1.7 1.7 0 0 0-1.6-1H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 3 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.7a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 9a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+          Ajustes
+        </button>
+      </nav>
+      <div class="side-spacer"></div>
+      <div class="shop-card"><strong>Taller Rivas</strong><span>Sucursal Centro · San Salvador</span></div>
+      <div class="user">
+        <div class="avatar">MR</div>
+        <div class="user-info"><strong>Marta Rivas</strong><span>Recepción</span></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow">Taller Rivas · Sucursal Centro</div>
+          <h1>Vehículos <span class="pill-count">128</span></h1>
+        </div>
+        <div class="head-actions">
+          <label class="search">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.2-3.2"/></svg>
+            <input id="table-search" type="search" placeholder="Buscar placa o cliente" aria-label="Buscar placa o cliente">
+          </label>
+          <button class="btn btn-secondary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 21h16"/></svg>
+            Exportar
+          </button>
+          <button class="btn btn-primary" data-goto="orden">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+            Nueva orden
+          </button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b>128</b><span>Vehículos activos</span></div>
+        <div class="stat"><b>64</b><span>Órdenes este mes</span></div>
+        <div class="stat"><b>12</b><span>Recordatorios pendientes</span></div>
+        <div class="stat"><b>3.2</b><span>Días promedio por orden</span></div>
+      </div>
+
+      <div class="filters">
+        <button class="chip" aria-pressed="true">Todos</button>
+        <button class="chip" aria-pressed="false">Al día</button>
+        <button class="chip" aria-pressed="false">Con recordatorio</button>
+        <button class="chip" aria-pressed="false">Sin contacto 90 días</button>
+        <div class="right">Ordenado por <b>último servicio</b></div>
+      </div>
+
+      <div class="table-wrap">
+        <div class="thead">
+          <span>PLACA / VEHÍCULO</span><span>PROPIETARIO</span><span>ÚLTIMO SERVICIO</span><span>KM</span><span>ESTADO</span><span></span>
+        </div>
+        <div class="tbody" id="vehicle-rows">
+          <div class="trow" data-search="p 482 913 toyota corolla carlos menjivar">
+            <div class="cell"><span class="plate">P 482 913</span><span class="sub">Toyota Corolla 2019</span></div>
+            <div class="cell"><span class="name">Carlos Menjívar</span><span class="sub">+503 7712 4408</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Cambio de aceite</span><span class="sub">12 mar 2026</span></div>
+            <span class="km">142,830</span>
+            <span class="status ok"><span class="dot"></span>Al día</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+          <div class="trow" data-search="p 771 kbc honda cr-v ana sofia rivera">
+            <div class="cell"><span class="plate">P 771 KBC</span><span class="sub">Honda CR-V 2021</span></div>
+            <div class="cell"><span class="name">Ana Sofía Rivera</span><span class="sub">+503 7845 1120</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Frenos delanteros</span><span class="sub">04 mar 2026</span></div>
+            <span class="km">68,210</span>
+            <span class="status due"><span class="dot"></span>Recordatorio</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+          <div class="trow" data-search="p 219 lmd nissan frontier jose antonio pena">
+            <div class="cell"><span class="plate">P 219 LMD</span><span class="sub">Nissan Frontier 2018</span></div>
+            <div class="cell"><span class="name">José Antonio Peña</span><span class="sub">+503 7012 8890</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Alineación y balanceo</span><span class="sub">28 feb 2026</span></div>
+            <span class="km">203,410</span>
+            <span class="status ok"><span class="dot"></span>Al día</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+          <div class="trow" data-search="p 884 trx hyundai tucson gabriela santos">
+            <div class="cell"><span class="plate">P 884 TRX</span><span class="sub">Hyundai Tucson 2022</span></div>
+            <div class="cell"><span class="name">Gabriela Santos</span><span class="sub">+503 7550 3311</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Servicio de 30,000 km</span><span class="sub">21 feb 2026</span></div>
+            <span class="km">31,940</span>
+            <span class="status shop"><span class="dot"></span>En taller</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+          <div class="trow" data-search="p 103 qwe mazda 3 luis ernesto cruz">
+            <div class="cell"><span class="plate">P 103 QWE</span><span class="sub">Mazda 3 2020</span></div>
+            <div class="cell"><span class="name">Luis Ernesto Cruz</span><span class="sub">+503 7123 0094</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Batería</span><span class="sub">14 feb 2026</span></div>
+            <span class="km">88,120</span>
+            <span class="status ok"><span class="dot"></span>Al día</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+          <div class="trow" data-search="p 655 mno kia sportage rosa elena vasquez">
+            <div class="cell"><span class="plate">P 655 MNO</span><span class="sub">Kia Sportage 2017</span></div>
+            <div class="cell"><span class="name">Rosa Elena Vásquez</span><span class="sub">+503 7688 4471</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Cambio de aceite</span><span class="sub">02 feb 2026</span></div>
+            <span class="km">176,500</span>
+            <span class="status due"><span class="dot"></span>Recordatorio</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+          <div class="trow" data-search="p 340 jkl mitsubishi l200 oscar armando diaz">
+            <div class="cell"><span class="plate">P 340 JKL</span><span class="sub">Mitsubishi L200 2019</span></div>
+            <div class="cell"><span class="name">Óscar Armando Díaz</span><span class="sub">+503 7290 1137</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Suspensión trasera</span><span class="sub">27 ene 2026</span></div>
+            <span class="km">121,760</span>
+            <span class="status ok"><span class="dot"></span>Al día</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+          <div class="trow" data-search="p 927 hgd ford ranger daniel alejandro molina">
+            <div class="cell"><span class="plate">P 927 HGD</span><span class="sub">Ford Ranger 2020</span></div>
+            <div class="cell"><span class="name">Daniel Alejandro Molina</span><span class="sub">+503 7745 6620</span></div>
+            <div class="cell"><span class="name" style="font-weight:400">Cambio de aceite</span><span class="sub">19 ene 2026</span></div>
+            <span class="km">97,340</span>
+            <span class="status ok"><span class="dot"></span>Al día</span>
+            <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="m9 6 6 6-6 6"/></svg>
+          </div>
+        </div>
+        <div class="tfoot">
+          <span id="row-count">128 vehículos · Página 1 de 13</span>
+          <div class="pager">
+            <button aria-label="Página anterior">‹</button>
+            <button aria-current="true">1</button>
+            <button>2</button>
+            <button>3</button>
+            <button aria-label="Página siguiente">›</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="followup">
+        <div class="lead"><span>SEGUIMIENTO</span><b>3 vehículos sin servicio</b></div>
+        <div class="item">
+          <div class="txt"><b>P 655 MNO</b><span>Kia Sportage 2017 · oct 2025</span></div>
+          <button class="mini-btn" data-toast="Recordatorio enviado a Rosa Elena por WhatsApp">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.7A8.4 8.4 0 1 1 21 11.5Z"/></svg>
+            Recordar
+          </button>
+        </div>
+        <div class="item">
+          <div class="txt"><b>P 884 TRX</b><span>Hyundai Tucson 2022 · sep 2025</span></div>
+          <button class="mini-btn" data-toast="Recordatorio enviado a Gabriela por WhatsApp">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.7A8.4 8.4 0 1 1 21 11.5Z"/></svg>
+            Recordar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ NUEVA ORDEN ============ -->
+<section class="view" id="view-orden" role="tabpanel" aria-label="Nueva orden">
+  <div class="app">
+    <aside class="side">
+      <div class="brand"><strong>KILORA</strong><span>Historial del vehículo</span></div>
+      <nav class="nav">
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+          Vehículos
+        </button>
+        <button class="nav-item" aria-current="page">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M9 4h6a2 2 0 0 1 2 2v14l-5-3-5 3V6a2 2 0 0 1 2-2Z"/><path d="M9 9h6"/></svg>
+          Órdenes
+        </button>
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.6c2.6-.2 4.4 1.4 5 4.4"/></svg>
+          Clientes
+        </button>
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 9a6 6 0 1 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z"/><path d="M10 19a2.2 2.2 0 0 0 4 0"/></svg>
+          Recordatorios
+        </button>
+        <button class="nav-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 7 19.3a1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.7 1.7 0 0 0 3 15a1.7 1.7 0 0 0-1.6-1H1a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 3 9a1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.7 1.7 0 0 0 9 3a2 2 0 1 1 4 0v.1A1.7 1.7 0 0 0 15 4.7a1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1A1.7 1.7 0 0 0 21 9a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>
+          Ajustes
+        </button>
+      </nav>
+      <div class="side-spacer"></div>
+      <div class="shop-card"><strong>Taller Rivas</strong><span>Sucursal Centro · San Salvador</span></div>
+      <div class="user">
+        <div class="avatar">MR</div>
+        <div class="user-info"><strong>Marta Rivas</strong><span>Recepción</span></div>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="order-head">
+        <div>
+          <div class="crumbs">
+            <span>Vehículos</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+            <span>P 482 913</span>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+            <b>Nueva orden</b>
+          </div>
+          <h1>Registrar orden</h1>
+        </div>
+        <div class="head-actions">
+          <span class="timer">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 1.5M9 2h6"/></svg>
+            3 min
+          </span>
+          <button class="btn btn-secondary">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+            Guardar borrador
+          </button>
+          <button class="btn btn-primary" data-toast="Orden registrada · el propietario recibe el enlace">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m4 12.5 5 5L20 6.5"/></svg>
+            Registrar orden
+          </button>
+        </div>
+      </div>
+
+      <div class="order-grid">
+        <div class="form-col">
+          <div class="card vehicle">
+            <div>
+              <div class="plate">P 482 913</div>
+              <div class="meta">Toyota Corolla 2019 · Carlos Menjívar</div>
+            </div>
+            <div class="hint">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/><path d="M12 7.5V12l3 2"/></svg>
+              8 registros · último 142,830 km
+            </div>
+            <button class="link">Cambiar</button>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><b>Trabajo realizado</b><span>Se guarda en el historial del vehículo</span></div>
+            <div class="templates">
+              <span>Plantillas</span>
+              <button class="tpl" data-item="Cambio de aceite 5W-30 sintético" data-price="45">Cambio de aceite</button>
+              <button class="tpl" data-item="Frenos delanteros" data-price="120">Frenos</button>
+              <button class="tpl" data-item="Alineación y balanceo" data-price="35">Alineación</button>
+              <button class="tpl" data-item="Servicio de 30,000 km" data-price="95">Servicio 30k</button>
+            </div>
+            <div class="items" id="order-items">
+              <div class="item-row" data-price="45">
+                <span>Cambio de aceite 5W-30 sintético</span>
+                <span class="qty">1</span>
+                <span class="price">$45.00</span>
+                <button class="x" aria-label="Quitar trabajo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                </button>
+              </div>
+              <div class="item-row" data-price="12">
+                <span>Filtro de aceite</span>
+                <span class="qty">1</span>
+                <span class="price">$12.00</span>
+                <button class="x" aria-label="Quitar trabajo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                </button>
+              </div>
+              <div class="item-row" data-price="0">
+                <span>Revisión de frenos</span>
+                <span class="qty">1</span>
+                <span class="price">$0.00</span>
+                <button class="x" aria-label="Quitar trabajo">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                </button>
+              </div>
+            </div>
+            <button class="link" id="add-item" style="display:flex;align-items:center;gap:5px;font-size:11.5px;margin-top:2px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+              Agregar trabajo
+            </button>
+          </div>
+
+          <div class="meta-grid">
+            <div class="field"><label for="km">KILOMETRAJE</label><input class="input" id="km" value="142,830 km"></div>
+            <div class="field"><label for="fecha">FECHA DEL SERVICIO</label><input class="input" id="fecha" value="30 oct 2026"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><b>Fotos y notas internas</b><span>Solo visible para tu taller</span></div>
+            <div class="media">
+              <div class="thumb">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>
+                Factura
+              </div>
+              <div class="thumb">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg>
+                Aceite
+              </div>
+              <div class="drop">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 20h16"/></svg>
+                Arrastra fotos · sin EXIF
+              </div>
+            </div>
+            <div class="note">Ej. cliente pidió revisar la fuga de aceite antes del próximo viaje…</div>
+          </div>
+
+          <div class="card">
+            <div class="card-head"><b>Historial reciente</b><span>8 registros · este taller y otros</span></div>
+            <div class="recent">
+              <div class="recent-row"><span class="d">12 mar 2026</span><span>Cambio de aceite 10W-30</span><span class="k">138,420 km</span><span class="tag">Este taller</span></div>
+              <div class="recent-row"><span class="d">08 sep 2025</span><span>Frenos delanteros</span><span class="k">121,300 km</span><span class="tag">Este taller</span></div>
+              <div class="recent-row"><span class="d">21 may 2025</span><span>Alineación y balanceo</span><span class="k">114,800 km</span><span class="tag blind">Vista ciega</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="sum-card">
+            <h2>Resumen</h2>
+            <div class="sum-row"><span>Mano de obra</span><span class="v">$0.00</span></div>
+            <div class="sum-row"><span>Repuestos</span><span class="v" id="parts-total">$57.00</span></div>
+            <div class="sum-row"><span>Descuento</span><span class="v">— $0.00</span></div>
+            <div class="rule"></div>
+            <div class="total"><span>Total</span><b id="order-total">$57.00</b></div>
+          </div>
+
+          <div class="sum-card">
+            <span class="vis-title">VISIBILIDAD</span>
+            <div class="vis-row">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+              <div class="t"><b>Propietario</b><span>Ve costo, fotos y detalle</span></div>
+            </div>
+            <div class="vis-row">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 3l18 18"/><path d="M10.6 6.1A9.8 9.8 0 0 1 12 6c6 0 9.5 6 9.5 6a17 17 0 0 1-3.2 3.8M6.3 8.4A17.4 17.4 0 0 0 2.5 12S6 18 12 18a9.6 9.6 0 0 0 3.2-.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>
+              <div class="t"><b>Otros talleres</b><span>Vista ciega: fecha y kilometraje</span></div>
+            </div>
+            <div class="rule"></div>
+            <div class="switch-row">
+              <div class="t"><b style="font-size:11.5px">Avisar por WhatsApp</b><span style="font-size:10px;color:var(--ink-3);display:block">Se envía el enlace del historial</span></div>
+              <button class="switch" role="switch" aria-checked="true" aria-label="Avisar por WhatsApp"><span class="knob"></span></button>
+            </div>
+          </div>
+
+          <div class="sum-ctas">
+            <button class="btn btn-primary" data-toast="Orden registrada · el propietario recibe el enlace">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m4 12.5 5 5L20 6.5"/></svg>
+              Registrar orden · <span id="cta-total">$57.00</span>
+            </button>
+            <button class="btn-outline-wide">Guardar borrador</button>
+          </div>
+
+          <div class="fine">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            Los registros no se editan. Cualquier corrección se agrega como registro nuevo y fechado.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HISTORIAL MÓVIL ============ -->
+<section class="view" id="view-historial" role="tabpanel" aria-label="Historial del propietario">
+  <div class="mobile-stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="statusbar">
+          <span>9:41</span>
+          <span class="sig">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M5 12.5a10 10 0 0 1 14 0M8 15.5a6 6 0 0 1 8 0M12 18.5h.01"/></svg>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="7" width="17" height="10" rx="2.5"/><path d="M22 10.5v3"/><rect x="4" y="9" width="11" height="6" rx="1" fill="currentColor" stroke="none"/></svg>
+          </span>
+        </div>
+
+        <div class="mnav">
+          <button class="back">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m14 6-6 6 6 6"/></svg>
+            Mi vehículo
+          </button>
+          <button class="back" aria-label="Compartir" data-toast="Enlace copiado">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.3M8.2 13.2l7.6 4.3"/></svg>
+          </button>
+        </div>
+
+        <div class="hero-m">
+          <div class="plate" id="mobile-plate">P 482 913</div>
+          <div class="row"><span>Toyota Corolla 2019</span><span class="km">142,830 km</span></div>
+          <div class="seal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            Taller Rivas · verificado
+          </div>
+          <div class="summary-strip">
+            <div><b>8</b><span>servicios</span></div>
+            <div><b>2</b><span>talleres</span></div>
+            <div><b>2021</b><span>desde</span></div>
+          </div>
+        </div>
+
+        <div class="timeline">
+          <div class="year">2026 <span class="line"></span></div>
+          <div class="entry">
+            <div class="date"><b>12</b><span>MAR</span></div>
+            <div class="body">
+              <b>Cambio de aceite 10W-30</b>
+              <span class="shop">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                Taller Rivas
+              </span>
+              <span class="meta">142,830 km <span class="sep"></span> $57.00</span>
+            </div>
+            <div class="thumb-m"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg></div>
+          </div>
+          <div class="entry">
+            <div class="date"><b>04</b><span>ENE</span></div>
+            <div class="body">
+              <b>Revisión general de 140,000 km</b>
+              <span class="shop">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                Taller Rivas
+              </span>
+              <span class="meta">138,120 km <span class="sep"></span> $0.00</span>
+            </div>
+            <div class="thumb-m"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg></div>
+          </div>
+          <div class="year">2025 <span class="line"></span></div>
+          <div class="entry">
+            <div class="date"><b>08</b><span>SEP</span></div>
+            <div class="body">
+              <b>Frenos delanteros y discos</b>
+              <span class="shop">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                Taller Rivas
+              </span>
+              <span class="meta">121,300 km <span class="sep"></span> $180.00</span>
+            </div>
+            <div class="thumb-m"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg></div>
+          </div>
+          <div class="entry">
+            <div class="date"><b>21</b><span>MAY</span></div>
+            <div class="body">
+              <b>Alineación y balanceo</b>
+              <span class="shop">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                Auto Servicio Escalón
+              </span>
+              <span class="meta">114,800 km <span class="sep"></span> $95.00</span>
+            </div>
+            <div class="thumb-m"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m4 18 5-5 4 4 3-3 4 4"/></svg></div>
+          </div>
+        </div>
+
+        <div class="specs">
+          <div class="head"><b>Ficha del vehículo</b><span>Registrada por Taller Rivas</span></div>
+          <div class="specs-grid">
+            <div><span>AÑO</span><b>2019</b></div>
+            <div><span>MOTOR</span><b>1.8L · 4 cil.</b></div>
+            <div><span>COLOR</span><b>Blanco perla</b></div>
+            <div><span>VIN</span><b>JT2BB1HE4K0…4471</b></div>
+          </div>
+        </div>
+        <div class="mbar">
+          <button class="btn btn-primary" data-toast="Enlace del historial listo para compartir">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.3M8.2 13.2l7.6 4.3"/></svg>
+            Compartir historial
+          </button>
+          <button class="icon-btn" aria-label="Enviar por WhatsApp" data-toast="Abriendo WhatsApp…">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.1-5.7A8.4 8.4 0 1 1 21 11.5Z"/><path d="M8.5 9.2c.3 2.6 2.2 4.5 4.7 4.9"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LANDING ============ -->
+<section class="view" id="view-landing" role="tabpanel" aria-label="Landing">
+  <div class="landing">
+    <div class="wrap">
+      <nav class="land-nav">
+        <div class="logo">KILORA <small>SV</small></div>
+        <div class="land-links">
+          <a href="#">Cómo funciona</a>
+          <a href="#">Para talleres</a>
+          <a href="#" data-goto="login">Ingresar</a>
+        </div>
+        <button class="btn btn-primary btn-sm" data-goto="historial">Buscar mi historial</button>
+      </nav>
+
+      <header class="hero-land">
+        <div class="hero-copy">
+          <div class="eyebrow">Historial digital del vehículo</div>
+          <h1>El historial de tu carro no debería quedar <em>en el taller</em>.</h1>
+          <p>Kilora guarda cada servicio, kilometraje y foto. Cambiá de taller y el historial viaja con el carro — no con el negocio.</p>
+          <form class="lookup" id="lookup-form">
+            <span class="tag">SV</span>
+            <input id="plate-input" value="P 482 913" aria-label="Placa del vehículo" autocomplete="off" spellcheck="false">
+            <button class="btn btn-primary" type="submit">Ver historial</button>
+          </form>
+          <div class="micro">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            Sin cuenta. Solo la placa. El taller decide qué comparte.
+          </div>
+          <div class="trust">
+            <div class="t">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+              Talleres verificados
+            </div>
+            <div class="t">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M5 8h14"/></svg>
+              Registros que no se editan
+            </div>
+            <div class="sp">ES · USD</div>
+          </div>
+        </div>
+
+        <div class="dossier">
+          <div class="dossier-card">
+            <div class="dossier-top">
+              <div>
+                <div class="plate">P 482 913</div>
+                <div class="model">Toyota Corolla 2019</div>
+              </div>
+              <div class="seal">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v6c0 4.2-3 7.4-7 9-4-1.6-7-4.8-7-9V6l7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+                Verificado
+              </div>
+            </div>
+            <div class="dossier-list">
+              <div class="dossier-item"><div><b>Cambio de aceite 10W-30</b><div class="d">12 mar 2026 · Taller Rivas</div></div><span class="p">142,830 km</span></div>
+              <div class="dossier-item"><div><b>Frenos delanteros</b><div class="d">08 sep 2025 · Taller Rivas</div></div><span class="p">121,300 km</span></div>
+              <div class="dossier-item"><div><b>Alineación y balanceo</b><div class="d">21 may 2025 · Auto Servicio Escalón</div></div><span class="p">114,800 km</span></div>
+            </div>
+            <div class="dossier-foot"><span>8 registros · 2 talleres</span><span>Actualizado 12 mar 2026</span></div>
+          </div>
+        </div>
+      </header>
+
+      <section class="section" style="padding-top:18px">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Cómo funciona</div>
+            <h2>Cinco minutos en el taller.<br>Un historial para siempre.</h2>
+          </div>
+          <p>El recepcionista registra una vez. El propietario recibe un enlace. Ningún dato se reescribe después.</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="n">01</div>
+            <h3>El taller registra</h3>
+            <p>Servicio, kilometraje, fotos y precio. Con plantillas de trabajos frecuentes, sin campos de más.</p>
+          </div>
+          <div class="step">
+            <div class="n">02</div>
+            <h3>Vos recibís el enlace</h3>
+            <p>Llega por WhatsApp. Se abre sin descargar nada y sin crear cuenta.</p>
+          </div>
+          <div class="step">
+            <div class="n">03</div>
+            <h3>El historial queda con el carro</h3>
+            <p>Si cambiás de taller, el historial sigue ahí. El taller nuevo ve lo esencial; no tus costos.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top:8px">
+        <div class="section-head">
+          <div>
+            <div class="eyebrow">Dos capas, un mismo registro</div>
+            <h2>Vos ves todo.<br>La competencia, lo justo.</h2>
+          </div>
+          <p>El mismo servicio se proyecta distinto según quién lo mira. Esa decisión se toma en el servidor, no escondiendo cosas en pantalla.</p>
+        </div>
+        <div class="split">
+          <div class="split-pane">
+            <span class="kicker">PROPIETARIO</span>
+            <h3>El historial completo</h3>
+            <p>Qué se hizo, cuándo, a qué kilometraje, quién lo hizo, cuánto costó y las fotos.</p>
+            <div class="mini-list">
+              <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 6.5"/></svg> Costos y repuestos</div>
+              <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 6.5"/></svg> Fotos y notas del taller</div>
+              <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 6.5"/></svg> Taller autor de cada servicio</div>
+            </div>
+          </div>
+          <div class="split-pane">
+            <span class="kicker">OTRO TALLER VINCULADO</span>
+            <h3>La vista ciega</h3>
+            <p>Sabe qué se hizo, cuándo y a qué kilometraje. No ve autor, costo, fotos ni notas internas.</p>
+            <div class="mini-list">
+              <div><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 6.5"/></svg> Trabajo, fecha y kilometraje</div>
+              <div class="masked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Sin costo <span class="box"></span></div>
+              <div class="masked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Sin fotos <span class="box"></span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" style="padding-top:0">
+        <div class="cta-band">
+          <div>
+            <h2>¿Tenés un taller? Que tu trabajo quede registrado.</h2>
+            <p>Registrá una orden en menos de cinco minutos. Sin instalar nada.</p>
+          </div>
+          <button class="btn" data-goto="login">Pedir acceso</button>
+        </div>
+      </section>
+
+      <footer class="land-foot">
+        <span class="logo">KILORA</span>
+        <span>San Salvador, El Salvador · 2026</span>
+        <span>Términos · Privacidad</span>
+      </footer>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LOGIN ============ -->
+<section class="view" id="view-login" role="tabpanel" aria-label="Login">
+  <div class="login">
+    <aside class="login-aside">
+      <div class="logo">KILORA</div>
+      <div class="mid">
+        <h2>El historial del vehículo, en un solo lugar.</h2>
+        <p>El taller registra. El propietario conserva. Sin planillas, sin carpetas, sin perder el historial al cambiar de taller.</p>
+        <div class="login-checks">
+          <div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 6.5"/></svg> Registro en menos de 5 minutos</div>
+          <div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 6.5"/></svg> Permisos por sucursal y auditoría</div>
+          <div><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m4 12 5 5L20 6.5"/></svg> El historial nunca se reescribe</div>
+        </div>
+      </div>
+      <div class="quote">
+        “Antes cada servicio vivía en un cuaderno distinto. Ahora el cliente llega y ya sé qué le hicieron y cuándo.”
+        <b>— Taller Rivas · San Salvador</b>
+      </div>
+    </aside>
+
+    <main class="login-main">
+      <div class="login-card">
+        <div class="kicker">Acceso del taller</div>
+        <h1>Ingresá a tu taller</h1>
+        <p>Usá el correo con el que te invitaron. Si todavía no tenés cuenta, pedí acceso desde la landing.</p>
+        <form class="login-form" id="login-form">
+          <div class="field"><label for="email">CORREO</label><input class="input" id="email" type="email" value="marta@tallerrivas.sv" autocomplete="email"></div>
+          <div class="field"><label for="pass">CONTRASEÑA</label><input class="input" id="pass" type="password" value="demokilora" autocomplete="current-password"></div>
+          <div class="row-between">
+            <label class="check"><input type="checkbox" checked> Mantener sesión</label>
+            <a href="#" style="color:var(--accent);font-weight:600">¿Olvidaste tu contraseña?</a>
+          </div>
+          <button class="btn btn-primary" type="submit">Ingresar</button>
+        </form>
+        <div class="divider">O</div>
+        <div class="alt-action">¿Sos propietario? <a href="#" data-goto="historial">Consultá tu historial por placa</a></div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<div class="toast" id="toast" role="status" aria-live="polite">
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m4 12 5 5L20 6.5"/></svg>
+  <span id="toast-text"></span>
+</div>
+
+<script>
+(function(){
+  const views = document.querySelectorAll('.view');
+  const tabs = document.querySelectorAll('.proto-tab');
+
+  function showView(name, push){
+    const target = document.getElementById('view-' + name);
+    if(!target) return;
+    views.forEach(v => v.classList.toggle('active', v === target));
+    tabs.forEach(t => t.setAttribute('aria-selected', String(t.dataset.view === name)));
+    if(push !== false) history.replaceState(null, '', '#' + name);
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+
+  tabs.forEach(t => t.addEventListener('click', () => showView(t.dataset.view)));
+  document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', e => { e.preventDefault(); showView(b.dataset.goto); }));
+
+  const initial = location.hash.replace('#','');
+  if(initial && document.getElementById('view-' + initial)) showView(initial, false);
+
+  const toast = document.getElementById('toast');
+  const toastText = document.getElementById('toast-text');
+  let toastTimer;
+  function notify(message){
+    toastText.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+  document.querySelectorAll('[data-toast]').forEach(b => b.addEventListener('click', () => notify(b.dataset.toast)));
+
+  const search = document.getElementById('table-search');
+  if(search){
+    search.addEventListener('input', () => {
+      const q = search.value.trim().toLowerCase();
+      let shown = 0;
+      document.querySelectorAll('#vehicle-rows .trow').forEach(row => {
+        const hit = !q || row.dataset.search.includes(q) || row.textContent.toLowerCase().includes(q);
+        row.style.display = hit ? '' : 'none';
+        if(hit) shown++;
+      });
+      document.getElementById('row-count').textContent = shown + ' vehículos · Página 1 de 13';
+    });
+  }
+
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      document.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed','false'));
+      chip.setAttribute('aria-pressed','true');
+    });
+  });
+
+  const items = document.getElementById('order-items');
+  if(items){
+    function updateTotal(){
+      let total = 0;
+      items.querySelectorAll('.item-row').forEach(r => total += Number(r.dataset.price || 0));
+      const txt = '$' + total.toFixed(2);
+      document.getElementById('parts-total').textContent = txt;
+      document.getElementById('order-total').textContent = txt;
+      document.getElementById('cta-total').textContent = txt;
+    }
+    function bindRemove(btn){
+      btn.addEventListener('click', () => {
+        btn.closest('.item-row').remove();
+        updateTotal();
+      });
+    }
+    items.querySelectorAll('.x').forEach(bindRemove);
+
+    document.querySelectorAll('.tpl').forEach(tpl => {
+      tpl.addEventListener('click', () => {
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.dataset.price = tpl.dataset.price;
+        row.innerHTML = '<span></span><span class="qty">1</span><span class="price">$' + Number(tpl.dataset.price).toFixed(2) + '</span><button class="x" aria-label="Quitar trabajo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6 6 18"/></svg></button>';
+        row.firstElementChild.textContent = tpl.dataset.item;
+        items.appendChild(row);
+        bindRemove(row.querySelector('.x'));
+        updateTotal();
+        notify(tpl.dataset.item + ' agregado');
+      });
+    });
+    document.getElementById('add-item').addEventListener('click', () => notify('Elegí una plantilla o escribí el trabajo'));
+  }
+
+  const sw = document.querySelector('.switch');
+  if(sw){
+    sw.addEventListener('click', () => {
+      const on = sw.getAttribute('aria-checked') === 'true';
+      sw.setAttribute('aria-checked', String(!on));
+    });
+  }
+
+  const lookup = document.getElementById('lookup-form');
+  if(lookup){
+    lookup.addEventListener('submit', e => {
+      e.preventDefault();
+      const plate = document.getElementById('plate-input').value.trim().toUpperCase() || 'P 482 913';
+      document.getElementById('mobile-plate').textContent = plate;
+      showView('historial');
+      notify('Historial de ' + plate);
+    });
+  }
+
+  const login = document.getElementById('login-form');
+  if(login){
+    login.addEventListener('submit', e => {
+      e.preventDefault();
+      showView('vehiculos');
+      notify('Bienvenida, Marta');
+    });
+  }
+})();
+</script>
+</body>
+</html>

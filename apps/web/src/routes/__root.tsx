@@ -12,11 +12,37 @@ export const Route = createRootRoute({
 	head: () => ({
 		meta: [
 			{ charSet: "utf-8" },
-			{ name: "viewport", content: "width=device-width, initial-scale=1" },
+			{
+				name: "viewport",
+				content:
+					"width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content",
+			},
+			{
+				name: "theme-color",
+				media: "(prefers-color-scheme: light)",
+				content: "#f4f3ef",
+			},
+			{
+				name: "theme-color",
+				media: "(prefers-color-scheme: dark)",
+				content: "#15181b",
+			},
 			{ title: "Kilora" },
 			{ name: "description", content: "Historial digital del vehículo" },
 		],
-		links: [{ rel: "stylesheet", href: appCss }],
+		links: [
+			{ rel: "stylesheet", href: appCss },
+			{ rel: "preconnect", href: "https://fonts.googleapis.com" },
+			{
+				rel: "preconnect",
+				href: "https://fonts.gstatic.com",
+				crossOrigin: "anonymous",
+			},
+			{
+				rel: "stylesheet",
+				href: "https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap",
+			},
+		],
 	}),
 	shellComponent: RootDocument,
 });
