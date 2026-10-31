@@ -1,0 +1,58 @@
+# ── Dependencias ──────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+vendor/
+
+# ── Build y caché ─────────────────────────────────────────────
+dist/
+.output/
+.vinxi/
+.tanstack/
+build/
+coverage/
+*.tsbuildinfo
+.go-build-cache/
+
+# ── Entorno y secretos ────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ── Go ────────────────────────────────────────────────────────
+bin/
+tmp/
+*.test
+*.out
+
+# ── Base de datos local ───────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+.pgdata/
+
+# ── Storage local de desarrollo ───────────────────────────────
+.storage/
+
+# ── Logs ──────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ── Sistema operativo ─────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editores ──────────────────────────────────────────────────
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+
+# ── Documentos privados de producto (no se publican) ──────────
+DECISIONS.md
+PRODUCT_CONTEXT.md
+NOTES*.md
+docs/private/

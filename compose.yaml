@@ -1,0 +1,24 @@
+name: kilora
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: kilora-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kilora
+      POSTGRES_PASSWORD: kilora
+      POSTGRES_DB: kilora
+      TZ: America/El_Salvador
+    ports:
+      - "5432:5432"
+    volumes:
+      - kilora-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kilora -d kilora"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  kilora-pgdata:

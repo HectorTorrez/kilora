@@ -1,0 +1,28 @@
+{
+  "name": "kilora",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.23.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "check": "pnpm --filter web check",
+    "format": "pnpm --filter web format",
+    "api": "go run ./services/api/cmd/api",
+    "api:build": "go build -o bin/api ./services/api/cmd/api",
+    "api:vet": "cd services/api && go vet ./...",
+    "api:test": "cd services/api && go test ./...",
+    "sqlc": "cd services/api && sqlc generate",
+    "db:setup": "./scripts/db-setup.sh",
+    "db:up": "docker compose up -d --wait db",
+    "db:down": "docker compose down",
+    "db:logs": "docker compose logs -f db",
+    "db:reset": "docker compose down -v && docker compose up -d --wait db && ./scripts/migrate.sh up",
+    "db:migrate": "./scripts/migrate.sh up",
+    "db:status": "./scripts/migrate.sh status",
+    "start": "./scripts/dev.sh"
+  }
+}
