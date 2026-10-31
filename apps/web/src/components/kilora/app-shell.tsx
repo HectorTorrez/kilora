@@ -1,0 +1,134 @@
+import { Link, useRouterState } from "@tanstack/react-router";
+import { ClipboardList, LayoutDashboard, ShieldCheck } from "lucide-react";
+import type { ReactNode } from "react";
+import { currentUser, shop } from "@/lib/demo";
+import { cn } from "@/lib/utils";
+
+const navigation = [
+	{ to: "/taller", label: "Vehículos", icon: LayoutDashboard, exact: true },
+	{
+		to: "/taller/ordenes",
+		label: "Órdenes",
+		icon: ClipboardList,
+		exact: false,
+	},
+];
+
+function useIsActive() {
+	const pathname = useRouterState({
+		select: (state) => state.location.pathname,
+	});
+
+	return (to: string, exact: boolean) =>
+		exact ? pathname === to : pathname.startsWith(to);
+}
+
+export function AppShell({ children }: { children: ReactNode }) {
+	const isActive = useIsActive();
+
+	return (
+		<div className="flex min-h-dvh bg-background">
+			<aside className="sticky top-0 hidden h-dvh w-[236px] shrink-0 flex-col gap-6 border-r bg-card px-3.5 pt-6 pb-4 lg:flex">
+				<div className="px-2.5">
+					<Link
+						to="/taller"
+						className="font-display text-[19px] font-bold tracking-[0.2em]"
+					>
+						KILORA
+					</Link>
+					<p className="mt-1 text-[11px] text-ink-3">Historial del vehículo</p>
+				</div>
+
+				<nav className="flex flex-col gap-0.5">
+					{navigation.map((item) => {
+						const active = isActive(item.to, item.exact);
+						const Icon = item.icon;
+
+						return (
+							<Link
+								key={item.to}
+								to={item.to}
+								className={cn(
+									"pressable flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13px] font-medium",
+									"text-ink-2 hover:bg-paper hover:text-foreground",
+									active && "bg-secondary font-semibold text-foreground",
+								)}
+							>
+								<Icon className="size-4 opacity-80" aria-hidden="true" />
+								{item.label}
+								{item.to === "/taller" ? (
+									<span
+										className={cn(
+											"ml-auto font-mono text-[10px] text-ink-3",
+											active && "text-seal",
+										)}
+									>
+										128
+									</span>
+								) : null}
+							</Link>
+						);
+					})}
+				</nav>
+
+				<div className="flex-1" />
+
+				<div className="rounded-lg bg-paper px-2.5 py-3">
+					<p className="text-[12.5px] font-semibold">{shop.name}</p>
+					<p className="mt-1 text-[11px] leading-snug text-ink-3">
+						{shop.branch}
+					</p>
+				</div>
+
+				<Link
+					to="/h/$placa"
+					params={{ placa: "P-482-913" }}
+					className="flex items-center gap-2 px-0.5 text-[11px] text-ink-3 transition-colors hover:text-seal"
+				>
+					<ShieldCheck className="size-3.5" aria-hidden="true" />
+					Ver historial del propietario
+				</Link>
+
+				<div className="flex items-center gap-2.5 px-0.5">
+					<div className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-[10.5px] font-semibold text-ink-2">
+						{currentUser.initials}
+					</div>
+					<div className="min-w-0 leading-tight">
+						<p className="truncate text-[12px] font-semibold">
+							{currentUser.name}
+						</p>
+						<p className="text-[11px] text-ink-3">{currentUser.role}</p>
+					</div>
+				</div>
+			</aside>
+
+			<div className="min-w-0 flex-1">
+				<header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3 lg:hidden">
+					<Link
+						to="/taller"
+						className="font-display text-[15px] font-bold tracking-[0.2em]"
+					>
+						KILORA
+					</Link>
+					<nav className="flex items-center gap-1">
+						{navigation.map((item) => (
+							<Link
+								key={item.to}
+								to={item.to}
+								className={cn(
+									"pressable rounded-md px-2.5 py-1.5 text-[12px] font-medium text-ink-2",
+									isActive(item.to, item.exact) &&
+										"bg-secondary font-semibold text-foreground",
+								)}
+							>
+								{item.label}
+							</Link>
+						))}
+					</nav>
+				</header>
+
+				{children}
+			</div>
+		</div>
+	);
+}

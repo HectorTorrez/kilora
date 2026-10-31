@@ -10,33 +10,93 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TallerRouteImport } from './routes/taller'
+import { Route as HPlacaRouteImport } from './routes/h.$placa'
+import { Route as TallerIndexRouteImport } from './routes/taller/index'
+import { Route as TallerOrdenesIndexRouteImport } from './routes/taller/ordenes/index'
+import { Route as TallerOrdenesNuevaRouteImport } from './routes/taller/ordenes/nueva'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TallerRoute = TallerRouteImport.update({
+  id: '/taller',
+  path: '/taller',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HPlacaRoute = HPlacaRouteImport.update({
+  id: '/h/$placa',
+  path: '/h/$placa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TallerIndexRoute = TallerIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TallerRoute,
+} as any)
+const TallerOrdenesIndexRoute = TallerOrdenesIndexRouteImport.update({
+  id: '/ordenes/',
+  path: '/ordenes/',
+  getParentRoute: () => TallerRoute,
+} as any)
+const TallerOrdenesNuevaRoute = TallerOrdenesNuevaRouteImport.update({
+  id: '/ordenes/nueva',
+  path: '/ordenes/nueva',
+  getParentRoute: () => TallerRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/taller': typeof TallerRouteWithChildren
+  '/h/$placa': typeof HPlacaRoute
+  '/taller/': typeof TallerIndexRoute
+  '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
+  '/taller/ordenes/': typeof TallerOrdenesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/h/$placa': typeof HPlacaRoute
+  '/taller': typeof TallerIndexRoute
+  '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
+  '/taller/ordenes': typeof TallerOrdenesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/taller': typeof TallerRouteWithChildren
+  '/h/$placa': typeof HPlacaRoute
+  '/taller/': typeof TallerIndexRoute
+  '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
+  '/taller/ordenes/': typeof TallerOrdenesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/taller'
+    | '/h/$placa'
+    | '/taller/'
+    | '/taller/ordenes/nueva'
+    | '/taller/ordenes/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    '/' | '/h/$placa' | '/taller' | '/taller/ordenes/nueva' | '/taller/ordenes'
+  id:
+    | '__root__'
+    | '/'
+    | '/taller'
+    | '/h/$placa'
+    | '/taller/'
+    | '/taller/ordenes/nueva'
+    | '/taller/ordenes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TallerRoute: typeof TallerRouteWithChildren
+  HPlacaRoute: typeof HPlacaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +108,63 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/taller': {
+      id: '/taller'
+      path: '/taller'
+      fullPath: '/taller'
+      preLoaderRoute: typeof TallerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/h/$placa': {
+      id: '/h/$placa'
+      path: '/h/$placa'
+      fullPath: '/h/$placa'
+      preLoaderRoute: typeof HPlacaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/taller/': {
+      id: '/taller/'
+      path: '/'
+      fullPath: '/taller/'
+      preLoaderRoute: typeof TallerIndexRouteImport
+      parentRoute: typeof TallerRoute
+    }
+    '/taller/ordenes/': {
+      id: '/taller/ordenes/'
+      path: '/ordenes'
+      fullPath: '/taller/ordenes/'
+      preLoaderRoute: typeof TallerOrdenesIndexRouteImport
+      parentRoute: typeof TallerRoute
+    }
+    '/taller/ordenes/nueva': {
+      id: '/taller/ordenes/nueva'
+      path: '/ordenes/nueva'
+      fullPath: '/taller/ordenes/nueva'
+      preLoaderRoute: typeof TallerOrdenesNuevaRouteImport
+      parentRoute: typeof TallerRoute
+    }
   }
 }
 
+interface TallerRouteChildren {
+  TallerIndexRoute: typeof TallerIndexRoute
+  TallerOrdenesNuevaRoute: typeof TallerOrdenesNuevaRoute
+  TallerOrdenesIndexRoute: typeof TallerOrdenesIndexRoute
+}
+
+const TallerRouteChildren: TallerRouteChildren = {
+  TallerIndexRoute: TallerIndexRoute,
+  TallerOrdenesNuevaRoute: TallerOrdenesNuevaRoute,
+  TallerOrdenesIndexRoute: TallerOrdenesIndexRoute,
+}
+
+const TallerRouteWithChildren =
+  TallerRoute._addFileChildren(TallerRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TallerRoute: TallerRouteWithChildren,
+  HPlacaRoute: HPlacaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
