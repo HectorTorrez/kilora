@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "doop": {
+      "type": "http",
+      "url": "https://doop.design/mcp"
+    }
+  }
+}

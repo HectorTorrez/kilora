@@ -20,12 +20,12 @@ export const Route = createRootRoute({
 			{
 				name: "theme-color",
 				media: "(prefers-color-scheme: light)",
-				content: "#f4f3ef",
+				content: "#eef1f4",
 			},
 			{
 				name: "theme-color",
 				media: "(prefers-color-scheme: dark)",
-				content: "#15181b",
+				content: "#0f141a",
 			},
 			{ title: "Kilora" },
 			{ name: "description", content: "Historial digital del vehículo" },

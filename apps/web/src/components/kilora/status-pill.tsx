@@ -2,13 +2,13 @@ import { statusCopy, type VehicleStatus } from "@/lib/demo";
 import { cn } from "@/lib/utils";
 
 const styles: Record<VehicleStatus, string> = {
-	ok: "bg-seal-soft text-seal",
+	ok: "bg-ok-soft text-ok",
 	due: "bg-secondary text-ink-2",
 	shop: "bg-warn-soft text-warn",
 };
 
 const dots: Record<VehicleStatus, string> = {
-	ok: "bg-seal",
+	ok: "bg-ok",
 	due: "bg-ink-3",
 	shop: "bg-warn",
 };
