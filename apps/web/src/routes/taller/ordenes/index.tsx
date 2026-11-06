@@ -19,7 +19,7 @@ const filters = [
 ] as const;
 
 const statusStyles: Record<Order["status"], string> = {
-	registrada: "bg-seal-soft text-seal",
+	registrada: "bg-ok-soft text-ok",
 	cotizacion: "bg-warn-soft text-warn",
 	borrador: "bg-secondary text-ink-2",
 };
