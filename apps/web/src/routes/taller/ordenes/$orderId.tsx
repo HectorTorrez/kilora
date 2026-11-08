@@ -182,7 +182,7 @@ function OrderDetail({
 					}}
 				>
 					<h2 className="font-semibold">Datos de la orden</h2>
-					<Label className="block" htmlFor="field-1">
+					<Label className="grid gap-2" htmlFor="field-1">
 						Motivo
 						<Input
 							id="field-1"
@@ -191,7 +191,7 @@ function OrderDetail({
 							onChange={(e) => setReason(e.target.value)}
 						/>
 					</Label>
-					<Label className="block" htmlFor="field-2">
+					<Label className="grid gap-2" htmlFor="field-2">
 						Kilometraje
 						<Input
 							id="field-2"
@@ -201,7 +201,7 @@ function OrderDetail({
 							onChange={(e) => setKm(e.target.value)}
 						/>
 					</Label>
-					<Label className="block" htmlFor="field-3">
+					<Label className="grid gap-2" htmlFor="field-3">
 						Notas públicas · las ve el propietario
 						<Textarea
 							id="field-3"
@@ -209,7 +209,7 @@ function OrderDetail({
 							onChange={(e) => setPublicNotes(e.target.value)}
 						/>
 					</Label>
-					<Label className="block" htmlFor="field-4">
+					<Label className="grid gap-2" htmlFor="field-4">
 						Notas internas · privadas del taller
 						<Textarea
 							id="field-4"

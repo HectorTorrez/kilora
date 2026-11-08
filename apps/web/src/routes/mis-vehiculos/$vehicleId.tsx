@@ -126,7 +126,7 @@ function Page() {
 						}}
 					>
 						<h2 className="font-bold">Agregar servicio</h2>
-						<Label className="block" htmlFor="service-date">
+						<Label className="grid gap-2" htmlFor="service-date">
 							Fecha
 							<Input
 								id="service-date"

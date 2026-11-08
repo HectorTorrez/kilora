@@ -98,14 +98,14 @@ function NewOrderPage() {
 						} catch {}
 					}}
 				>
-					<div>
+					<div className="grid gap-2">
 						<Label htmlFor="branch">Sucursal</Label>
 						<Select
 							value={branch || branches[0]?.branch_id || ""}
 							onValueChange={setBranch}
 							required
 						>
-							<SelectTrigger id="branch" className="mt-1 w-full">
+							<SelectTrigger id="branch" className="w-full">
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
@@ -117,7 +117,7 @@ function NewOrderPage() {
 							</SelectContent>
 						</Select>
 					</div>
-					<Label className="block" htmlFor="field-1">
+					<Label className="grid gap-2" htmlFor="field-1">
 						Motivo
 						<Input
 							id="field-1"
@@ -126,7 +126,7 @@ function NewOrderPage() {
 							onChange={(e) => setReason(e.target.value)}
 						/>
 					</Label>
-					<Label className="block" htmlFor="field-2">
+					<Label className="grid gap-2" htmlFor="field-2">
 						Kilometraje
 						<Input
 							id="field-2"
@@ -136,7 +136,7 @@ function NewOrderPage() {
 							onChange={(e) => setKm(e.target.value)}
 						/>
 					</Label>
-					<Label className="block" htmlFor="field-3">
+					<Label className="grid gap-2" htmlFor="field-3">
 						Notas internas · privadas del taller
 						<Textarea
 							id="field-3"

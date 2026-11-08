@@ -43,7 +43,7 @@ export function VehicleForm({
 				} catch {}
 			}}
 		>
-			<Label className="block" htmlFor="field-1">
+			<Label className="grid gap-2" htmlFor="field-1">
 				Placa (opcional)
 				<Input
 					id="field-1"
@@ -51,7 +51,7 @@ export function VehicleForm({
 					onChange={(e) => setPlate(e.target.value)}
 				/>
 			</Label>
-			<Label className="block" htmlFor="field-2">
+			<Label className="grid gap-2" htmlFor="field-2">
 				Marca
 				<Input
 					id="field-2"
@@ -60,7 +60,7 @@ export function VehicleForm({
 					onChange={(e) => setMake(e.target.value)}
 				/>
 			</Label>
-			<Label className="block" htmlFor="field-3">
+			<Label className="grid gap-2" htmlFor="field-3">
 				Modelo
 				<Input
 					id="field-3"
@@ -69,7 +69,7 @@ export function VehicleForm({
 					onChange={(e) => setModel(e.target.value)}
 				/>
 			</Label>
-			<Label className="block" htmlFor="field-4">
+			<Label className="grid gap-2" htmlFor="field-4">
 				Año
 				<Input
 					id="field-4"
@@ -78,7 +78,7 @@ export function VehicleForm({
 					onChange={(e) => setYear(e.target.value)}
 				/>
 			</Label>
-			<Label className="block" htmlFor="field-5">
+			<Label className="grid gap-2" htmlFor="field-5">
 				Nombre de contacto
 				<Input
 					id="field-5"
@@ -86,7 +86,7 @@ export function VehicleForm({
 					onChange={(e) => setName(e.target.value)}
 				/>
 			</Label>
-			<Label className="block" htmlFor="field-6">
+			<Label className="grid gap-2" htmlFor="field-6">
 				Teléfono (+503)
 				<Input
 					id="field-6"
