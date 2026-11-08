@@ -1137,6 +1137,41 @@
             "session": []
           }
         ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    }
+                  },
+                  "required": []
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ManualHistoryInput"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
       }
     },
     "/api/v1/workshops/{workshopID}/work-orders": {
@@ -2336,6 +2371,336 @@
           }
         }
       }
+    },
+    "/api/v1/public/invitations/{token}": {
+      "parameters": [
+        {
+          "name": "token",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicInvitation"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/invitations/{token}/accept": {
+      "parameters": [
+        {
+          "name": "token",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerVehicle"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "consent": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "consent"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workshops/{workshopID}/vehicles/{vehicleID}/invitations": {
+      "parameters": [
+        {
+          "name": "workshopID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "vehicleID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Invitation"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationResult"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationCreate"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/vehicles": {
+      "parameters": [],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OwnerVehicle"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerVehicle"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerVehicleInput"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/vehicles/{vehicleID}": {
+      "parameters": [
+        {
+          "name": "vehicleID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerVehicle"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/odometer": {
+      "parameters": [
+        {
+          "name": "vehicleID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "reading": {
+                      "type": "object"
+                    },
+                    "warning": {
+                      "type": "string"
+                    }
+                  },
+                  "required": []
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "km": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "km"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/corrections": {
+      "parameters": [
+        {
+          "name": "vehicleID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "post": {
+        "responses": {
+          "201": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectionInput"
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2779,6 +3144,12 @@
           "created_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "owner_linked": {
+            "type": "boolean"
+          },
+          "owner_name": {
+            "type": "string"
           }
         },
         "required": [
@@ -3837,6 +4208,280 @@
             "format": "date-time"
           }
         }
+      },
+      "InvitationCreate": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "InvitationResult": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "whatsapp_url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "whatsapp_url",
+          "expires_at"
+        ]
+      },
+      "Invitation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "aceptada",
+              "expirada",
+              "revocada"
+            ]
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "PublicInvitation": {
+        "type": "object",
+        "properties": {
+          "workshop_name": {
+            "type": "string"
+          },
+          "workshop_verified_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle": {
+            "type": "object",
+            "properties": {
+              "plate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "make": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "year": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              }
+            },
+            "required": []
+          },
+          "email_hint": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string"
+          }
+        },
+        "required": []
+      },
+      "OwnerVehicleInput": {
+        "type": "object",
+        "properties": {
+          "plate": {
+            "type": "string"
+          },
+          "make": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "make",
+          "model"
+        ]
+      },
+      "OwnerVehicle": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "plate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "make": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "last_odometer_km": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "history_count": {
+            "type": "integer"
+          },
+          "last_service": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "odometer_readings": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "workshops": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        },
+        "required": []
+      },
+      "ManualItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "trabajo",
+              "pieza"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "description"
+        ]
+      },
+      "ManualHistoryInput": {
+        "type": "object",
+        "properties": {
+          "performed_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "odometer_km": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ManualItem"
+            }
+          },
+          "total": {
+            "type": "string"
+          },
+          "workshop_name_text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "performed_on",
+          "summary"
+        ]
+      },
+      "CorrectionInput": {
+        "type": "object",
+        "properties": {
+          "history_record_id": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "changes": {
+            "type": "object",
+            "properties": {
+              "performed_on": {
+                "type": "string"
+              },
+              "odometer_km": {
+                "type": "integer"
+              },
+              "summary": {
+                "type": "string"
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ManualItem"
+                }
+              }
+            },
+            "required": []
+          }
+        },
+        "required": [
+          "history_record_id",
+          "reason",
+          "changes"
+        ]
       }
     }
   }

@@ -175,5 +175,14 @@ func (s *server) getVehicle(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "Error interno")
 		return
 	}
+	out["owner_linked"] = v.OwnerUserID.Valid
+	if v.OwnerUserID.Valid {
+		owner, e := sqlc.New(s.db).GetUserByID(r.Context(), v.OwnerUserID)
+		if e != nil {
+			fail(w, 500, "Error interno")
+			return
+		}
+		out["owner_name"] = owner.FullName
+	}
 	writeJSON(w, 200, out)
 }

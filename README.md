@@ -94,3 +94,9 @@ Las rutas siguientes requieren sesión y membresía en el taller. Los mecánicos
 - `POST /work-orders/{orderID}/quote/share` devuelve un enlace de solo lectura válido por 15 días y un enlace de WhatsApp; compartir de nuevo invalida el anterior. `PATCH /work-orders/{orderID}/quote/outcome` registra el resultado verbal (`acepto`, `rechazo`, `no_respondio`); después no se pueden editar los ítems. El detalle de la orden incluye la comparación entre cotización y cobro publicado.
 - `GET /api/v1/public/quotes/{token}` muestra la cotización compartida sin sesión y limita las consultas por IP.
 - `POST /work-orders/{orderID}/jobs` y `DELETE /work-orders/{orderID}/jobs/{jobID}` gestionan trabajos. `POST /work-orders/{orderID}/jobs/{jobID}/parts` y `DELETE /work-orders/{orderID}/jobs/{jobID}/parts/{partID}` gestionan piezas. Los importes se reciben como números o cadenas decimales con hasta dos decimales, en USD.
+
+### Invitaciones y propietario
+
+El taller (admin o recepción) crea y consulta invitaciones en `POST/GET /api/v1/workshops/{workshopID}/vehicles/{vehicleID}/invitations`. El enlace público se consulta en `GET /api/v1/public/invitations/{token}` y el usuario destinatario lo acepta con consentimiento explícito en `POST /api/v1/invitations/{token}/accept`.
+
+El propietario usa `GET/POST /api/v1/me/vehicles`, `GET /api/v1/me/vehicles/{vehicleID}`, `GET/POST /api/v1/me/vehicles/{vehicleID}/history`, `POST /api/v1/me/vehicles/{vehicleID}/corrections` y `POST /api/v1/me/vehicles/{vehicleID}/odometer`. Los importes se envían como cadenas decimales en USD. El nombre libre del taller en un servicio manual se guarda en las notas públicas como `Realizado en: …`; no crea un vínculo con ese taller. Las correcciones y lecturas son adiciones, no modifican registros anteriores.

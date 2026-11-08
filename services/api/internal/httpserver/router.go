@@ -52,6 +52,7 @@ func NewRouter(d Deps) http.Handler {
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/public/quotes/{token}", s.publicQuote)
+		r.Get("/public/invitations/{token}", s.publicInvitation)
 		r.Post("/auth/register", s.register)
 		r.Post("/auth/login", s.login)
 		r.Post("/auth/logout", s.logout)
@@ -61,7 +62,14 @@ func NewRouter(d Deps) http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(requireUser)
 			r.Get("/auth/me", s.me)
+			r.Post("/invitations/{token}/accept", s.acceptInvitation)
 			r.Post("/workshops", s.createWorkshop)
+			r.Get("/me/vehicles", s.listOwnerVehicles)
+			r.Post("/me/vehicles", s.createOwnerVehicle)
+			r.Get("/me/vehicles/{vehicleID}", s.getOwnerVehicle)
+			r.Post("/me/vehicles/{vehicleID}/history", s.manualHistory)
+			r.Post("/me/vehicles/{vehicleID}/corrections", s.ownerCorrection)
+			r.Post("/me/vehicles/{vehicleID}/odometer", s.addOdometer)
 			r.Get("/me/vehicles/{vehicleID}/history", s.history)
 			r.Route("/workshops/{workshopID}", func(r chi.Router) {
 				r.Use(s.requireWorkshop)
@@ -82,6 +90,8 @@ func NewRouter(d Deps) http.Handler {
 				r.Get("/vehicles", s.listVehicles)
 				r.Post("/vehicles", s.createVehicle)
 				r.Get("/vehicles/{vehicleID}", s.getVehicle)
+				r.Post("/vehicles/{vehicleID}/invitations", s.createInvitation)
+				r.Get("/vehicles/{vehicleID}/invitations", s.listInvitations)
 				r.Get("/vehicles/{vehicleID}/history", s.history)
 			})
 		})

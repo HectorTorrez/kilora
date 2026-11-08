@@ -469,6 +469,21 @@ type HistoryRecord struct {
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
+type Invitation struct {
+	ID         pgtype.UUID        `json:"id"`
+	VehicleID  pgtype.UUID        `json:"vehicle_id"`
+	WorkshopID pgtype.UUID        `json:"workshop_id"`
+	Email      string             `json:"email"`
+	TokenHash  string             `json:"token_hash"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	CreatedBy  pgtype.UUID        `json:"created_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	AcceptedAt pgtype.Timestamptz `json:"accepted_at"`
+	AcceptedBy pgtype.UUID        `json:"accepted_by"`
+	ConsentAt  pgtype.Timestamptz `json:"consent_at"`
+	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
+}
+
 type Job struct {
 	ID            pgtype.UUID        `json:"id"`
 	WorkOrderID   pgtype.UUID        `json:"work_order_id"`
