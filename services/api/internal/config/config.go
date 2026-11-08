@@ -10,11 +10,13 @@ import (
 )
 
 type Config struct {
-	Addr        string
-	DatabaseURL string
-	WebOrigin   string
-	SessionKey  string
-	Env         string
+	Addr         string
+	DatabaseURL  string
+	WebOrigin    string
+	SessionKey   string
+	ResendAPIKey string
+	EmailFrom    string
+	Env          string
 }
 
 // Load lee el .env de la raíz del repo si existe y valida lo indispensable.
@@ -27,11 +29,13 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Addr:        env("API_ADDR", ":8080"),
-		DatabaseURL: os.Getenv("DATABASE_URL"),
-		WebOrigin:   env("WEB_ORIGIN", "http://localhost:3000"),
-		SessionKey:  os.Getenv("SESSION_SECRET"),
-		Env:         env("APP_ENV", "development"),
+		Addr:         env("API_ADDR", ":8080"),
+		DatabaseURL:  os.Getenv("DATABASE_URL"),
+		WebOrigin:    env("WEB_ORIGIN", "http://localhost:3000"),
+		SessionKey:   os.Getenv("SESSION_SECRET"),
+		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
+		EmailFrom:    env("EMAIL_FROM", "no-reply@kilora.com"),
+		Env:          env("APP_ENV", "development"),
 	}
 
 	if cfg.DatabaseURL == "" {

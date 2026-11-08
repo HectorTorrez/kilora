@@ -11,6 +11,48 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AuthTokenPurpose string
+
+const (
+	AuthTokenPurposeVerifyEmail   AuthTokenPurpose = "verify_email"
+	AuthTokenPurposeResetPassword AuthTokenPurpose = "reset_password"
+)
+
+func (e *AuthTokenPurpose) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = AuthTokenPurpose(s)
+	case string:
+		*e = AuthTokenPurpose(s)
+	default:
+		return fmt.Errorf("unsupported scan type for AuthTokenPurpose: %T", src)
+	}
+	return nil
+}
+
+type NullAuthTokenPurpose struct {
+	AuthTokenPurpose AuthTokenPurpose `json:"auth_token_purpose"`
+	Valid            bool             `json:"valid"` // Valid is true if AuthTokenPurpose is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullAuthTokenPurpose) Scan(value interface{}) error {
+	if value == nil {
+		ns.AuthTokenPurpose, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.AuthTokenPurpose.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullAuthTokenPurpose) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.AuthTokenPurpose), nil
+}
+
 type HistorySource string
 
 const (
@@ -295,6 +337,15 @@ type AuditEvent struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+type AuthToken struct {
+	TokenHash string             `json:"token_hash"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Purpose   AuthTokenPurpose   `json:"purpose"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	UsedAt    pgtype.Timestamptz `json:"used_at"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type Branch struct {
 	ID         pgtype.UUID        `json:"id"`
 	WorkshopID pgtype.UUID        `json:"workshop_id"`
@@ -376,6 +427,16 @@ type Part struct {
 	InternalCost pgtype.Numeric     `json:"internal_cost"`
 	Currency     string             `json:"currency"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+}
+
+type Session struct {
+	ID         string             `json:"id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	LastSeenAt pgtype.Timestamptz `json:"last_seen_at"`
+	UserAgent  *string            `json:"user_agent"`
+	Ip         *string            `json:"ip"`
 }
 
 type Vehicle struct {

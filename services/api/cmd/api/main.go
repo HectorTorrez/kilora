@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"kilora/api/internal/auth"
 	"kilora/api/internal/config"
 	"kilora/api/internal/database"
 	"kilora/api/internal/httpserver"
@@ -39,12 +40,18 @@ func run(logger *slog.Logger) error {
 	}
 	defer pool.Close()
 
+	var mailer auth.Mailer = auth.LogMailer{Logger: logger}
+	if cfg.ResendAPIKey != "" {
+		mailer = auth.ResendMailer{APIKey: cfg.ResendAPIKey, From: cfg.EmailFrom}
+	}
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: httpserver.NewRouter(httpserver.Deps{
-			Logger:    logger,
-			DB:        pool,
-			WebOrigin: cfg.WebOrigin,
+			Logger:        logger,
+			DB:            pool,
+			WebOrigin:     cfg.WebOrigin,
+			Mailer:        mailer,
+			SecureCookies: cfg.IsProduction(),
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
