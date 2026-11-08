@@ -2250,6 +2250,346 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/workshops/{workshopID}/quotes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    outcome?: "pendiente" | "acepto" | "rechazo" | "no_respondio";
+                    limit?: number;
+                    offset?: number;
+                };
+                header?: never;
+                path: {
+                    workshopID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CounterQuoteList"];
+                    };
+                };
+                /** @description Datos inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CounterQuoteInput"];
+                };
+            };
+            responses: {
+                /** @description Cotización creada */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CounterQuote"];
+                    };
+                };
+                /** @description Datos inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    quoteID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CounterQuote"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    quoteID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CounterQuoteInput"];
+                };
+            };
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CounterQuote"];
+                    };
+                };
+                /** @description Datos inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    quoteID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QuoteOutcomeInput"];
+                };
+            };
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CounterQuote"];
+                    };
+                };
+                /** @description Datos inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    quoteID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QuoteShare"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}/convert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    quoteID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Orden creada a partir de la cotización */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QuoteConvertResult"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/quotes/{token}": {
         parameters: {
             query?: never;
@@ -3099,6 +3439,93 @@ export interface components {
             expires_at: string;
             whatsapp_url: string;
         };
+        CounterQuoteInput: {
+            customer_name: string;
+            customer_phone?: string | null;
+            /** Format: uuid */
+            vehicle_id?: string | null;
+            vehicle_make?: string | null;
+            vehicle_model: string;
+            vehicle_year?: number | null;
+            vehicle_plate?: string | null;
+            /** Format: uuid */
+            branch_id: string;
+            notes?: string | null;
+            /** @default 15 */
+            valid_days: number;
+            items: components["schemas"]["QuoteItem"][];
+        };
+        CounterQuoteSummary: {
+            /** Format: uuid */
+            id: string;
+            number: number;
+            customer_name: string | null;
+            customer_phone: string | null;
+            vehicle_make: string | null;
+            vehicle_model: string | null;
+            vehicle_year: number | null;
+            vehicle_plate: string | null;
+            total: string;
+            currency: string;
+            /** @enum {string} */
+            outcome: "pendiente" | "acepto" | "rechazo" | "no_respondio";
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date */
+            valid_until: string | null;
+            /** Format: uuid */
+            converted_order_id: string | null;
+            converted_order_number: number | null;
+        };
+        CounterQuoteList: {
+            items: components["schemas"]["CounterQuoteSummary"][];
+            total: number;
+        };
+        CounterQuote: {
+            /** Format: uuid */
+            id: string;
+            number: number;
+            /** Format: uuid */
+            branch_id: string;
+            branch_name: string;
+            workshop_name: string;
+            workshop_nit: string | null;
+            /** Format: date-time */
+            verified_at: string | null;
+            customer_name: string | null;
+            customer_phone: string | null;
+            /** Format: uuid */
+            vehicle_id: string | null;
+            vehicle_make: string | null;
+            vehicle_model: string | null;
+            vehicle_year: number | null;
+            vehicle_plate: string | null;
+            notes: string | null;
+            /** Format: date */
+            valid_until: string | null;
+            items: components["schemas"]["QuoteItem"][];
+            total: string;
+            currency: string;
+            /** @enum {string} */
+            outcome: "pendiente" | "acepto" | "rechazo" | "no_respondio";
+            /** Format: date-time */
+            outcome_at: string | null;
+            /** Format: uuid */
+            outcome_by: string | null;
+            /** Format: date-time */
+            shared_at: string | null;
+            /** Format: date-time */
+            share_expires_at: string | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: uuid */
+            converted_order_id: string | null;
+            converted_order_number: number | null;
+        };
+        QuoteConvertResult: {
+            /** Format: uuid */
+            order_id: string;
+        };
         PublicQuote: {
             workshop_name: string;
             /** Format: date-time */
@@ -3107,7 +3534,12 @@ export interface components {
             make: string;
             model: string;
             year: number | null;
-            order_number: number;
+            order_number: number | null;
+            quote_number: number;
+            customer_name: string | null;
+            notes: string | null;
+            /** Format: date */
+            valid_until: string | null;
             items: components["schemas"]["QuoteItem"][];
             total: string;
             currency: string;

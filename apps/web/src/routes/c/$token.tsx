@@ -4,7 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { date, money } from "@/lib/format";
+import { date, day, money } from "@/lib/format";
 
 const getQuote = createServerFn({ method: "GET" })
 	.validator((token: string) => token)
@@ -49,11 +49,16 @@ function PublicQuote() {
 				)}
 			</header>
 			<Card className="gap-0 rounded-lg p-5 shadow-none">
-				<p className="text-sm text-ink-3">Orden #{q.order_number}</p>
-				<h2 className="mt-1 text-xl font-semibold">{q.plate || "Sin placa"}</h2>
-				<p>
-					{q.make} {q.model} {q.year}
+				<p className="text-sm text-ink-3">
+					{q.order_number != null
+						? `Orden #${q.order_number}`
+						: `Cotización COT-${String(q.quote_number).padStart(4, "0")}`}
 				</p>
+				{q.customer_name ? (
+					<p className="mt-1 font-medium">{q.customer_name}</p>
+				) : null}
+				<h2 className="mt-1 text-xl font-semibold">{q.plate || "Sin placa"}</h2>
+				<p>{[q.make, q.model, q.year].filter(Boolean).join(" ")}</p>
 			</Card>
 			<Card className="gap-0 rounded-lg p-5 shadow-none">
 				<h2 className="mb-3 font-semibold">Detalle de cotización</h2>
@@ -84,8 +89,10 @@ function PublicQuote() {
 					<span>{money(q.total)}</span>
 				</p>
 			</Card>
+			{q.notes ? <p className="text-sm">{q.notes}</p> : null}
 			<p className="text-sm text-ink-3">
-				Enviada el {date(q.shared_at)} · válida hasta {date(q.share_expires_at)}
+				Enviada el {date(q.shared_at)} · válida hasta{" "}
+				{q.valid_until ? day(q.valid_until) : date(q.share_expires_at)}
 			</p>
 		</main>
 	);

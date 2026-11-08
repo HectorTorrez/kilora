@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ClipboardList, LayoutDashboard } from "lucide-react";
+import { ClipboardList, FileText, LayoutDashboard } from "lucide-react";
 import {
 	createContext,
 	type ReactNode,
@@ -27,6 +27,12 @@ const navigation = [
 		to: "/taller/ordenes",
 		label: "Órdenes",
 		icon: ClipboardList,
+		exact: false,
+	},
+	{
+		to: "/taller/cotizaciones",
+		label: "Cotizaciones",
+		icon: FileText,
 		exact: false,
 	},
 ];
@@ -72,8 +78,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 	};
 
 	return (
-		<div className="flex min-h-dvh bg-background">
-			<aside className="sticky top-0 hidden h-dvh w-[236px] shrink-0 flex-col gap-6 border-r bg-card px-3.5 pt-6 pb-4 lg:flex">
+		<div className="kilora-app flex min-h-dvh bg-background">
+			<aside className="print-hidden sticky top-0 hidden h-dvh w-[236px] shrink-0 flex-col gap-6 border-r bg-card px-3.5 pt-6 pb-4 lg:flex">
 				<div className="px-2.5">
 					<Link
 						to="/taller"
@@ -165,7 +171,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 			</aside>
 
 			<div className="min-w-0 flex-1">
-				<header className="flex items-center justify-between gap-4 border-b bg-card px-5 py-3 lg:hidden">
+				<header className="print-hidden flex items-center justify-between gap-4 border-b bg-card px-5 py-3 lg:hidden">
 					<Link
 						to="/taller"
 						className="font-display text-[15px] font-bold tracking-[0.2em]"
@@ -189,7 +195,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 					</nav>
 				</header>
 
-				<div className="flex items-center justify-between gap-2 border-b bg-card px-5 py-2 text-xs lg:hidden">
+				<div className="print-hidden flex items-center justify-between gap-2 border-b bg-card px-5 py-2 text-xs lg:hidden">
 					<span>
 						{me.user.full_name} · {active?.workshop_name}
 					</span>
@@ -207,7 +213,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 				{logout.error && (
 					<Alert
 						variant="destructive"
-						className="px-5 text-xs text-destructive lg:hidden"
+						className="print-hidden px-5 text-xs text-destructive lg:hidden"
 					>
 						<AlertDescription>{logout.error.message}</AlertDescription>
 					</Alert>

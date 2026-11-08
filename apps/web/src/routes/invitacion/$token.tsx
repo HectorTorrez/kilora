@@ -5,11 +5,15 @@ import {
 	notFound,
 	useNavigate,
 } from "@tanstack/react-router";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
+import { errorMessage } from "@/components/kilora/form-schemas";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RequiredMark } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { meQuery } from "@/lib/auth";
@@ -105,25 +109,40 @@ function Page() {
 									checked={consent}
 									onCheckedChange={(checked) => setConsent(checked === true)}
 									className="mt-1"
+									aria-required={true}
 								/>
-								Autorizo que {inv.workshop_name} registre los servicios de este
-								vehículo en mi historial Kilora y acceda a la información
-								compartida con talleres vinculados.
+								<span>
+									Autorizo que {inv.workshop_name} registre los servicios de
+									este vehículo en mi historial Kilora y acceda a la información
+									compartida con talleres vinculados.
+									<RequiredMark />
+								</span>
 							</Label>
 							<Button
+								className="w-full sm:w-auto"
 								disabled={!consent || accept.isPending}
 								onClick={async () => {
 									try {
 										const v = await accept.mutateAsync(token);
+										toast.success("Invitación aceptada");
 										if (v.id)
 											await navigate({
 												to: "/mis-vehiculos/$vehicleId",
 												params: { vehicleId: v.id },
 											});
-									} catch {}
+									} catch (error) {
+										toast.error(errorMessage(error));
+									}
 								}}
 							>
-								Aceptar invitación
+								{accept.isPending ? (
+									<>
+										<Loader2 className="animate-spin" />
+										Aceptando…
+									</>
+								) : (
+									"Aceptar invitación"
+								)}
 							</Button>
 							{accept.error && (
 								<Alert variant="destructive" className="text-destructive">

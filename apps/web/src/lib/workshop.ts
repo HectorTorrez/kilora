@@ -80,6 +80,56 @@ export const orderQuery = (workshopID: string, orderID: string) =>
 				}),
 			),
 	});
+export const counterQuotesQuery = (
+	workshopID: string,
+	q = "",
+	outcome?: S["CounterQuote"]["outcome"],
+) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "counter-quotes", q, outcome ?? ""],
+		queryFn: async () => {
+			if (import.meta.env.SSR) {
+				const params = new URLSearchParams();
+				if (q) params.set("q", q);
+				if (outcome) params.set("outcome", outcome);
+				params.set("limit", "50");
+				return get<S["CounterQuoteList"]>(
+					`/api/v1/workshops/${encodeURIComponent(workshopID)}/quotes?${params}`,
+				);
+			}
+			return unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/quotes", {
+					params: {
+						path: { workshopID },
+						query: { q: q || undefined, outcome, limit: 50 },
+					},
+				}),
+			);
+		},
+	});
+export const counterQuoteQuery = (workshopID: string, quoteID: string) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "counter-quote", quoteID],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/quotes/{quoteID}", {
+					params: { path: { workshopID, quoteID } },
+				}),
+			),
+	});
+const quoteShareKey = (quoteID: string) => `kilora-quote-share:${quoteID}`;
+export function rememberQuoteShare(quoteID: string, url: string) {
+	try {
+		sessionStorage.setItem(quoteShareKey(quoteID), url);
+	} catch {}
+}
+export function storedQuoteShare(quoteID: string) {
+	try {
+		return sessionStorage.getItem(quoteShareKey(quoteID)) ?? "";
+	} catch {
+		return "";
+	}
+}
 export const quoteQuery = (workshopID: string, orderID: string) =>
 	queryOptions({
 		queryKey: ["workshop", workshopID, "quote", orderID],
@@ -186,6 +236,48 @@ export const actions = (workshopID: string, orderID = "") => {
 				await api.PATCH(
 					"/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote/outcome",
 					{ params: { path }, body },
+				),
+			),
+	};
+};
+export const counterQuoteActions = (workshopID: string, quoteID = "") => {
+	const path = { workshopID, quoteID };
+	return {
+		create: async (body: S["CounterQuoteInput"]) =>
+			unwrap(
+				await api.POST("/api/v1/workshops/{workshopID}/quotes", {
+					params: { path: { workshopID } },
+					body,
+				}),
+			),
+		update: async (body: S["CounterQuoteInput"]) =>
+			unwrap(
+				await api.PUT("/api/v1/workshops/{workshopID}/quotes/{quoteID}", {
+					params: { path },
+					body,
+				}),
+			),
+		outcome: async (body: S["QuoteOutcomeInput"]) =>
+			unwrap(
+				await api.PATCH(
+					"/api/v1/workshops/{workshopID}/quotes/{quoteID}/outcome",
+					{ params: { path }, body },
+				),
+			),
+		share: async () =>
+			unwrap(
+				await api.POST(
+					"/api/v1/workshops/{workshopID}/quotes/{quoteID}/share",
+					{
+						params: { path },
+					},
+				),
+			),
+		convert: async () =>
+			unwrap(
+				await api.POST(
+					"/api/v1/workshops/{workshopID}/quotes/{quoteID}/convert",
+					{ params: { path } },
 				),
 			),
 	};

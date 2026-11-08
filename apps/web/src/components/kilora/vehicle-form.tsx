@@ -1,103 +1,135 @@
-import { useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Form } from "@/components/ui/form";
 import { actions, useWorkshopMutation } from "@/lib/workshop";
+import {
+	applyFormError,
+	FormActions,
+	NumberField,
+	RequiredLegend,
+	RootError,
+	SubmitButton,
+	TextField,
+} from "./form-fields";
+import {
+	maskSvPhone,
+	optionalPhone,
+	optionalText,
+	requiredText,
+	toSvPhone,
+	yearBounds,
+	yearField,
+} from "./form-schemas";
+
+const schema = z.object({
+	make: requiredText("Ingresá la marca"),
+	model: requiredText("Ingresá el modelo"),
+	year: yearField(false),
+	plate: optionalText,
+	contact_name: optionalText,
+	contact_phone: optionalPhone,
+});
 
 export function VehicleForm({
 	workshopID,
 	onCreated,
+	onCancel,
 }: {
 	workshopID: string;
-	onCreated: (id: string) => void;
+	onCreated: (vehicle: {
+		id: string;
+		plate: string | null;
+		make: string;
+		model: string;
+		year: number | null;
+	}) => void;
+	onCancel?: () => void;
 }) {
-	const [plate, setPlate] = useState("");
-	const [make, setMake] = useState("");
-	const [model, setModel] = useState("");
-	const [year, setYear] = useState("");
-	const [name, setName] = useState("");
-	const [phone, setPhone] = useState("");
+	const bounds = yearBounds();
 	const create = useWorkshopMutation(
 		workshopID,
 		actions(workshopID).createVehicle,
 	);
+	const form = useForm({
+		resolver: zodResolver(schema),
+		defaultValues: {
+			make: "",
+			model: "",
+			year: "",
+			plate: "",
+			contact_name: "",
+			contact_phone: "",
+		},
+	});
+	const submit = form.handleSubmit(async (values) => {
+		form.clearErrors("root");
+		try {
+			const vehicle = await create.mutateAsync({
+				plate: values.plate.toUpperCase() || null,
+				make: values.make,
+				model: values.model,
+				year: values.year ? Number(values.year) : null,
+				contact_name: values.contact_name || null,
+				contact_phone: toSvPhone(values.contact_phone),
+			});
+			toast.success("Vehículo registrado");
+			onCreated(vehicle);
+		} catch (error) {
+			applyFormError(form, error);
+		}
+	});
 	return (
-		<form
-			className="grid gap-3 sm:grid-cols-2"
-			onSubmit={async (e) => {
-				e.preventDefault();
-				try {
-					const vehicle = await create.mutateAsync({
-						plate: plate || null,
-						make,
-						model,
-						year: year ? Number(year) : null,
-						contact_name: name || null,
-						contact_phone: phone
-							? phone.startsWith("+503")
-								? phone
-								: `+503${phone}`
-							: null,
-					});
-					onCreated(vehicle.id);
-				} catch {}
-			}}
-		>
-			<Label className="grid gap-2" htmlFor="field-1">
-				Placa (opcional)
-				<Input
-					id="field-1"
-					value={plate}
-					onChange={(e) => setPlate(e.target.value)}
+		<Form {...form}>
+			<form onSubmit={submit} className="grid gap-5 sm:grid-cols-2" noValidate>
+				<RequiredLegend className="sm:col-span-2" />
+				<TextField name="make" label="Marca" autoFocus required />
+				<TextField name="model" label="Modelo" required />
+				<NumberField
+					name="year"
+					label="Año"
+					optional
+					min={bounds.min}
+					max={bounds.max}
+					step={1}
 				/>
-			</Label>
-			<Label className="grid gap-2" htmlFor="field-2">
-				Marca
-				<Input
-					id="field-2"
-					required
-					value={make}
-					onChange={(e) => setMake(e.target.value)}
+				<TextField
+					name="plate"
+					label="Placa"
+					optional
+					uppercase
+					placeholder="P123456"
 				/>
-			</Label>
-			<Label className="grid gap-2" htmlFor="field-3">
-				Modelo
-				<Input
-					id="field-3"
-					required
-					value={model}
-					onChange={(e) => setModel(e.target.value)}
+				<TextField name="contact_name" label="Nombre de contacto" optional />
+				<TextField
+					name="contact_phone"
+					label="Teléfono"
+					optional
+					prefix="+503"
+					inputMode="numeric"
+					autoComplete="tel"
+					normalize={maskSvPhone}
+					description="8 dígitos, sin el código de país"
 				/>
-			</Label>
-			<Label className="grid gap-2" htmlFor="field-4">
-				Año
-				<Input
-					id="field-4"
-					type="number"
-					value={year}
-					onChange={(e) => setYear(e.target.value)}
-				/>
-			</Label>
-			<Label className="grid gap-2" htmlFor="field-5">
-				Nombre de contacto
-				<Input
-					id="field-5"
-					value={name}
-					onChange={(e) => setName(e.target.value)}
-				/>
-			</Label>
-			<Label className="grid gap-2" htmlFor="field-6">
-				Teléfono (+503)
-				<Input
-					id="field-6"
-					type="tel"
-					value={phone}
-					onChange={(e) => setPhone(e.target.value)}
-				/>
-			</Label>
-			<Button disabled={create.isPending} type="submit">
-				Registrar vehículo
-			</Button>
-		</form>
+				<RootError />
+				<FormActions>
+					{onCancel ? (
+						<Button
+							type="button"
+							variant="outline"
+							className="w-full sm:w-auto"
+							onClick={onCancel}
+						>
+							Cancelar
+						</Button>
+					) : null}
+					<SubmitButton pending={create.isPending}>
+						Registrar vehículo
+					</SubmitButton>
+				</FormActions>
+			</form>
+		</Form>
 	);
 }

@@ -269,6 +269,41 @@
   }
 }
 
+@media print {
+  @page {
+    size: letter;
+    margin: 14mm;
+  }
+  html,
+  body,
+  #app,
+  .kilora-app {
+    background: #fff !important;
+    color: #000 !important;
+    min-height: 0 !important;
+  }
+  .print-hidden {
+    display: none !important;
+  }
+  .quote-sheet,
+  .quote-sheet * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  .quote-sheet {
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .quote-sheet tr,
+  .quote-sheet .avoid-break {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

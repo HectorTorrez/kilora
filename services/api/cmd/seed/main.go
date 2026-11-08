@@ -176,7 +176,7 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 				outcome = "acepto"
 			}
 			quoteID := uuid.New()
-			if err = exec("INSERT INTO quote(id,work_order_id,workshop_id,total,outcome,shared_at,share_expires_at,created_by,outcome_at,outcome_by) VALUES($1,$2,$3,90,$4,now(),now()+interval '15 days',$5::uuid,CASE WHEN $4::quote_outcome='acepto' THEN now() END,CASE WHEN $4::quote_outcome='acepto' THEN $5::uuid END)", quoteID, o, w, outcome, users[0]); err != nil {
+			if err = exec("INSERT INTO quote(id,work_order_id,workshop_id,branch_id,number,total,outcome,shared_at,share_expires_at,created_by,outcome_at,outcome_by) VALUES($1,$2,$3,$4,$5,90,$6,now(),now()+interval '15 days',$7::uuid,CASE WHEN $6::quote_outcome='acepto' THEN now() END,CASE WHEN $6::quote_outcome='acepto' THEN $7::uuid END)", quoteID, o, w, b2, i+1, outcome, users[0]); err != nil {
 				return err
 			}
 			if err = exec("INSERT INTO quote_item(quote_id,position,kind,description,quantity,unit_price) VALUES($1,1,'mano_de_obra','Revisión y reparación',1,90)", quoteID); err != nil {

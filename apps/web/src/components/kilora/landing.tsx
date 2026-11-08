@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { FAQS } from "@/lib/site";
 
 const NAV = [
@@ -229,29 +230,31 @@ function HistoryCard() {
 						<span className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
 							Ver como
 						</span>
-						<div className="inline-flex rounded-md border bg-surface p-0.5">
+						<ToggleGroup
+							type="single"
+							value={viewer}
+							onValueChange={(value) => {
+								if (value === "propietario" || value === "taller")
+									setViewer(value);
+							}}
+							spacing={1}
+							className="rounded-md border bg-surface p-0.5"
+						>
 							{(
 								[
 									["propietario", "Propietario"],
 									["taller", "Otro taller"],
 								] as const
 							).map(([value, label]) => (
-								<label
+								<ToggleGroupItem
 									key={value}
-									className="cursor-pointer rounded px-3 py-1 text-xs font-medium text-ink-3 transition-colors has-[:checked]:bg-card has-[:checked]:text-foreground has-[:checked]:shadow-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring/50"
+									value={value}
+									className="h-auto min-w-0 rounded px-3 py-1 text-xs font-medium text-ink-3 hover:bg-transparent hover:text-foreground data-[state=on]:bg-card data-[state=on]:text-foreground data-[state=on]:shadow-sm"
 								>
-									<input
-										type="radio"
-										name="viewer"
-										value={value}
-										checked={viewer === value}
-										onChange={() => setViewer(value)}
-										className="sr-only"
-									/>
 									{label}
-								</label>
+								</ToggleGroupItem>
 							))}
-						</div>
+						</ToggleGroup>
 					</div>
 				</fieldset>
 

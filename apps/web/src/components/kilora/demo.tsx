@@ -105,7 +105,7 @@ export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
 }
 export function DemoBanner({ email }: { email: string }) {
 	return email.toLowerCase().endsWith("@demo.kilora.app") ? (
-		<Alert className="rounded-none border-0 bg-secondary px-4 py-2 text-center text-xs">
+		<Alert className="print-hidden rounded-none border-0 bg-secondary px-4 py-2 text-center text-xs">
 			<AlertDescription className="block text-center text-xs">
 				Estás en la demo · los datos son compartidos con otros visitantes
 			</AlertDescription>

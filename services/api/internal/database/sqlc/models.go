@@ -531,20 +531,32 @@ type Part struct {
 }
 
 type Quote struct {
-	ID             pgtype.UUID        `json:"id"`
-	WorkOrderID    pgtype.UUID        `json:"work_order_id"`
-	WorkshopID     pgtype.UUID        `json:"workshop_id"`
-	Total          pgtype.Numeric     `json:"total"`
-	Currency       string             `json:"currency"`
-	Outcome        QuoteOutcome       `json:"outcome"`
-	OutcomeAt      pgtype.Timestamptz `json:"outcome_at"`
-	OutcomeBy      pgtype.UUID        `json:"outcome_by"`
-	ShareTokenHash *string            `json:"share_token_hash"`
-	SharedAt       pgtype.Timestamptz `json:"shared_at"`
-	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
-	CreatedBy      pgtype.UUID        `json:"created_by"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID               pgtype.UUID        `json:"id"`
+	WorkOrderID      pgtype.UUID        `json:"work_order_id"`
+	WorkshopID       pgtype.UUID        `json:"workshop_id"`
+	Total            pgtype.Numeric     `json:"total"`
+	Currency         string             `json:"currency"`
+	Outcome          QuoteOutcome       `json:"outcome"`
+	OutcomeAt        pgtype.Timestamptz `json:"outcome_at"`
+	OutcomeBy        pgtype.UUID        `json:"outcome_by"`
+	ShareTokenHash   *string            `json:"share_token_hash"`
+	SharedAt         pgtype.Timestamptz `json:"shared_at"`
+	ShareExpiresAt   pgtype.Timestamptz `json:"share_expires_at"`
+	CreatedBy        pgtype.UUID        `json:"created_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Number           int32              `json:"number"`
+	BranchID         pgtype.UUID        `json:"branch_id"`
+	CustomerName     *string            `json:"customer_name"`
+	CustomerPhone    *string            `json:"customer_phone"`
+	VehicleID        pgtype.UUID        `json:"vehicle_id"`
+	VehicleMake      *string            `json:"vehicle_make"`
+	VehicleModel     *string            `json:"vehicle_model"`
+	VehicleYear      *int32             `json:"vehicle_year"`
+	VehiclePlate     *string            `json:"vehicle_plate"`
+	Notes            *string            `json:"notes"`
+	ValidUntil       pgtype.Date        `json:"valid_until"`
+	ConvertedOrderID pgtype.UUID        `json:"converted_order_id"`
 }
 
 type QuoteItem struct {

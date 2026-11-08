@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	decimalpkg "github.com/shopspring/decimal"
 	"kilora/api/internal/auth"
@@ -21,6 +23,46 @@ import (
 
 var errQuoteFinalized = errors.New("cotización finalizada")
 var errQuoteNotFound = errors.New("cotización no encontrada")
+var errQuoteItemsEmpty = errors.New("cotización sin ítems")
+var errQuoteItemsInvalid = errors.New("ítems de cotización inválidos")
+var errQuoteConverted = errors.New("cotización convertida")
+var errQuoteRejected = errors.New("cotización rechazada")
+
+type parsedQuoteItem struct {
+	kind, description string
+	quantity, price   pgtype.Numeric
+}
+
+func parseQuoteItems(raw []quoteInputItem) ([]parsedQuoteItem, decimalpkg.Decimal, error) {
+	if len(raw) == 0 {
+		return nil, decimalpkg.Zero, errQuoteItemsEmpty
+	}
+	items := make([]parsedQuoteItem, 0, len(raw))
+	total := decimalpkg.Zero
+	for _, v := range raw {
+		q, a := decimal(v.Quantity, "")
+		p, b := decimal(v.UnitPrice, "")
+		v.Description = strings.TrimSpace(v.Description)
+		if !a || !b || !q.Valid || !p.Valid || q.Int.Sign() <= 0 || len(strings.Split(stringValue(q), ".")[0]) > 8 || v.Description == "" || (v.Kind != "repuesto" && v.Kind != "mano_de_obra") {
+			return nil, decimalpkg.Zero, errQuoteItemsInvalid
+		}
+		total = total.Add(money(q).Mul(money(p)).Round(2))
+		items = append(items, parsedQuoteItem{v.Kind, v.Description, q, p})
+	}
+	return items, total, nil
+}
+
+func replaceQuoteItems(ctx context.Context, q *sqlc.Queries, id pgtype.UUID, items []parsedQuoteItem) error {
+	if err := q.DeleteQuoteItems(ctx, id); err != nil {
+		return err
+	}
+	for i, v := range items {
+		if err := q.CreateQuoteItem(ctx, sqlc.CreateQuoteItemParams{QuoteID: id, Position: int32(i), Kind: sqlc.QuoteItemKind(v.kind), Description: v.description, Quantity: v.quantity, UnitPrice: v.price}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 type quoteInputItem struct {
 	Kind        string          `json:"kind"`
@@ -43,49 +85,43 @@ func (s *server) saveQuote(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	if len(in.Items) == 0 {
+	items, total, itemErr := parseQuoteItems(in.Items)
+	if errors.Is(itemErr, errQuoteItemsEmpty) {
 		fail(w, 400, "Agrega al menos un ítem")
 		return
 	}
-	type item struct {
-		kind, description string
-		quantity, price   pgtype.Numeric
-	}
-	var items []item
-	total := decimalpkg.Zero
-	for _, v := range in.Items {
-		q, a := decimal(v.Quantity, "")
-		p, b := decimal(v.UnitPrice, "")
-		v.Description = strings.TrimSpace(v.Description)
-		if !a || !b || !q.Valid || !p.Valid || q.Int.Sign() <= 0 || len(strings.Split(stringValue(q), ".")[0]) > 8 || v.Description == "" || (v.Kind != "repuesto" && v.Kind != "mano_de_obra") {
-			fail(w, 400, "Datos de cotización inválidos")
-			return
-		}
-		total = total.Add(money(q).Mul(money(p)).Round(2))
-		items = append(items, item{v.Kind, v.Description, q, p})
+	if itemErr != nil {
+		fail(w, 400, "Datos de cotización inválidos")
+		return
 	}
 	ctx := r.Context()
-	e := database.WithTx(ctx, s.db, func(q *sqlc.Queries) error {
-		if _, err := q.LockWorkOrder(ctx, sqlc.LockWorkOrderParams{ID: o.ID, WorkshopID: o.WorkshopID}); err != nil {
-			return err
-		}
-		quote, err := q.UpsertQuote(ctx, sqlc.UpsertQuoteParams{WorkOrderID: o.ID, WorkshopID: o.WorkshopID, Total: dbMoney(total), CreatedBy: dbUUID(wc.UserID)})
-		if errors.Is(err, pgx.ErrNoRows) {
-			return errQuoteFinalized
-		}
-		if err != nil {
-			return err
-		}
-		if err = q.DeleteQuoteItems(ctx, quote.ID); err != nil {
-			return err
-		}
-		for i, v := range items {
-			if err = q.CreateQuoteItem(ctx, sqlc.CreateQuoteItemParams{QuoteID: quote.ID, Position: int32(i), Kind: sqlc.QuoteItemKind(v.kind), Description: v.description, Quantity: v.quantity, UnitPrice: v.price}); err != nil {
+	var e error
+	for attempt := 0; attempt < 3; attempt++ {
+		e = database.WithTx(ctx, s.db, func(q *sqlc.Queries) error {
+			if _, err := q.LockWorkOrder(ctx, sqlc.LockWorkOrderParams{ID: o.ID, WorkshopID: o.WorkshopID}); err != nil {
 				return err
 			}
+			number, err := orderQuoteNumber(ctx, q, o)
+			if err != nil {
+				return err
+			}
+			quote, err := q.UpsertQuote(ctx, sqlc.UpsertQuoteParams{WorkOrderID: o.ID, WorkshopID: o.WorkshopID, BranchID: o.BranchID, Number: number, Total: dbMoney(total), CreatedBy: dbUUID(wc.UserID)})
+			if errors.Is(err, pgx.ErrNoRows) {
+				return errQuoteFinalized
+			}
+			if err != nil {
+				return err
+			}
+			if err = replaceQuoteItems(ctx, q, quote.ID, items); err != nil {
+				return err
+			}
+			return audit(ctx, q, wc, quote.ID, "quote", "quote.save")
+		})
+		var pe *pgconn.PgError
+		if !errors.As(e, &pe) || pe.Code != "23505" {
+			break
 		}
-		return audit(ctx, q, wc, quote.ID, "quote", "quote.save")
-	})
+	}
 	if errors.Is(e, errQuoteFinalized) {
 		fail(w, 409, "La cotización ya tiene resultado")
 		return
@@ -95,6 +131,24 @@ func (s *server) saveQuote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.getQuote(w, r)
+}
+
+func orderQuoteNumber(ctx context.Context, q *sqlc.Queries, o sqlc.WorkOrder) (int32, error) {
+	meta, err := q.GetOrderQuoteMeta(ctx, sqlc.GetOrderQuoteMetaParams{WorkOrderID: o.ID, WorkshopID: o.WorkshopID})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return q.NextQuoteNumber(ctx, o.WorkshopID)
+	}
+	if err != nil {
+		return 0, err
+	}
+	return meta.Number, nil
+}
+
+func dateValue(v pgtype.Date) any {
+	if !v.Valid {
+		return nil
+	}
+	return v.Time.Format("2006-01-02")
 }
 
 func nullableTime(v pgtype.Timestamptz) *time.Time {
@@ -120,10 +174,7 @@ func (s *server) quoteData(r *http.Request, id pgtype.UUID) (map[string]any, err
 	if err != nil {
 		return nil, err
 	}
-	items := []any{}
-	for _, v := range rows {
-		items = append(items, map[string]any{"kind": v.Kind, "description": v.Description, "quantity": v.Quantity, "unit_price": v.UnitPrice})
-	}
+	items := quoteItemJSON(rows)
 	return map[string]any{"items": items, "total": data.Total, "currency": data.Currency, "outcome": data.Outcome, "outcome_at": nullableTime(data.OutcomeAt), "outcome_by": nullableUUID(data.OutcomeBy), "shared_at": nullableTime(data.SharedAt), "share_expires_at": nullableTime(data.ShareExpiresAt)}, nil
 }
 func (s *server) getQuote(w http.ResponseWriter, r *http.Request) {
@@ -258,5 +309,9 @@ func (s *server) publicQuote(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "Error interno")
 		return
 	}
-	writeJSON(w, 200, map[string]any{"workshop_name": public.Name, "verified_at": nullableTime(public.VerifiedAt), "plate": public.Plate, "make": public.Make, "model": public.Model, "year": public.Year, "order_number": public.Number, "items": v["items"], "total": v["total"], "currency": v["currency"], "shared_at": nullableTime(public.SharedAt), "share_expires_at": nullableTime(public.ShareExpiresAt)})
+	var orderNumber any
+	if public.OrderNumber != nil {
+		orderNumber = *public.OrderNumber
+	}
+	writeJSON(w, 200, map[string]any{"workshop_name": public.Name, "verified_at": nullableTime(public.VerifiedAt), "plate": public.Plate, "make": public.Make, "model": public.Model, "year": public.Year, "order_number": orderNumber, "quote_number": public.QuoteNumber, "customer_name": public.CustomerName, "notes": public.Notes, "valid_until": dateValue(public.ValidUntil), "items": v["items"], "total": v["total"], "currency": v["currency"], "shared_at": nullableTime(public.SharedAt), "share_expires_at": nullableTime(public.ShareExpiresAt)})
 }

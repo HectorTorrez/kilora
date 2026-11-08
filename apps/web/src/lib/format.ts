@@ -1,3 +1,6 @@
+export const quoteCode = (number: number) =>
+	`COT-${String(number).padStart(4, "0")}`;
+
 export const money = (value: number | string) =>
 	new Intl.NumberFormat("es-SV", { style: "currency", currency: "USD" }).format(
 		Number(value),

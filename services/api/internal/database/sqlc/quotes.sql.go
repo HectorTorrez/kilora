@@ -11,6 +11,82 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createCounterQuote = `-- name: CreateCounterQuote :one
+INSERT INTO quote (
+  workshop_id, branch_id, number, customer_name, customer_phone, vehicle_id,
+  vehicle_make, vehicle_model, vehicle_year, vehicle_plate, notes, valid_until, total, created_by
+) VALUES (
+  $1, $2, $3, $4, $5, $6,
+  $7, $8, $9, $10, $11, $12, $13, $14
+) RETURNING id, work_order_id, workshop_id, total, currency, outcome, outcome_at, outcome_by, share_token_hash, shared_at, share_expires_at, created_by, created_at, updated_at, number, branch_id, customer_name, customer_phone, vehicle_id, vehicle_make, vehicle_model, vehicle_year, vehicle_plate, notes, valid_until, converted_order_id
+`
+
+type CreateCounterQuoteParams struct {
+	WorkshopID    pgtype.UUID    `json:"workshop_id"`
+	BranchID      pgtype.UUID    `json:"branch_id"`
+	Number        int32          `json:"number"`
+	CustomerName  *string        `json:"customer_name"`
+	CustomerPhone *string        `json:"customer_phone"`
+	VehicleID     pgtype.UUID    `json:"vehicle_id"`
+	VehicleMake   *string        `json:"vehicle_make"`
+	VehicleModel  *string        `json:"vehicle_model"`
+	VehicleYear   *int32         `json:"vehicle_year"`
+	VehiclePlate  *string        `json:"vehicle_plate"`
+	Notes         *string        `json:"notes"`
+	ValidUntil    pgtype.Date    `json:"valid_until"`
+	Total         pgtype.Numeric `json:"total"`
+	CreatedBy     pgtype.UUID    `json:"created_by"`
+}
+
+func (q *Queries) CreateCounterQuote(ctx context.Context, arg CreateCounterQuoteParams) (Quote, error) {
+	row := q.db.QueryRow(ctx, createCounterQuote,
+		arg.WorkshopID,
+		arg.BranchID,
+		arg.Number,
+		arg.CustomerName,
+		arg.CustomerPhone,
+		arg.VehicleID,
+		arg.VehicleMake,
+		arg.VehicleModel,
+		arg.VehicleYear,
+		arg.VehiclePlate,
+		arg.Notes,
+		arg.ValidUntil,
+		arg.Total,
+		arg.CreatedBy,
+	)
+	var i Quote
+	err := row.Scan(
+		&i.ID,
+		&i.WorkOrderID,
+		&i.WorkshopID,
+		&i.Total,
+		&i.Currency,
+		&i.Outcome,
+		&i.OutcomeAt,
+		&i.OutcomeBy,
+		&i.ShareTokenHash,
+		&i.SharedAt,
+		&i.ShareExpiresAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Number,
+		&i.BranchID,
+		&i.CustomerName,
+		&i.CustomerPhone,
+		&i.VehicleID,
+		&i.VehicleMake,
+		&i.VehicleModel,
+		&i.VehicleYear,
+		&i.VehiclePlate,
+		&i.Notes,
+		&i.ValidUntil,
+		&i.ConvertedOrderID,
+	)
+	return i, err
+}
+
 const createQuoteItem = `-- name: CreateQuoteItem :exec
 INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price) VALUES ($1, $2, $3, $4, $5, $6)
 `
@@ -45,8 +121,133 @@ func (q *Queries) DeleteQuoteItems(ctx context.Context, quoteID pgtype.UUID) err
 	return err
 }
 
+const getCounterQuote = `-- name: GetCounterQuote :one
+SELECT
+  q.id, q.workshop_id, q.branch_id, q.number, q.customer_name, q.customer_phone, q.vehicle_id,
+  q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate, q.notes, q.valid_until,
+  q.total::text AS total, q.currency, q.outcome::text AS outcome, q.outcome_at, q.outcome_by,
+  q.shared_at, q.share_expires_at, q.created_at, q.work_order_id, q.converted_order_id,
+  w.name AS workshop_name, w.nit AS workshop_nit, w.verified_at, b.name AS branch_name,
+  o.number AS converted_order_number
+FROM quote q
+JOIN workshop w ON w.id = q.workshop_id
+JOIN branch b ON b.id = q.branch_id
+LEFT JOIN work_order o ON o.id = q.converted_order_id
+WHERE q.id = $1 AND q.workshop_id = $2
+  AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
+`
+
+type GetCounterQuoteParams struct {
+	ID         pgtype.UUID `json:"id"`
+	WorkshopID pgtype.UUID `json:"workshop_id"`
+}
+
+type GetCounterQuoteRow struct {
+	ID                   pgtype.UUID        `json:"id"`
+	WorkshopID           pgtype.UUID        `json:"workshop_id"`
+	BranchID             pgtype.UUID        `json:"branch_id"`
+	Number               int32              `json:"number"`
+	CustomerName         *string            `json:"customer_name"`
+	CustomerPhone        *string            `json:"customer_phone"`
+	VehicleID            pgtype.UUID        `json:"vehicle_id"`
+	VehicleMake          *string            `json:"vehicle_make"`
+	VehicleModel         *string            `json:"vehicle_model"`
+	VehicleYear          *int32             `json:"vehicle_year"`
+	VehiclePlate         *string            `json:"vehicle_plate"`
+	Notes                *string            `json:"notes"`
+	ValidUntil           pgtype.Date        `json:"valid_until"`
+	Total                string             `json:"total"`
+	Currency             string             `json:"currency"`
+	Outcome              string             `json:"outcome"`
+	OutcomeAt            pgtype.Timestamptz `json:"outcome_at"`
+	OutcomeBy            pgtype.UUID        `json:"outcome_by"`
+	SharedAt             pgtype.Timestamptz `json:"shared_at"`
+	ShareExpiresAt       pgtype.Timestamptz `json:"share_expires_at"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	WorkOrderID          pgtype.UUID        `json:"work_order_id"`
+	ConvertedOrderID     pgtype.UUID        `json:"converted_order_id"`
+	WorkshopName         string             `json:"workshop_name"`
+	WorkshopNit          *string            `json:"workshop_nit"`
+	VerifiedAt           pgtype.Timestamptz `json:"verified_at"`
+	BranchName           string             `json:"branch_name"`
+	ConvertedOrderNumber *int32             `json:"converted_order_number"`
+}
+
+func (q *Queries) GetCounterQuote(ctx context.Context, arg GetCounterQuoteParams) (GetCounterQuoteRow, error) {
+	row := q.db.QueryRow(ctx, getCounterQuote, arg.ID, arg.WorkshopID)
+	var i GetCounterQuoteRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkshopID,
+		&i.BranchID,
+		&i.Number,
+		&i.CustomerName,
+		&i.CustomerPhone,
+		&i.VehicleID,
+		&i.VehicleMake,
+		&i.VehicleModel,
+		&i.VehicleYear,
+		&i.VehiclePlate,
+		&i.Notes,
+		&i.ValidUntil,
+		&i.Total,
+		&i.Currency,
+		&i.Outcome,
+		&i.OutcomeAt,
+		&i.OutcomeBy,
+		&i.SharedAt,
+		&i.ShareExpiresAt,
+		&i.CreatedAt,
+		&i.WorkOrderID,
+		&i.ConvertedOrderID,
+		&i.WorkshopName,
+		&i.WorkshopNit,
+		&i.VerifiedAt,
+		&i.BranchName,
+		&i.ConvertedOrderNumber,
+	)
+	return i, err
+}
+
+const getOrderQuoteMeta = `-- name: GetOrderQuoteMeta :one
+SELECT id, number FROM quote WHERE work_order_id = $1 AND workshop_id = $2
+`
+
+type GetOrderQuoteMetaParams struct {
+	WorkOrderID pgtype.UUID `json:"work_order_id"`
+	WorkshopID  pgtype.UUID `json:"workshop_id"`
+}
+
+type GetOrderQuoteMetaRow struct {
+	ID     pgtype.UUID `json:"id"`
+	Number int32       `json:"number"`
+}
+
+func (q *Queries) GetOrderQuoteMeta(ctx context.Context, arg GetOrderQuoteMetaParams) (GetOrderQuoteMetaRow, error) {
+	row := q.db.QueryRow(ctx, getOrderQuoteMeta, arg.WorkOrderID, arg.WorkshopID)
+	var i GetOrderQuoteMetaRow
+	err := row.Scan(&i.ID, &i.Number)
+	return i, err
+}
+
 const getPublicQuote = `-- name: GetPublicQuote :one
-SELECT q.id, w.name, w.verified_at, v.plate, v.make, v.model, v.year, o.number, q.shared_at, q.share_expires_at FROM quote q JOIN work_order o ON o.id = q.work_order_id JOIN workshop w ON w.id = q.workshop_id JOIN vehicle v ON v.id = o.vehicle_id WHERE q.share_token_hash = $1 AND q.share_expires_at > now()
+SELECT q.id, w.name, w.verified_at,
+  COALESCE(q.vehicle_plate, v.plate) AS plate,
+  COALESCE(q.vehicle_make, v.make, '') AS make,
+  COALESCE(q.vehicle_model, v.model, '') AS model,
+  COALESCE(q.vehicle_year, v.year) AS year,
+  o.number AS order_number,
+  q.number AS quote_number,
+  q.customer_name,
+  q.notes,
+  q.valid_until,
+  q.shared_at,
+  q.share_expires_at
+FROM quote q
+JOIN workshop w ON w.id = q.workshop_id
+LEFT JOIN work_order o ON o.id = q.work_order_id
+LEFT JOIN vehicle v ON v.id = COALESCE(o.vehicle_id, q.vehicle_id)
+WHERE q.share_token_hash = $1 AND q.share_expires_at > now()
 `
 
 type GetPublicQuoteRow struct {
@@ -57,7 +258,11 @@ type GetPublicQuoteRow struct {
 	Make           string             `json:"make"`
 	Model          string             `json:"model"`
 	Year           *int32             `json:"year"`
-	Number         int32              `json:"number"`
+	OrderNumber    *int32             `json:"order_number"`
+	QuoteNumber    int32              `json:"quote_number"`
+	CustomerName   *string            `json:"customer_name"`
+	Notes          *string            `json:"notes"`
+	ValidUntil     pgtype.Date        `json:"valid_until"`
 	SharedAt       pgtype.Timestamptz `json:"shared_at"`
 	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
 }
@@ -73,7 +278,11 @@ func (q *Queries) GetPublicQuote(ctx context.Context, shareTokenHash *string) (G
 		&i.Make,
 		&i.Model,
 		&i.Year,
-		&i.Number,
+		&i.OrderNumber,
+		&i.QuoteNumber,
+		&i.CustomerName,
+		&i.Notes,
+		&i.ValidUntil,
 		&i.SharedAt,
 		&i.ShareExpiresAt,
 	)
@@ -142,6 +351,98 @@ func (q *Queries) GetQuoteIDByOrder(ctx context.Context, arg GetQuoteIDByOrderPa
 	return id, err
 }
 
+const listCounterQuotes = `-- name: ListCounterQuotes :many
+SELECT
+  q.id, q.number, q.customer_name, q.customer_phone, q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate,
+  q.total::text AS total, q.currency, q.outcome::text AS outcome, q.created_at, q.valid_until,
+  q.converted_order_id, o.number AS converted_order_number, COUNT(*) OVER() AS total_count
+FROM quote q
+LEFT JOIN work_order o ON o.id = q.converted_order_id
+WHERE q.workshop_id = $1
+  AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
+  AND ($2::quote_outcome IS NULL OR q.outcome = $2)
+  AND (
+    $3::text IS NULL
+    OR q.customer_name ILIKE $3 ESCAPE '\'
+    OR COALESCE(q.customer_phone, '') ILIKE $3 ESCAPE '\'
+    OR COALESCE(q.vehicle_plate, '') ILIKE $3 ESCAPE '\'
+    OR q.number::text ILIKE $3 ESCAPE '\'
+    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $3 ESCAPE '\'
+  )
+ORDER BY q.created_at DESC, q.number DESC
+LIMIT $5 OFFSET $4
+`
+
+type ListCounterQuotesParams struct {
+	WorkshopID pgtype.UUID   `json:"workshop_id"`
+	Outcome    *QuoteOutcome `json:"outcome"`
+	Search     *string       `json:"search"`
+	RowOffset  int32         `json:"row_offset"`
+	RowLimit   int32         `json:"row_limit"`
+}
+
+type ListCounterQuotesRow struct {
+	ID                   pgtype.UUID        `json:"id"`
+	Number               int32              `json:"number"`
+	CustomerName         *string            `json:"customer_name"`
+	CustomerPhone        *string            `json:"customer_phone"`
+	VehicleMake          *string            `json:"vehicle_make"`
+	VehicleModel         *string            `json:"vehicle_model"`
+	VehicleYear          *int32             `json:"vehicle_year"`
+	VehiclePlate         *string            `json:"vehicle_plate"`
+	Total                string             `json:"total"`
+	Currency             string             `json:"currency"`
+	Outcome              string             `json:"outcome"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	ValidUntil           pgtype.Date        `json:"valid_until"`
+	ConvertedOrderID     pgtype.UUID        `json:"converted_order_id"`
+	ConvertedOrderNumber *int32             `json:"converted_order_number"`
+	TotalCount           int64              `json:"total_count"`
+}
+
+func (q *Queries) ListCounterQuotes(ctx context.Context, arg ListCounterQuotesParams) ([]ListCounterQuotesRow, error) {
+	rows, err := q.db.Query(ctx, listCounterQuotes,
+		arg.WorkshopID,
+		arg.Outcome,
+		arg.Search,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCounterQuotesRow{}
+	for rows.Next() {
+		var i ListCounterQuotesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Number,
+			&i.CustomerName,
+			&i.CustomerPhone,
+			&i.VehicleMake,
+			&i.VehicleModel,
+			&i.VehicleYear,
+			&i.VehiclePlate,
+			&i.Total,
+			&i.Currency,
+			&i.Outcome,
+			&i.CreatedAt,
+			&i.ValidUntil,
+			&i.ConvertedOrderID,
+			&i.ConvertedOrderNumber,
+			&i.TotalCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listQuoteItems = `-- name: ListQuoteItems :many
 SELECT kind::text, description, quantity::text, unit_price::text FROM quote_item WHERE quote_id = $1 ORDER BY position
 `
@@ -178,6 +479,127 @@ func (q *Queries) ListQuoteItems(ctx context.Context, quoteID pgtype.UUID) ([]Li
 	return items, nil
 }
 
+const lockCounterQuote = `-- name: LockCounterQuote :one
+SELECT id, number, outcome::text AS outcome, branch_id, vehicle_id, customer_name, customer_phone,
+  vehicle_make, vehicle_model, vehicle_year, vehicle_plate, work_order_id, converted_order_id
+FROM quote
+WHERE id = $1 AND workshop_id = $2
+  AND (work_order_id IS NULL OR converted_order_id IS NOT NULL)
+FOR UPDATE
+`
+
+type LockCounterQuoteParams struct {
+	ID         pgtype.UUID `json:"id"`
+	WorkshopID pgtype.UUID `json:"workshop_id"`
+}
+
+type LockCounterQuoteRow struct {
+	ID               pgtype.UUID `json:"id"`
+	Number           int32       `json:"number"`
+	Outcome          string      `json:"outcome"`
+	BranchID         pgtype.UUID `json:"branch_id"`
+	VehicleID        pgtype.UUID `json:"vehicle_id"`
+	CustomerName     *string     `json:"customer_name"`
+	CustomerPhone    *string     `json:"customer_phone"`
+	VehicleMake      *string     `json:"vehicle_make"`
+	VehicleModel     *string     `json:"vehicle_model"`
+	VehicleYear      *int32      `json:"vehicle_year"`
+	VehiclePlate     *string     `json:"vehicle_plate"`
+	WorkOrderID      pgtype.UUID `json:"work_order_id"`
+	ConvertedOrderID pgtype.UUID `json:"converted_order_id"`
+}
+
+func (q *Queries) LockCounterQuote(ctx context.Context, arg LockCounterQuoteParams) (LockCounterQuoteRow, error) {
+	row := q.db.QueryRow(ctx, lockCounterQuote, arg.ID, arg.WorkshopID)
+	var i LockCounterQuoteRow
+	err := row.Scan(
+		&i.ID,
+		&i.Number,
+		&i.Outcome,
+		&i.BranchID,
+		&i.VehicleID,
+		&i.CustomerName,
+		&i.CustomerPhone,
+		&i.VehicleMake,
+		&i.VehicleModel,
+		&i.VehicleYear,
+		&i.VehiclePlate,
+		&i.WorkOrderID,
+		&i.ConvertedOrderID,
+	)
+	return i, err
+}
+
+const markQuoteConverted = `-- name: MarkQuoteConverted :one
+UPDATE quote SET
+  work_order_id = $1,
+  converted_order_id = $2,
+  outcome = 'acepto',
+  outcome_at = now(),
+  outcome_by = $3
+WHERE id = $4 AND workshop_id = $5
+  AND work_order_id IS NULL AND converted_order_id IS NULL AND outcome <> 'rechazo'
+RETURNING id
+`
+
+type MarkQuoteConvertedParams struct {
+	WorkOrderID      pgtype.UUID `json:"work_order_id"`
+	ConvertedOrderID pgtype.UUID `json:"converted_order_id"`
+	OutcomeBy        pgtype.UUID `json:"outcome_by"`
+	ID               pgtype.UUID `json:"id"`
+	WorkshopID       pgtype.UUID `json:"workshop_id"`
+}
+
+func (q *Queries) MarkQuoteConverted(ctx context.Context, arg MarkQuoteConvertedParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, markQuoteConverted,
+		arg.WorkOrderID,
+		arg.ConvertedOrderID,
+		arg.OutcomeBy,
+		arg.ID,
+		arg.WorkshopID,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const nextQuoteNumber = `-- name: NextQuoteNumber :one
+SELECT (COALESCE(MAX(number), 0) + 1)::int AS number FROM quote WHERE workshop_id = $1
+`
+
+func (q *Queries) NextQuoteNumber(ctx context.Context, workshopID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, nextQuoteNumber, workshopID)
+	var number int32
+	err := row.Scan(&number)
+	return number, err
+}
+
+const setCounterQuoteOutcome = `-- name: SetCounterQuoteOutcome :one
+UPDATE quote SET outcome = $1, outcome_at = now(), outcome_by = $2
+WHERE id = $3 AND workshop_id = $4
+  AND work_order_id IS NULL AND converted_order_id IS NULL
+RETURNING id
+`
+
+type SetCounterQuoteOutcomeParams struct {
+	Outcome    QuoteOutcome `json:"outcome"`
+	OutcomeBy  pgtype.UUID  `json:"outcome_by"`
+	ID         pgtype.UUID  `json:"id"`
+	WorkshopID pgtype.UUID  `json:"workshop_id"`
+}
+
+func (q *Queries) SetCounterQuoteOutcome(ctx context.Context, arg SetCounterQuoteOutcomeParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, setCounterQuoteOutcome,
+		arg.Outcome,
+		arg.OutcomeBy,
+		arg.ID,
+		arg.WorkshopID,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const setQuoteOutcome = `-- name: SetQuoteOutcome :one
 UPDATE quote SET outcome = $1, outcome_at = now(), outcome_by = $2 WHERE work_order_id = $3 AND workshop_id = $4 RETURNING id
 `
@@ -199,6 +621,32 @@ func (q *Queries) SetQuoteOutcome(ctx context.Context, arg SetQuoteOutcomeParams
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const shareCounterQuote = `-- name: ShareCounterQuote :one
+UPDATE quote SET share_token_hash = $1, shared_at = now(), share_expires_at = now() + interval '15 days'
+WHERE id = $2 AND workshop_id = $3
+  AND (work_order_id IS NULL OR converted_order_id IS NOT NULL)
+RETURNING id, share_expires_at, total::text
+`
+
+type ShareCounterQuoteParams struct {
+	ShareTokenHash *string     `json:"share_token_hash"`
+	ID             pgtype.UUID `json:"id"`
+	WorkshopID     pgtype.UUID `json:"workshop_id"`
+}
+
+type ShareCounterQuoteRow struct {
+	ID             pgtype.UUID        `json:"id"`
+	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
+	Total          string             `json:"total"`
+}
+
+func (q *Queries) ShareCounterQuote(ctx context.Context, arg ShareCounterQuoteParams) (ShareCounterQuoteRow, error) {
+	row := q.db.QueryRow(ctx, shareCounterQuote, arg.ShareTokenHash, arg.ID, arg.WorkshopID)
+	var i ShareCounterQuoteRow
+	err := row.Scan(&i.ID, &i.ShareExpiresAt, &i.Total)
+	return i, err
 }
 
 const shareQuote = `-- name: ShareQuote :one
@@ -224,15 +672,73 @@ func (q *Queries) ShareQuote(ctx context.Context, arg ShareQuoteParams) (ShareQu
 	return i, err
 }
 
+const updateCounterQuote = `-- name: UpdateCounterQuote :one
+UPDATE quote SET
+  branch_id = $1,
+  customer_name = $2,
+  customer_phone = $3,
+  vehicle_id = $4,
+  vehicle_make = $5,
+  vehicle_model = $6,
+  vehicle_year = $7,
+  vehicle_plate = $8,
+  notes = $9,
+  valid_until = $10,
+  total = $11
+WHERE id = $12 AND workshop_id = $13
+  AND outcome = 'pendiente' AND converted_order_id IS NULL AND work_order_id IS NULL
+RETURNING id
+`
+
+type UpdateCounterQuoteParams struct {
+	BranchID      pgtype.UUID    `json:"branch_id"`
+	CustomerName  *string        `json:"customer_name"`
+	CustomerPhone *string        `json:"customer_phone"`
+	VehicleID     pgtype.UUID    `json:"vehicle_id"`
+	VehicleMake   *string        `json:"vehicle_make"`
+	VehicleModel  *string        `json:"vehicle_model"`
+	VehicleYear   *int32         `json:"vehicle_year"`
+	VehiclePlate  *string        `json:"vehicle_plate"`
+	Notes         *string        `json:"notes"`
+	ValidUntil    pgtype.Date    `json:"valid_until"`
+	Total         pgtype.Numeric `json:"total"`
+	ID            pgtype.UUID    `json:"id"`
+	WorkshopID    pgtype.UUID    `json:"workshop_id"`
+}
+
+func (q *Queries) UpdateCounterQuote(ctx context.Context, arg UpdateCounterQuoteParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, updateCounterQuote,
+		arg.BranchID,
+		arg.CustomerName,
+		arg.CustomerPhone,
+		arg.VehicleID,
+		arg.VehicleMake,
+		arg.VehicleModel,
+		arg.VehicleYear,
+		arg.VehiclePlate,
+		arg.Notes,
+		arg.ValidUntil,
+		arg.Total,
+		arg.ID,
+		arg.WorkshopID,
+	)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
 const upsertQuote = `-- name: UpsertQuote :one
-INSERT INTO quote(work_order_id, workshop_id, total, created_by) VALUES ($1, $2, $3, $4)
-ON CONFLICT(work_order_id) DO UPDATE SET total = EXCLUDED.total WHERE quote.outcome = 'pendiente'
+INSERT INTO quote (work_order_id, workshop_id, branch_id, number, total, created_by)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (work_order_id) DO UPDATE SET total = EXCLUDED.total WHERE quote.outcome = 'pendiente'
 RETURNING id, outcome
 `
 
 type UpsertQuoteParams struct {
 	WorkOrderID pgtype.UUID    `json:"work_order_id"`
 	WorkshopID  pgtype.UUID    `json:"workshop_id"`
+	BranchID    pgtype.UUID    `json:"branch_id"`
+	Number      int32          `json:"number"`
 	Total       pgtype.Numeric `json:"total"`
 	CreatedBy   pgtype.UUID    `json:"created_by"`
 }
@@ -246,6 +752,8 @@ func (q *Queries) UpsertQuote(ctx context.Context, arg UpsertQuoteParams) (Upser
 	row := q.db.QueryRow(ctx, upsertQuote,
 		arg.WorkOrderID,
 		arg.WorkshopID,
+		arg.BranchID,
+		arg.Number,
 		arg.Total,
 		arg.CreatedBy,
 	)

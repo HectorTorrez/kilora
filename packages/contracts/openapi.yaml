@@ -2340,6 +2340,246 @@
         }
       }
     },
+    "/api/v1/workshops/{workshopID}/quotes": {
+      "get": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "outcome",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["pendiente", "acepto", "rechazo", "no_respondio"]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": { "type": "integer", "minimum": 0 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CounterQuoteList" }
+              }
+            }
+          },
+          "400": { "description": "Datos inválidos" }
+        }
+      },
+      "post": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CounterQuoteInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Cotización creada",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+              }
+            }
+          },
+          "400": { "description": "Datos inválidos" },
+          "404": { "description": "No encontrado" }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}": {
+      "get": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "quoteID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+              }
+            }
+          },
+          "404": { "description": "No encontrado" }
+        }
+      },
+      "put": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "quoteID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CounterQuoteInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+              }
+            }
+          },
+          "400": { "description": "Datos inválidos" },
+          "404": { "description": "No encontrado" },
+          "409": { "description": "Conflicto" }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}/outcome": {
+      "patch": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "quoteID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/QuoteOutcomeInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+              }
+            }
+          },
+          "400": { "description": "Datos inválidos" },
+          "404": { "description": "No encontrado" },
+          "409": { "description": "Conflicto" }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}/share": {
+      "post": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "quoteID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuoteShare" }
+              }
+            }
+          },
+          "404": { "description": "No encontrado" }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}/convert": {
+      "post": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "quoteID",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Orden creada a partir de la cotización",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/QuoteConvertResult" }
+              }
+            }
+          },
+          "404": { "description": "No encontrado" },
+          "409": { "description": "Conflicto" }
+        }
+      }
+    },
     "/api/v1/public/quotes/{token}": {
       "get": {
         "parameters": [
@@ -4187,6 +4427,153 @@
           }
         }
       },
+      "CounterQuoteInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["customer_name", "vehicle_model", "branch_id", "items"],
+        "properties": {
+          "customer_name": { "type": "string" },
+          "customer_phone": { "type": ["string", "null"] },
+          "vehicle_id": { "type": ["string", "null"], "format": "uuid" },
+          "vehicle_make": { "type": ["string", "null"] },
+          "vehicle_model": { "type": "string" },
+          "vehicle_year": { "type": ["integer", "null"] },
+          "vehicle_plate": { "type": ["string", "null"] },
+          "branch_id": { "type": "string", "format": "uuid" },
+          "notes": { "type": ["string", "null"] },
+          "valid_days": { "type": "integer", "minimum": 1, "maximum": 365, "default": 15 },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/components/schemas/QuoteItem" }
+          }
+        }
+      },
+      "CounterQuoteSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "customer_name",
+          "customer_phone",
+          "vehicle_make",
+          "vehicle_model",
+          "vehicle_year",
+          "vehicle_plate",
+          "total",
+          "currency",
+          "outcome",
+          "created_at",
+          "valid_until",
+          "converted_order_id",
+          "converted_order_number"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "number": { "type": "integer" },
+          "customer_name": { "type": ["string", "null"] },
+          "customer_phone": { "type": ["string", "null"] },
+          "vehicle_make": { "type": ["string", "null"] },
+          "vehicle_model": { "type": ["string", "null"] },
+          "vehicle_year": { "type": ["integer", "null"] },
+          "vehicle_plate": { "type": ["string", "null"] },
+          "total": { "type": "string" },
+          "currency": { "type": "string" },
+          "outcome": {
+            "type": "string",
+            "enum": ["pendiente", "acepto", "rechazo", "no_respondio"]
+          },
+          "created_at": { "type": "string", "format": "date-time" },
+          "valid_until": { "type": ["string", "null"], "format": "date" },
+          "converted_order_id": { "type": ["string", "null"], "format": "uuid" },
+          "converted_order_number": { "type": ["integer", "null"] }
+        }
+      },
+      "CounterQuoteList": {
+        "type": "object",
+        "required": ["items", "total"],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/CounterQuoteSummary" }
+          },
+          "total": { "type": "integer" }
+        }
+      },
+      "CounterQuote": {
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "branch_id",
+          "branch_name",
+          "workshop_name",
+          "workshop_nit",
+          "verified_at",
+          "customer_name",
+          "customer_phone",
+          "vehicle_id",
+          "vehicle_make",
+          "vehicle_model",
+          "vehicle_year",
+          "vehicle_plate",
+          "notes",
+          "valid_until",
+          "items",
+          "total",
+          "currency",
+          "outcome",
+          "outcome_at",
+          "outcome_by",
+          "shared_at",
+          "share_expires_at",
+          "created_at",
+          "converted_order_id",
+          "converted_order_number"
+        ],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "number": { "type": "integer" },
+          "branch_id": { "type": "string", "format": "uuid" },
+          "branch_name": { "type": "string" },
+          "workshop_name": { "type": "string" },
+          "workshop_nit": { "type": ["string", "null"] },
+          "verified_at": { "type": ["string", "null"], "format": "date-time" },
+          "customer_name": { "type": ["string", "null"] },
+          "customer_phone": { "type": ["string", "null"] },
+          "vehicle_id": { "type": ["string", "null"], "format": "uuid" },
+          "vehicle_make": { "type": ["string", "null"] },
+          "vehicle_model": { "type": ["string", "null"] },
+          "vehicle_year": { "type": ["integer", "null"] },
+          "vehicle_plate": { "type": ["string", "null"] },
+          "notes": { "type": ["string", "null"] },
+          "valid_until": { "type": ["string", "null"], "format": "date" },
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QuoteItem" }
+          },
+          "total": { "type": "string" },
+          "currency": { "type": "string" },
+          "outcome": {
+            "type": "string",
+            "enum": ["pendiente", "acepto", "rechazo", "no_respondio"]
+          },
+          "outcome_at": { "type": ["string", "null"], "format": "date-time" },
+          "outcome_by": { "type": ["string", "null"], "format": "uuid" },
+          "shared_at": { "type": ["string", "null"], "format": "date-time" },
+          "share_expires_at": { "type": ["string", "null"], "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" },
+          "converted_order_id": { "type": ["string", "null"], "format": "uuid" },
+          "converted_order_number": { "type": ["integer", "null"] }
+        }
+      },
+      "QuoteConvertResult": {
+        "type": "object",
+        "required": ["order_id"],
+        "properties": {
+          "order_id": { "type": "string", "format": "uuid" }
+        }
+      },
       "PublicQuote": {
         "type": "object",
         "required": [
@@ -4197,6 +4584,10 @@
           "model",
           "year",
           "order_number",
+          "quote_number",
+          "customer_name",
+          "notes",
+          "valid_until",
           "items",
           "total",
           "currency",
@@ -4233,7 +4624,20 @@
             ]
           },
           "order_number": {
+            "type": ["integer", "null"]
+          },
+          "quote_number": {
             "type": "integer"
+          },
+          "customer_name": {
+            "type": ["string", "null"]
+          },
+          "notes": {
+            "type": ["string", "null"]
+          },
+          "valid_until": {
+            "type": ["string", "null"],
+            "format": "date"
           },
           "items": {
             "type": "array",

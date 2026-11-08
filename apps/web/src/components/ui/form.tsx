@@ -51,7 +51,7 @@ const useFormField = () => {
 		throw new Error("useFormField should be used within <FormField>");
 	}
 
-	const { id } = itemContext;
+	const { id, required } = itemContext;
 
 	return {
 		id,
@@ -60,25 +60,39 @@ const useFormField = () => {
 		formDescriptionId: `${id}-form-item-description`,
 		formMessageId: `${id}-form-item-message`,
 		...fieldState,
+		required,
 	};
 };
 
 type FormItemContextValue = {
 	id: string;
+	required?: boolean;
 };
 
 const FormItemContext = React.createContext<FormItemContextValue>(
 	{} as FormItemContextValue,
 );
 
-function FormItem({ className, ...props }: React.ComponentProps<"div">) {
+function RequiredMark() {
+	return (
+		<span aria-hidden="true" className="ml-0.5 text-destructive">
+			*
+		</span>
+	);
+}
+
+function FormItem({
+	className,
+	required,
+	...props
+}: React.ComponentProps<"div"> & { required?: boolean }) {
 	const id = React.useId();
 
 	return (
-		<FormItemContext.Provider value={{ id }}>
+		<FormItemContext.Provider value={{ id, required }}>
 			<div
 				data-slot="form-item"
-				className={cn("grid gap-2", className)}
+				className={cn("grid min-w-0 gap-2", className)}
 				{...props}
 			/>
 		</FormItemContext.Provider>
@@ -87,23 +101,27 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 
 function FormLabel({
 	className,
+	children,
 	...props
 }: React.ComponentProps<typeof LabelPrimitive.Root>) {
-	const { error, formItemId } = useFormField();
+	const { error, formItemId, required } = useFormField();
 
 	return (
 		<Label
 			data-slot="form-label"
 			data-error={!!error}
-			className={cn("data-[error=true]:text-destructive", className)}
+			className={cn("gap-0 data-[error=true]:text-destructive", className)}
 			htmlFor={formItemId}
 			{...props}
-		/>
+		>
+			{children}
+			{required ? <RequiredMark /> : null}
+		</Label>
 	);
 }
 
 function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
-	const { error, formItemId, formDescriptionId, formMessageId } =
+	const { error, formItemId, formDescriptionId, formMessageId, required } =
 		useFormField();
 
 	return (
@@ -117,6 +135,7 @@ function FormControl({ ...props }: React.ComponentProps<typeof Slot.Root>) {
 			}
 			aria-invalid={!!error}
 			{...props}
+			{...(required ? { "aria-required": true } : {})}
 		/>
 	);
 }
@@ -163,4 +182,5 @@ export {
 	FormDescription,
 	FormMessage,
 	FormField,
+	RequiredMark,
 };

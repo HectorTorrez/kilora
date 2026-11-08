@@ -2,20 +2,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { CircleCheck, type LucideIcon, Mail } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-	Form,
-	FormControl,
-	FormField,
-	FormItem,
-	FormLabel,
-	FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+import { Form } from "@/components/ui/form";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
 	meQuery,
@@ -26,6 +19,14 @@ import {
 	useResetPassword,
 	useVerifyEmail,
 } from "@/lib/auth";
+import {
+	applyFormError,
+	PasswordField,
+	RequiredLegend,
+	RootError,
+	SubmitButton,
+	TextField,
+} from "./form-fields";
 
 const schema = z.object({
 	full_name: z.string(),
@@ -75,6 +76,59 @@ const details: Record<Mode, [string, string, string]> = {
 		"Confirmá tu dirección de correo para completar tu cuenta.",
 	],
 };
+const pendingLabel: Record<Mode, string> = {
+	login: "Ingresando…",
+	registro: "Creando cuenta…",
+	onboarding: "Creando taller…",
+	olvide: "Enviando…",
+	restablecer: "Guardando…",
+	verificar: "Verificando…",
+};
+const submitLabel: Record<Mode, string> = {
+	login: "Entrar",
+	registro: "Crear cuenta",
+	onboarding: "Crear taller",
+	olvide: "Enviar enlace",
+	restablecer: "Guardar contraseña",
+	verificar: "Verificar correo",
+};
+
+export function safeRedirect(redirectTo?: string) {
+	if (
+		redirectTo?.startsWith("/") &&
+		!redirectTo.startsWith("//") &&
+		!redirectTo.startsWith("/\\")
+	)
+		return redirectTo;
+	return undefined;
+}
+
+function successContent(mode: Mode): {
+	title: string;
+	body: string;
+	icon: LucideIcon;
+} | null {
+	if (mode === "olvide")
+		return {
+			title: "Revisá tu correo",
+			body: "Si el correo está registrado, recibirás un enlace de recuperación.",
+			icon: Mail,
+		};
+	if (mode === "restablecer")
+		return {
+			title: "Contraseña actualizada",
+			body: "Tu contraseña fue actualizada. Ingresá de nuevo.",
+			icon: CircleCheck,
+		};
+	if (mode === "verificar")
+		return {
+			title: "Correo verificado",
+			body: "Tu correo fue verificado.",
+			icon: CircleCheck,
+		};
+	return null;
+}
+
 export function AuthPage({
 	mode,
 	token = "",
@@ -146,20 +200,20 @@ export function AuthPage({
 			branch_name: "",
 		},
 	});
+	async function enterApp() {
+		const me = await qc.fetchQuery(meQuery());
+		await navigate({
+			href:
+				safeRedirect(redirectTo) ||
+				(me?.memberships.length ? "/taller" : "/mis-vehiculos"),
+		});
+	}
 	const submit = form.handleSubmit(async (v) => {
+		form.clearErrors("root");
 		try {
 			if (mode === "login") {
 				await login.mutateAsync({ email: v.email, password: v.password });
-				const me = await qc.fetchQuery(meQuery());
-				const safe =
-					redirectTo?.startsWith("/") &&
-					!redirectTo.startsWith("//") &&
-					!redirectTo.startsWith("/\\")
-						? redirectTo
-						: undefined;
-				await navigate({
-					href: safe || (me?.memberships.length ? "/taller" : "/mis-vehiculos"),
-				});
+				await enterApp();
 			}
 			if (mode === "registro") {
 				await register.mutateAsync({
@@ -167,16 +221,7 @@ export function AuthPage({
 					email: v.email,
 					password: v.password,
 				});
-				const me = await qc.fetchQuery(meQuery());
-				const safe =
-					redirectTo?.startsWith("/") &&
-					!redirectTo.startsWith("//") &&
-					!redirectTo.startsWith("/\\")
-						? redirectTo
-						: undefined;
-				await navigate({
-					href: safe || (me?.memberships.length ? "/taller" : "/mis-vehiculos"),
-				});
+				await enterApp();
 			}
 			if (mode === "onboarding") {
 				await workshop.mutateAsync({
@@ -190,50 +235,24 @@ export function AuthPage({
 			if (mode === "restablecer")
 				await reset.mutateAsync({ token, password: v.password });
 			if (mode === "verificar") await verify.mutateAsync({ token });
-		} catch {
-			/* Error shown below. */
+		} catch (error) {
+			applyFormError(form, error);
 		}
 	});
-	const field = (
-		key: keyof Values,
-		label: string,
-		type = "text",
-		autoComplete?: string,
-	) => (
-		<FormField
-			control={form.control}
-			name={key}
-			render={({ field }) => (
-				<FormItem>
-					<FormLabel>{label}</FormLabel>
-					<FormControl>
-						<Input
-							{...field}
-							type={type}
-							autoComplete={autoComplete}
-							onChange={(event) => {
-								field.onChange(event);
-								if (key === "email") setSelectedRole(null);
-							}}
-						/>
-					</FormControl>
-					<FormMessage />
-				</FormItem>
-			)}
-		/>
-	);
 	const done =
 		mutation.isSuccess && ["olvide", "restablecer", "verificar"].includes(mode);
+	const success = successContent(mode);
+	const SuccessIcon = success?.icon;
 	return (
 		<main className="grid min-h-dvh lg:grid-cols-2">
-			<section className="flex flex-col justify-between bg-foreground p-8 text-background md:p-14">
+			<section className="hidden flex-col justify-between bg-foreground p-8 text-background lg:flex lg:p-14">
 				<Link
 					to="/"
 					className="font-display text-xl font-bold tracking-[0.2em]"
 				>
 					KILORA
 				</Link>
-				<div className="py-12">
+				<div>
 					<p className="mb-4 font-mono text-xs uppercase tracking-widest opacity-60">
 						Historial digital del vehículo
 					</p>
@@ -247,8 +266,16 @@ export function AuthPage({
 				</div>
 				<p className="text-sm opacity-60">Kilora · El Salvador</p>
 			</section>
-			<section className="flex items-center justify-center bg-background p-6 py-12">
-				<div className="w-full max-w-md">
+			<section className="flex flex-col bg-background px-6 py-8 lg:justify-center lg:px-8 lg:py-12">
+				<header className="mb-8 lg:hidden">
+					<Link
+						to="/"
+						className="font-display text-xl font-bold tracking-[0.2em]"
+					>
+						KILORA
+					</Link>
+				</header>
+				<div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
 					<p className="font-mono text-xs uppercase tracking-widest text-ink-3">
 						{details[mode][0]}
 					</p>
@@ -258,26 +285,29 @@ export function AuthPage({
 					<p className="mt-3 text-sm leading-relaxed text-ink-3">
 						{details[mode][2]}
 					</p>
-					{done ? (
-						<output className="mt-8 block space-y-4">
-							<p>
-								{mode === "olvide"
-									? "Si el correo está registrado, recibirás un enlace de recuperación."
-									: mode === "restablecer"
-										? "Tu contraseña fue actualizada. Ingresá de nuevo."
-										: "Tu correo fue verificado."}
+					{done && success && SuccessIcon ? (
+						<output className="mt-8 block rounded-lg border bg-card px-6 py-8 text-center">
+							<div className="mx-auto flex size-12 items-center justify-center rounded-full bg-ok-soft text-ok">
+								<SuccessIcon className="size-6" />
+							</div>
+							<p className="mt-4 font-display text-xl font-bold">
+								{success.title}
 							</p>
-							<Link
-								className="text-sm font-semibold text-seal"
-								to="/login"
-								search={{ redirect: undefined }}
-							>
-								Ir a iniciar sesión
-							</Link>
+							<p className="mt-2 text-sm leading-relaxed text-ink-3">
+								{success.body}
+							</p>
+							<Button asChild className="mt-6 w-full">
+								<Link to="/login" search={{ redirect: undefined }}>
+									Ir a iniciar sesión
+								</Link>
+							</Button>
 						</output>
 					) : (
 						<Form {...form}>
-							<form onSubmit={submit} className="mt-8 space-y-5" noValidate>
+							<form onSubmit={submit} className="mt-8 grid gap-5" noValidate>
+								{(mode === "registro" || mode === "onboarding") && (
+									<RequiredLegend />
+								)}
 								{accounts.length > 0 && (
 									<div className="space-y-2">
 										<ToggleGroup
@@ -316,22 +346,51 @@ export function AuthPage({
 										</p>
 									</div>
 								)}
-								{mode === "registro" &&
-									field("full_name", "Nombre completo", "text", "name")}
-								{["login", "registro", "olvide"].includes(mode) &&
-									field("email", "Correo electrónico", "email", "email")}
-								{["login", "registro", "restablecer"].includes(mode) &&
-									field(
-										"password",
-										"Contraseña",
-										"password",
-										mode === "login" ? "current-password" : "new-password",
-									)}
+								{mode === "registro" && (
+									<TextField
+										name="full_name"
+										label="Nombre completo"
+										autoComplete="name"
+										autoFocus
+										required
+									/>
+								)}
+								{["login", "registro", "olvide"].includes(mode) && (
+									<TextField
+										name="email"
+										label="Correo electrónico"
+										type="email"
+										autoComplete="email"
+										autoFocus={mode !== "registro"}
+										onValueChange={() => setSelectedRole(null)}
+										required
+									/>
+								)}
+								{["login", "registro", "restablecer"].includes(mode) && (
+									<PasswordField
+										name="password"
+										label="Contraseña"
+										autoComplete={
+											mode === "login" ? "current-password" : "new-password"
+										}
+										autoFocus={mode === "restablecer"}
+										required
+									/>
+								)}
 								{mode === "onboarding" && (
 									<>
-										{field("name", "Nombre del taller")}
-										{field("nit", "NIT (opcional)")}
-										{field("branch_name", "Nombre de la sucursal")}
+										<TextField
+											name="name"
+											label="Nombre del taller"
+											autoFocus
+											required
+										/>
+										<TextField name="nit" label="NIT" optional />
+										<TextField
+											name="branch_name"
+											label="Nombre de la sucursal"
+											required
+										/>
 									</>
 								)}
 								{mode === "login" && (
@@ -354,35 +413,18 @@ export function AuthPage({
 										</AlertDescription>
 									</Alert>
 								)}
-								{mutation.error && (
-									<Alert
-										variant="destructive"
-										className="text-sm text-destructive"
-									>
-										<AlertDescription>
-											{mutation.error.message}
-										</AlertDescription>
-									</Alert>
-								)}
-								<Button
+								<RootError />
+								<SubmitButton
+									pending={mutation.isPending}
+									pendingLabel={pendingLabel[mode]}
 									className="w-full"
-									type="submit"
+									autoFocus={mode === "verificar"}
 									disabled={
-										mutation.isPending ||
-										(["restablecer", "verificar"].includes(mode) && !token)
+										["restablecer", "verificar"].includes(mode) && !token
 									}
 								>
-									{mutation.isPending
-										? "Un momento…"
-										: {
-												login: "Entrar",
-												registro: "Crear cuenta",
-												onboarding: "Crear taller",
-												olvide: "Enviar enlace",
-												restablecer: "Guardar contraseña",
-												verificar: "Verificar correo",
-											}[mode]}
-								</Button>
+									{submitLabel[mode]}
+								</SubmitButton>
 							</form>
 						</Form>
 					)}
