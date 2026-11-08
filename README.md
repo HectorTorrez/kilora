@@ -1,115 +1,107 @@
 # Kilora
 
-Historial digital del vehículo. El taller registra sus servicios y el propietario conserva el historial aunque cambie de taller.
+**A vehicle’s service history should stay with its owner.**
 
-Monorepo:
+Kilora connects automotive workshops and vehicle owners through a shared service history. Workshops manage their day-to-day work, and owners keep a record of their vehicle’s maintenance—even when they change workshops.
 
-```
-apps/web            TanStack Start + React + Tailwind + shadcn/ui
-services/api        Go + chi + pgx + sqlc
-packages/contracts  Contratos compartidos (OpenAPI, tipos)
-db/migrations       Migraciones (goose)
-services/api/cmd/seed  Datos de demo
-scripts             Utilidades de desarrollo
-```
+Built for independent workshops and drivers in El Salvador, Kilora brings service orders, quotes, and maintenance records into one place.
 
-## Requisitos
+## Why Kilora
 
-- Node 24 y pnpm 11
-- Go 1.27
-- Docker (la base de datos corre en un contenedor)
-- sqlc (solo al regenerar consultas)
+A vehicle’s history often lives in paper receipts, WhatsApp conversations, and separate workshop records. When an owner visits a different workshop, that context is hard to recover.
+
+Kilora turns completed services into a lasting vehicle history. Owners can understand what was done and what they paid, while a linked workshop can see relevant maintenance details without accessing another workshop’s pricing or private notes.
+
+## For workshops
+
+- **Manage service orders.** Register vehicles, track work from intake to completion, and record jobs, parts, and mileage.
+- **Keep quotes connected to the work.** Prepare itemized estimates, share a read-only link through WhatsApp, record the customer’s verbal decision, and compare the quote with the final charge.
+- **Start before the owner signs up.** Create a provisional vehicle record, then invite its owner to connect it to their account.
+- **Coordinate your team.** Give administrators, reception staff, and mechanics access according to their roles and assigned branches.
+- **Publish a useful service record.** Marking an order ready adds a permanent snapshot to the vehicle’s history.
+
+## For vehicle owners
+
+- **Keep your history across workshops.** Find linked workshop services in one vehicle record.
+- **Understand your maintenance.** Review service dates, mileage, work performed, parts, and charges.
+- **Fill in the gaps.** Add services manually and record new odometer readings.
+- **Keep a traceable record.** Corrections are added as dated entries, preserving the original history.
+
+## Shared history, with clear boundaries
+
+Kilora gives each person the information relevant to them:
+
+| Who is viewing | What they can see |
+| --- | --- |
+| Vehicle owner | Their vehicle’s service history, including workshop names, charges, and public service notes. |
+| Workshop that performed the service | Its own service records, including internal costs and private notes. |
+| Another linked workshop | Maintenance context: work, parts, dates, and mileage. Other workshops’ identities, prices, and notes stay hidden. |
+
+Workshop internal costs and private notes remain private to that workshop, including when the owner views the service.
+
+## How it works
+
+1. **A workshop registers a vehicle** and opens a service order with the reason for the visit and its mileage.
+2. **The team prepares a quote** and records the work and parts used.
+3. **The workshop marks the order ready**, publishing a permanent service record.
+4. **The owner accepts an invitation** to connect the vehicle and access its history.
+5. **The history stays available** as the owner adds services or visits another linked workshop.
+
+## Explore the demo locally
+
+The demo includes two workshops, a reception account, and a vehicle owner so you can explore the same history from different perspectives.
+
+After completing the setup below, set `DEMO_MODE=true` in `.env` and run:
 
 ```bash
-brew install go sqlc
+pnpm db:seed
 ```
 
-PostgreSQL no se instala en la máquina: `compose.yaml` levanta `postgres:17-alpine` con un volumen persistente (`kilora-pgdata`).
+Open [localhost:3300](http://localhost:3300) and use the demo accounts on the home page, or sign in with one of these accounts. All use the password `demo1234`.
 
-## Puesta en marcha
+| Account | Experience |
+| --- | --- |
+| `taller@demo.kilora.app` | Administrator at Taller Los Volcanes. |
+| `recepcion@demo.kilora.app` | Reception staff at the Santa Tecla branch. |
+| `propietario@demo.kilora.app` | María Hernández’s vehicle history. |
+| `ceiba@demo.kilora.app` | AutoServicio La Ceiba’s restricted view of another workshop’s services. |
+
+## Run locally
+
+Requires Node.js 24+, pnpm 11, Go 1.27.3+, and Docker. PostgreSQL runs in Docker; no local PostgreSQL installation is needed.
 
 ```bash
 pnpm install
-cp .env.example .env          # completa SESSION_SECRET con: openssl rand -base64 48
-pnpm db:setup                 # levanta el contenedor y aplica migraciones
-pnpm dev                      # frontend en http://localhost:3300
-pnpm api                      # API en http://localhost:8080
+cp .env.example .env
 ```
 
-Comprobar el API:
+Generate a session secret with `openssl rand -base64 48` and set it as `SESSION_SECRET` in `.env`. Then initialize the database and start the app:
 
 ```bash
-curl http://localhost:8080/healthz
+pnpm db:setup
+pnpm start
 ```
 
-El frontend usa `VITE_API_URL` vacío para llamar a `/api` en el mismo origen; en desarrollo el proxy de Vite lo envía a `localhost:8080`. En producción, configura el host para redirigir `/api/*` a Go. Si ya tienes un `.env` anterior con `VITE_API_URL=http://localhost:8080`, déjalo vacío para usar el proxy.
+The web app runs at [localhost:3300](http://localhost:3300), and the API at [localhost:8080](http://localhost:8080). During development, the frontend proxies `/api` requests to the API; leave `VITE_API_URL` empty to use this setup.
 
-## Comandos
+## Development reference
 
-| Comando | Qué hace |
+Kilora uses React and TanStack Start for the web app, Go for the API, and PostgreSQL for storage.
+
+| Location | Contents |
 | --- | --- |
-| `pnpm start` | **Levanta todo**: base en Docker, API y frontend |
-| `pnpm dev` | Solo el frontend en modo desarrollo |
-| `pnpm build` | Build del frontend |
-| `pnpm check` | Lint y formato (Biome) |
-| `pnpm api` | API en modo desarrollo |
-| `pnpm db:setup` | Levanta el contenedor de la base y aplica migraciones |
-| `pnpm db:up` | Levanta solo la base en Docker |
-| `pnpm db:down` | Apaga el contenedor (conserva los datos) |
-| `pnpm db:logs` | Logs de PostgreSQL |
-| `pnpm db:reset` | Borra el volumen y reconstruye la base desde cero |
-| `pnpm db:migrate` | Aplica migraciones pendientes |
-| `pnpm db:status` | Estado de las migraciones |
+| [`apps/web`](apps/web) | Web application. |
+| [`services/api`](services/api) | API and business rules. |
+| [`packages/contracts/openapi.yaml`](packages/contracts/openapi.yaml) | API contract. |
+| [`db/migrations`](db/migrations) | Database migrations. |
+| [`DECISIONS.md`](DECISIONS.md) | Product decisions and scope, in Spanish. |
 
-Para entrar a la base sin tener psql instalado:
-
-```bash
-docker compose exec db psql -U kilora -d kilora
-```
-
-Para regenerar el código de base de datos:
-
-```bash
-cd services/api && sqlc generate
-```
-
-### Autenticación y talleres
-
-La API usa la cookie `kilora_session` (HttpOnly, SameSite=Lax; Secure en producción). Envía JSON y el origen configurado en `WEB_ORIGIN`; las sesiones duran 30 días y se renuevan como máximo una vez por hora.
-
-- `POST /api/v1/auth/register`: `email`, `password` (mínimo 8 caracteres), `full_name`.
-- `POST /api/v1/auth/login`: `email`, `password`; `POST /api/v1/auth/logout` cierra la sesión.
-- `GET /api/v1/auth/me` devuelve el usuario y sus membresías por sucursal.
-- `POST /api/v1/auth/verify-email`: `token`; `POST /api/v1/auth/forgot-password`: `email`; `POST /api/v1/auth/reset-password`: `token`, `password`.
-- `POST /api/v1/workshops`: `name`, `branch_name`, `nit` opcional; `GET /api/v1/workshops/{workshopID}` devuelve el taller y las sucursales accesibles.
-
-En desarrollo el correo se escribe en el log; con `RESEND_API_KEY` y `EMAIL_FROM` se envía mediante Resend. El registro inicia sesión sin esperar la verificación del correo. Los enlaces de verificación y recuperación expiran en 24 horas y una hora, respectivamente.
-
-Las rutas siguientes requieren sesión y membresía en el taller. Los mecánicos tienen acceso de lectura; recepción puede escribir en las sucursales asignadas y administración en cualquiera del taller. Los identificadores ajenos al taller responden 404.
-
-- `POST /api/v1/workshops/{workshopID}/vehicles` crea un vehículo provisional; `GET` en la misma ruta lista vehículos y acepta `plate` (prefijo) e `include_archived` (booleano). `GET /vehicles/{vehicleID}` devuelve el detalle y `GET /vehicles/{vehicleID}/history` su historial proyectado.
-- `POST /api/v1/workshops/{workshopID}/work-orders` crea una orden con `vehicle_id`, `branch_id`, `reason` y opcionalmente `odometer_km` e `internal_notes`. `GET` lista órdenes con filtros `status` y `branch_id`; `GET /work-orders/{orderID}` incluye trabajos y piezas.
-- `PATCH /api/v1/workshops/{workshopID}/work-orders/{orderID}` edita `reason`, `odometer_km`, `public_notes` e `internal_notes` mientras la orden está abierta. `PATCH /work-orders/{orderID}/status` cambia el estado; para cancelar se requiere `cancel_reason`. Marcar listo exige al menos un trabajo y publica una instantánea inmutable en el historial.
-- `PUT /work-orders/{orderID}/quote` guarda o reemplaza los ítems de la cotización pendiente; `GET` la consulta. Cada ítem lleva `kind` (`repuesto` o `mano_de_obra`), `description`, `quantity` y `unit_price`. Los importes por ítem se redondean a centavos antes de sumar.
-- `POST /work-orders/{orderID}/quote/share` devuelve un enlace de solo lectura válido por 15 días y un enlace de WhatsApp; compartir de nuevo invalida el anterior. `PATCH /work-orders/{orderID}/quote/outcome` registra el resultado verbal (`acepto`, `rechazo`, `no_respondio`); después no se pueden editar los ítems. El detalle de la orden incluye la comparación entre cotización y cobro publicado.
-- `GET /api/v1/public/quotes/{token}` muestra la cotización compartida sin sesión y limita las consultas por IP.
-- `POST /work-orders/{orderID}/jobs` y `DELETE /work-orders/{orderID}/jobs/{jobID}` gestionan trabajos. `POST /work-orders/{orderID}/jobs/{jobID}/parts` y `DELETE /work-orders/{orderID}/jobs/{jobID}/parts/{partID}` gestionan piezas. Los importes se reciben como números o cadenas decimales con hasta dos decimales, en USD.
-
-### Invitaciones y propietario
-
-El taller (admin o recepción) crea y consulta invitaciones en `POST/GET /api/v1/workshops/{workshopID}/vehicles/{vehicleID}/invitations`. El enlace público se consulta en `GET /api/v1/public/invitations/{token}` y el usuario destinatario lo acepta con consentimiento explícito en `POST /api/v1/invitations/{token}/accept`.
-
-El propietario usa `GET/POST /api/v1/me/vehicles`, `GET /api/v1/me/vehicles/{vehicleID}`, `GET/POST /api/v1/me/vehicles/{vehicleID}/history`, `POST /api/v1/me/vehicles/{vehicleID}/corrections` y `POST /api/v1/me/vehicles/{vehicleID}/odometer`. Los importes se envían como cadenas decimales en USD. El nombre libre del taller en un servicio manual se guarda en las notas públicas como `Realizado en: …`; no crea un vínculo con ese taller. Las correcciones y lecturas son adiciones, no modifican registros anteriores.
-
-## Demo
-
-Activa `DEMO_MODE=true` en `.env`, aplica las migraciones y ejecuta `pnpm db:seed`. El seed es idempotente. `pnpm db:seed -- --reset` elimina y recrea los datos de las cuentas y talleres demo en una transacción. Solo el seed deshabilita temporalmente los triggers append-only durante ese reinicio y los vuelve a habilitar antes de confirmar la transacción. No hay reinicio automático: prográmalo si la demo es pública.
-
-Todas las cuentas usan la contraseña `demo1234`:
-
-- `taller@demo.kilora.app`: administración de Taller Los Volcanes.
-- `recepcion@demo.kilora.app`: recepción en Santa Tecla.
-- `propietario@demo.kilora.app`: María Hernández.
-- `ceiba@demo.kilora.app`: AutoServicio La Ceiba y la vista ciega.
-
-La portada ofrece acceso en un clic cuando el modo demo está habilitado. El propietario ve el historial completo; otro taller vinculado solo ve trabajos, fechas y kilometraje.
+| Command | Purpose |
+| --- | --- |
+| `pnpm start` | Start the database, API, and web app. |
+| `pnpm build` | Build the web app. |
+| `pnpm check` | Check frontend lint and formatting. |
+| `pnpm api:test` | Run API tests. |
+| `pnpm db:migrate` | Apply pending database migrations. |
+| `pnpm db:seed` | Populate demo data. |
+| `pnpm sqlc` | Regenerate database query code; requires sqlc. |
