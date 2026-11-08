@@ -2,6 +2,7 @@ package httpserver
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	decimalpkg "github.com/shopspring/decimal"
 	"kilora/api/internal/database"
 	"kilora/api/internal/database/sqlc"
 )
@@ -24,7 +26,7 @@ func orderDTO(o sqlc.WorkOrder) map[string]any {
 	if o.CancelledAt.Valid {
 		cancelled = o.CancelledAt.Time
 	}
-	return map[string]any{"id": uuid.UUID(o.ID.Bytes), "workshop_id": uuid.UUID(o.WorkshopID.Bytes), "branch_id": uuid.UUID(o.BranchID.Bytes), "vehicle_id": uuid.UUID(o.VehicleID.Bytes), "number": o.Number, "status": o.Status, "reason": o.Reason, "odometer_km": o.OdometerKm, "internal_notes": o.InternalNotes, "received_at": o.ReceivedAt.Time, "completed_at": completed, "cancelled_at": cancelled, "cancel_reason": o.CancelReason, "created_by": uuid.UUID(o.CreatedBy.Bytes)}
+	return map[string]any{"id": uuid.UUID(o.ID.Bytes), "workshop_id": uuid.UUID(o.WorkshopID.Bytes), "branch_id": uuid.UUID(o.BranchID.Bytes), "vehicle_id": uuid.UUID(o.VehicleID.Bytes), "number": o.Number, "status": o.Status, "reason": o.Reason, "odometer_km": o.OdometerKm, "internal_notes": o.InternalNotes, "public_notes": o.PublicNotes, "received_at": o.ReceivedAt.Time, "completed_at": completed, "cancelled_at": cancelled, "cancel_reason": o.CancelReason, "created_by": uuid.UUID(o.CreatedBy.Bytes)}
 }
 func branchAllowed(wc WorkshopContext, id uuid.UUID) bool {
 	if wc.Role == "admin" {
@@ -165,6 +167,36 @@ func (s *server) getOrder(w http.ResponseWriter, r *http.Request) {
 		js = append(js, item)
 	}
 	out["jobs"] = js
+	var quoteID uuid.UUID
+	qe := s.db.QueryRow(r.Context(), "SELECT id FROM quote WHERE work_order_id=$1 AND workshop_id=$2", o.ID, o.WorkshopID).Scan(&quoteID)
+	if qe == nil {
+		quote, e := s.quoteData(r, quoteID)
+		if e != nil {
+			fail(w, 500, "Error interno")
+			return
+		}
+		out["quote"] = quote
+		var charged string
+		e = s.db.QueryRow(r.Context(), "SELECT total::text FROM history_record WHERE work_order_id=$1", o.ID).Scan(&charged)
+		if e == nil {
+			quoted, _ := decimalpkg.NewFromString(quote["total"].(string))
+			actual, _ := decimalpkg.NewFromString(charged)
+			out["quote_comparison"] = map[string]any{"quote_total": quote["total"], "charged_total": charged, "difference": actual.Sub(quoted).StringFixed(2)}
+		} else if !errors.Is(e, pgx.ErrNoRows) {
+			fail(w, 500, "Error interno")
+			return
+		}
+	} else if !errors.Is(qe, pgx.ErrNoRows) {
+		fail(w, 500, "Error interno")
+		return
+	}
+
+	if id, e := q.GetHistoryIDByOrder(r.Context(), o.ID); e == nil {
+		out["history_record_id"] = uuid.UUID(id.Bytes)
+	} else if !errors.Is(e, pgx.ErrNoRows) {
+		fail(w, 500, "Error interno")
+		return
+	}
 	writeJSON(w, 200, out)
 }
 func (s *server) listOrders(w http.ResponseWriter, r *http.Request) {
@@ -251,6 +283,18 @@ func (s *server) changeStatus(w http.ResponseWriter, r *http.Request) {
 		p.CancelReason = in.CancelReason
 	}
 	err := database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
+		locked, e := q.LockWorkOrder(r.Context(), sqlc.LockWorkOrderParams{ID: o.ID, WorkshopID: o.WorkshopID})
+		if e != nil {
+			return e
+		}
+		if locked.Status != o.Status {
+			return errTransitionConflict
+		}
+		if in.Status == "listo" {
+			if e = publishOrder(r.Context(), q, wc, locked); e != nil {
+				return e
+			}
+		}
 		n, e := q.TransitionWorkOrderStatus(r.Context(), p)
 		if e != nil {
 			return e
@@ -260,6 +304,10 @@ func (s *server) changeStatus(w http.ResponseWriter, r *http.Request) {
 		}
 		return audit(r.Context(), q, wc, o.ID, "work_order", "work_order.status")
 	})
+	if errors.Is(err, errNoJobs) {
+		fail(w, 409, "Agrega al menos un trabajo antes de marcar como listo")
+		return
+	}
 	if errors.Is(err, errTransitionConflict) {
 		fail(w, 409, "Transición inválida")
 		return
@@ -280,4 +328,54 @@ func branchWrite(w http.ResponseWriter, wc WorkshopContext, o sqlc.WorkOrder) bo
 		return false
 	}
 	return true
+}
+
+func (s *server) editOrder(w http.ResponseWriter, r *http.Request) {
+	o, wc, ok := s.mutableOrder(w, r)
+	if !ok {
+		return
+	}
+	var in map[string]json.RawMessage
+	if !decode(w, r, &in) {
+		return
+	}
+	for k, v := range in {
+		switch k {
+		case "reason":
+			if json.Unmarshal(v, &o.Reason) != nil {
+				fail(w, 400, "Datos de orden inválidos")
+				return
+			}
+			o.Reason = strings.TrimSpace(o.Reason)
+		case "odometer_km":
+			if json.Unmarshal(v, &o.OdometerKm) != nil || (o.OdometerKm != nil && *o.OdometerKm < 0) {
+				fail(w, 400, "Datos de orden inválidos")
+				return
+			}
+		case "public_notes":
+			if json.Unmarshal(v, &o.PublicNotes) != nil {
+				fail(w, 400, "Datos de orden inválidos")
+				return
+			}
+		case "internal_notes":
+			if json.Unmarshal(v, &o.InternalNotes) != nil {
+				fail(w, 400, "Datos de orden inválidos")
+				return
+			}
+		default:
+			fail(w, 400, "Datos de orden inválidos")
+			return
+		}
+	}
+	q := jobQueries(r.Context(), s)
+	updated, err := q.EditWorkOrder(r.Context(), sqlc.EditWorkOrderParams{ID: o.ID, WorkshopID: o.WorkshopID, Reason: o.Reason, OdometerKm: o.OdometerKm, PublicNotes: o.PublicNotes, InternalNotes: o.InternalNotes})
+	if err != nil {
+		fail(w, 500, "Error interno")
+		return
+	}
+	if err = audit(r.Context(), q, wc, o.ID, "work_order", "work_order.update"); err != nil {
+		fail(w, 500, "Error interno")
+		return
+	}
+	writeJSON(w, 200, orderDTO(updated))
 }

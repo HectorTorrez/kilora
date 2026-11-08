@@ -227,6 +227,92 @@ func (ns NullPartCategory) Value() (driver.Value, error) {
 	return string(ns.PartCategory), nil
 }
 
+type QuoteItemKind string
+
+const (
+	QuoteItemKindRepuesto   QuoteItemKind = "repuesto"
+	QuoteItemKindManoDeObra QuoteItemKind = "mano_de_obra"
+)
+
+func (e *QuoteItemKind) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = QuoteItemKind(s)
+	case string:
+		*e = QuoteItemKind(s)
+	default:
+		return fmt.Errorf("unsupported scan type for QuoteItemKind: %T", src)
+	}
+	return nil
+}
+
+type NullQuoteItemKind struct {
+	QuoteItemKind QuoteItemKind `json:"quote_item_kind"`
+	Valid         bool          `json:"valid"` // Valid is true if QuoteItemKind is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullQuoteItemKind) Scan(value interface{}) error {
+	if value == nil {
+		ns.QuoteItemKind, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.QuoteItemKind.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullQuoteItemKind) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.QuoteItemKind), nil
+}
+
+type QuoteOutcome string
+
+const (
+	QuoteOutcomePendiente   QuoteOutcome = "pendiente"
+	QuoteOutcomeAcepto      QuoteOutcome = "acepto"
+	QuoteOutcomeRechazo     QuoteOutcome = "rechazo"
+	QuoteOutcomeNoRespondio QuoteOutcome = "no_respondio"
+)
+
+func (e *QuoteOutcome) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = QuoteOutcome(s)
+	case string:
+		*e = QuoteOutcome(s)
+	default:
+		return fmt.Errorf("unsupported scan type for QuoteOutcome: %T", src)
+	}
+	return nil
+}
+
+type NullQuoteOutcome struct {
+	QuoteOutcome QuoteOutcome `json:"quote_outcome"`
+	Valid        bool         `json:"valid"` // Valid is true if QuoteOutcome is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullQuoteOutcome) Scan(value interface{}) error {
+	if value == nil {
+		ns.QuoteOutcome, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.QuoteOutcome.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullQuoteOutcome) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.QuoteOutcome), nil
+}
+
 type VehicleStatus string
 
 const (
@@ -429,6 +515,33 @@ type Part struct {
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 }
 
+type Quote struct {
+	ID             pgtype.UUID        `json:"id"`
+	WorkOrderID    pgtype.UUID        `json:"work_order_id"`
+	WorkshopID     pgtype.UUID        `json:"workshop_id"`
+	Total          pgtype.Numeric     `json:"total"`
+	Currency       string             `json:"currency"`
+	Outcome        QuoteOutcome       `json:"outcome"`
+	OutcomeAt      pgtype.Timestamptz `json:"outcome_at"`
+	OutcomeBy      pgtype.UUID        `json:"outcome_by"`
+	ShareTokenHash *string            `json:"share_token_hash"`
+	SharedAt       pgtype.Timestamptz `json:"shared_at"`
+	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
+	CreatedBy      pgtype.UUID        `json:"created_by"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type QuoteItem struct {
+	ID          pgtype.UUID    `json:"id"`
+	QuoteID     pgtype.UUID    `json:"quote_id"`
+	Position    int32          `json:"position"`
+	Kind        QuoteItemKind  `json:"kind"`
+	Description string         `json:"description"`
+	Quantity    pgtype.Numeric `json:"quantity"`
+	UnitPrice   pgtype.Numeric `json:"unit_price"`
+}
+
 type Session struct {
 	ID         string             `json:"id"`
 	UserID     pgtype.UUID        `json:"user_id"`
@@ -480,6 +593,7 @@ type WorkOrder struct {
 	CreatedBy     pgtype.UUID        `json:"created_by"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	PublicNotes   *string            `json:"public_notes"`
 }
 
 type Workshop struct {

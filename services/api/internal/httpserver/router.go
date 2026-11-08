@@ -51,6 +51,7 @@ func NewRouter(d Deps) http.Handler {
 	r.Get("/healthz", health(d.DB))
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/public/quotes/{token}", s.publicQuote)
 		r.Post("/auth/register", s.register)
 		r.Post("/auth/login", s.login)
 		r.Post("/auth/logout", s.logout)
@@ -68,7 +69,12 @@ func NewRouter(d Deps) http.Handler {
 				r.Post("/work-orders", s.createOrder)
 				r.Get("/work-orders", s.listOrders)
 				r.Get("/work-orders/{orderID}", s.getOrder)
+				r.With(s.jobTransaction).Patch("/work-orders/{orderID}", s.editOrder)
 				r.Patch("/work-orders/{orderID}/status", s.changeStatus)
+				r.Put("/work-orders/{orderID}/quote", s.saveQuote)
+				r.Get("/work-orders/{orderID}/quote", s.getQuote)
+				r.Post("/work-orders/{orderID}/quote/share", s.shareQuote)
+				r.Patch("/work-orders/{orderID}/quote/outcome", s.quoteOutcome)
 				r.With(s.jobTransaction).Post("/work-orders/{orderID}/jobs", s.createJob)
 				r.With(s.jobTransaction).Delete("/work-orders/{orderID}/jobs/{jobID}", s.deleteJob)
 				r.With(s.jobTransaction).Post("/work-orders/{orderID}/jobs/{jobID}/parts", s.createPart)

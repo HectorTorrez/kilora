@@ -23,3 +23,9 @@ UPDATE work_order SET status = sqlc.arg(status), completed_at = sqlc.narg(comple
 
 -- name: LockWorkOrder :one
 SELECT * FROM work_order WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id) FOR UPDATE;
+
+-- name: EditWorkOrder :one
+UPDATE work_order SET reason = sqlc.arg(reason), odometer_km = sqlc.narg(odometer_km), public_notes = sqlc.narg(public_notes), internal_notes = sqlc.narg(internal_notes) WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id) RETURNING *;
+
+-- name: GetHistoryIDByOrder :one
+SELECT id FROM history_record WHERE work_order_id = sqlc.arg(work_order_id);

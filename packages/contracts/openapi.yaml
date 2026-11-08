@@ -1460,6 +1460,56 @@
             "session": []
           }
         ]
+      },
+      "patch": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "orderID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditWorkOrder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkOrder"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
       }
     },
     "/api/v1/workshops/{workshopID}/work-orders/{orderID}/status": {
@@ -2068,6 +2118,224 @@
           }
         ]
       }
+    },
+    "/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote": {
+      "get": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "orderID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      },
+      "put": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "orderID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote/share": {
+      "post": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "orderID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteShare"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote/outcome": {
+      "patch": {
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "orderID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteOutcomeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Quote"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
+    },
+    "/api/v1/public/quotes/{token}": {
+      "get": {
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicQuote"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2629,6 +2897,12 @@
           "created_by": {
             "type": "string",
             "format": "uuid"
+          },
+          "public_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -3046,6 +3320,33 @@
             "items": {
               "$ref": "#/components/schemas/JobDetail"
             }
+          },
+          "public_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "history_record_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quote": {
+            "$ref": "#/components/schemas/Quote"
+          },
+          "quote_comparison": {
+            "type": "object",
+            "properties": {
+              "quote_total": {
+                "type": "string"
+              },
+              "charged_total": {
+                "type": "string"
+              },
+              "difference": {
+                "type": "string"
+              }
+            }
           }
         },
         "required": [
@@ -3286,6 +3587,256 @@
           "service",
           "version"
         ]
+      },
+      "EditWorkOrder": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "type": "string"
+          },
+          "odometer_km": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "public_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "internal_notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "QuoteItem": {
+        "type": "object",
+        "required": [
+          "kind",
+          "description",
+          "quantity",
+          "unit_price"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "repuesto",
+              "mano_de_obra"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          },
+          "unit_price": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              }
+            ]
+          }
+        }
+      },
+      "QuoteInput": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/QuoteItem"
+            }
+          }
+        }
+      },
+      "Quote": {
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "currency",
+          "outcome"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteItem"
+            }
+          },
+          "total": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "pendiente",
+              "acepto",
+              "rechazo",
+              "no_respondio"
+            ]
+          },
+          "outcome_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "outcome_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "shared_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "share_expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "QuoteOutcomeInput": {
+        "type": "object",
+        "required": [
+          "outcome"
+        ],
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "acepto",
+              "rechazo",
+              "no_respondio"
+            ]
+          }
+        }
+      },
+      "QuoteShare": {
+        "type": "object",
+        "required": [
+          "url",
+          "expires_at",
+          "whatsapp_url"
+        ],
+        "properties": {
+          "url": {
+            "type": "string"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "whatsapp_url": {
+            "type": "string"
+          }
+        }
+      },
+      "PublicQuote": {
+        "type": "object",
+        "required": [
+          "workshop_name",
+          "verified_at",
+          "plate",
+          "make",
+          "model",
+          "year",
+          "order_number",
+          "items",
+          "total",
+          "currency",
+          "shared_at",
+          "share_expires_at"
+        ],
+        "properties": {
+          "workshop_name": {
+            "type": "string"
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "plate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "make": {
+            "type": "string"
+          },
+          "model": {
+            "type": "string"
+          },
+          "year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "order_number": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteItem"
+            }
+          },
+          "total": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "shared_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "share_expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     }
   }

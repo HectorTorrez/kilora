@@ -68,7 +68,7 @@ func TestWorkshopIsolation(t *testing.T) {
 	}
 	order := req(a, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Revisión"}`, vid, ba), 201).(map[string]any)
 	oid := order["id"].(string)
-	job := req(a, "POST", pa+"/work-orders/"+oid+"/jobs", `{"description":"Revisión","labor_price":"12.50"}`, 201).(map[string]any)
+	job := req(a, "POST", pa+"/work-orders/"+oid+"/jobs", `{"description":"Revisión","labor_price":"12.50","internal_cost":"3.00","mechanic_notes":"secreto mecánico"}`, 201).(map[string]any)
 	jid := job["id"].(string)
 	part := req(a, "POST", pa+"/work-orders/"+oid+"/jobs/"+jid+"/parts", `{"name":"Filtro"}`, 201).(map[string]any)
 	pid := part["id"].(string)
@@ -111,6 +111,58 @@ func TestWorkshopIsolation(t *testing.T) {
 			req(c, "POST", pa+"/vehicles", `{"make":"x","model":"y"}`, 403)
 		}
 	}
+	// La constancia y la publicación permanecen aisladas por taller.
+	op := pa + "/work-orders/" + oid
+	req(a, "PATCH", op, `{"public_notes":"nota pública","internal_notes":"secreto interno"}`, 200)
+	req(a, "POST", op+"/jobs/"+jid+"/parts", `{"name":"Pieza","quantity":"2","unit_price":"7.25","internal_cost":"4.00"}`, 201)
+	req(a, "PUT", op+"/quote", `{"items":[{"kind":"mano_de_obra","description":"Servicio","quantity":"1","unit_price":"30.00"}]}`, 200)
+	req(b, "GET", pb+"/work-orders/"+oid+"/quote", "", 404)
+	req(b, "PUT", pb+"/work-orders/"+oid+"/quote", `{"items":[]}`, 404)
+	share := req(a, "POST", op+"/quote/share", "", 200).(map[string]any)
+	token := strings.Split(share["url"].(string), "/c/")[1]
+	public := req(&http.Client{}, "GET", "/api/v1/public/quotes/"+token, "", 200)
+	encoded, _ := json.Marshal(public)
+	if strings.Contains(string(encoded), "secreto interno") || strings.Contains(string(encoded), "internal_") || strings.Contains(string(encoded), "contact_") || strings.Contains(string(encoded), "secreto mecánico") {
+		t.Fatal(string(encoded))
+	}
+	share2 := req(a, "POST", op+"/quote/share", "", 200).(map[string]any)
+	req(&http.Client{}, "GET", "/api/v1/public/quotes/"+token, "", 404)
+	token2 := strings.Split(share2["url"].(string), "/c/")[1]
+	_, e = db.Exec(context.Background(), "UPDATE quote SET share_expires_at=now()-interval '1 second' WHERE work_order_id=$1", oid)
+	if e != nil {
+		t.Fatal(e)
+	}
+	req(&http.Client{}, "GET", "/api/v1/public/quotes/"+token2, "", 404)
+	req(a, "PATCH", op+"/quote/outcome", `{"outcome":"acepto"}`, 200)
+	req(a, "PUT", op+"/quote", `{"items":[{"kind":"repuesto","description":"x","quantity":"1","unit_price":"1"}]}`, 409)
+	req(a, "PATCH", op+"/status", `{"status":"diagnostico"}`, 200)
+	req(a, "PATCH", op+"/status", `{"status":"en_reparacion"}`, 200)
+	req(a, "PATCH", op+"/status", `{"status":"listo"}`, 200)
+	req(a, "PATCH", op+"/status", `{"status":"listo"}`, 409)
+	var total, internal string
+	e = db.QueryRow(context.Background(), "SELECT total::text,internal_cost::text FROM history_record WHERE work_order_id=$1", oid).Scan(&total, &internal)
+	if e != nil || total != "27.00" || internal != "7.00" {
+		t.Fatalf("snapshot: %s %s %v", total, internal, e)
+	}
+	detail := req(a, "GET", op, "", 200).(map[string]any)
+	if detail["history_record_id"] == nil || detail["quote_comparison"] == nil {
+		t.Fatal(detail)
+	}
+	_, e = db.Exec(context.Background(), "INSERT INTO vehicle_link(vehicle_id,workshop_id) VALUES($1,$2) ON CONFLICT DO NOTHING", vid, strings.TrimPrefix(pb, "/api/v1/workshops/"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	blind := req(b, "GET", pb+"/vehicles/"+vid+"/history", "", 200)
+	encoded, _ = json.Marshal(blind)
+	if strings.Contains(string(encoded), "secreto interno") || strings.Contains(string(encoded), "27.00") || strings.Contains(string(encoded), "nota pública") || strings.Contains(string(encoded), "secreto mecánico") {
+		t.Fatal(string(encoded))
+	}
+	emptyOrder := req(a, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Sin trabajos"}`, vid, ba), 201).(map[string]any)["id"].(string)
+	emptyPath := pa + "/work-orders/" + emptyOrder + "/status"
+	req(a, "PATCH", emptyPath, `{"status":"diagnostico"}`, 200)
+	req(a, "PATCH", emptyPath, `{"status":"en_reparacion"}`, 200)
+	req(a, "PATCH", emptyPath, `{"status":"listo"}`, 409)
+
 }
 func TestNormalizationAndTransitions(t *testing.T) {
 	if normalizePlate(" p - 123 ") != "P123" {

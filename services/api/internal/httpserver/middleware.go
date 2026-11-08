@@ -179,7 +179,8 @@ type limiter struct {
 	attempts map[string][]time.Time
 }
 
-func (l *limiter) allow(key string) bool {
+func (l *limiter) allow(key string) bool { return l.allowLimit(key, 10) }
+func (l *limiter) allowLimit(key string, limit int) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
@@ -194,7 +195,7 @@ func (l *limiter) allow(key string) bool {
 		i++
 	}
 	ts = ts[i:]
-	if len(ts) >= 10 {
+	if len(ts) >= limit {
 		l.attempts[key] = ts
 		return false
 	}

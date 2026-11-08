@@ -1465,7 +1465,47 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    orderID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["EditWorkOrder"];
+                };
+            };
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkOrder"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         trace?: never;
     };
     "/api/v1/workshops/{workshopID}/work-orders/{orderID}/status": {
@@ -1985,6 +2025,257 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    orderID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Quote"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    orderID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QuoteInput"];
+                };
+            };
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Quote"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    orderID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QuoteShare"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote/outcome": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    orderID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QuoteOutcomeInput"];
+                };
+            };
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Quote"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/public/quotes/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Operación exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicQuote"];
+                    };
+                };
+                /** @description No encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Conflicto */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2129,6 +2420,7 @@ export interface components {
             cancel_reason: string | null;
             /** Format: uuid */
             created_by: string;
+            public_notes?: string | null;
         };
         WorkOrderSummary: {
             /** Format: uuid */
@@ -2229,6 +2521,15 @@ export interface components {
             /** Format: uuid */
             created_by: string;
             jobs: components["schemas"]["JobDetail"][];
+            public_notes?: string | null;
+            /** Format: uuid */
+            history_record_id?: string;
+            quote?: components["schemas"]["Quote"];
+            quote_comparison?: {
+                quote_total?: string;
+                charged_total?: string;
+                difference?: string;
+            };
         };
         HistoryItem: {
             kind: string;
@@ -2295,6 +2596,64 @@ export interface components {
         Service: {
             service: string;
             version: string;
+        };
+        EditWorkOrder: {
+            reason?: string;
+            odometer_km?: number | null;
+            public_notes?: string | null;
+            internal_notes?: string | null;
+        };
+        QuoteItem: {
+            /** @enum {string} */
+            kind: "repuesto" | "mano_de_obra";
+            description: string;
+            quantity: string | number;
+            unit_price: string | number;
+        };
+        QuoteInput: {
+            items: components["schemas"]["QuoteItem"][];
+        };
+        Quote: {
+            items: components["schemas"]["QuoteItem"][];
+            total: string;
+            currency: string;
+            /** @enum {string} */
+            outcome: "pendiente" | "acepto" | "rechazo" | "no_respondio";
+            /** Format: date-time */
+            outcome_at?: string | null;
+            /** Format: uuid */
+            outcome_by?: string | null;
+            /** Format: date-time */
+            shared_at?: string | null;
+            /** Format: date-time */
+            share_expires_at?: string | null;
+        };
+        QuoteOutcomeInput: {
+            /** @enum {string} */
+            outcome: "acepto" | "rechazo" | "no_respondio";
+        };
+        QuoteShare: {
+            url: string;
+            /** Format: date-time */
+            expires_at: string;
+            whatsapp_url: string;
+        };
+        PublicQuote: {
+            workshop_name: string;
+            /** Format: date-time */
+            verified_at: string | null;
+            plate: string | null;
+            make: string;
+            model: string;
+            year: number | null;
+            order_number: number;
+            items: components["schemas"]["QuoteItem"][];
+            total: string;
+            currency: string;
+            /** Format: date-time */
+            shared_at: string;
+            /** Format: date-time */
+            share_expires_at: string;
         };
     };
     responses: never;
