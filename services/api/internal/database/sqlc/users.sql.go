@@ -84,7 +84,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (AppUser, err
 }
 
 const markUserEmailVerified = `-- name: MarkUserEmailVerified :execrows
-UPDATE app_user SET email_verified_at = now() WHERE id = $1
+UPDATE app_user SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1
 `
 
 func (q *Queries) MarkUserEmailVerified(ctx context.Context, id pgtype.UUID) (int64, error) {

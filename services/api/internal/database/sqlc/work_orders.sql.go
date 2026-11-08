@@ -168,6 +168,39 @@ func (q *Queries) ListWorkOrdersByWorkshop(ctx context.Context, arg ListWorkOrde
 	return items, nil
 }
 
+const lockWorkOrder = `-- name: LockWorkOrder :one
+SELECT id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at FROM work_order WHERE id = $1 AND workshop_id = $2 FOR UPDATE
+`
+
+type LockWorkOrderParams struct {
+	ID         pgtype.UUID `json:"id"`
+	WorkshopID pgtype.UUID `json:"workshop_id"`
+}
+
+func (q *Queries) LockWorkOrder(ctx context.Context, arg LockWorkOrderParams) (WorkOrder, error) {
+	row := q.db.QueryRow(ctx, lockWorkOrder, arg.ID, arg.WorkshopID)
+	var i WorkOrder
+	err := row.Scan(
+		&i.ID,
+		&i.WorkshopID,
+		&i.BranchID,
+		&i.VehicleID,
+		&i.Number,
+		&i.Status,
+		&i.Reason,
+		&i.OdometerKm,
+		&i.InternalNotes,
+		&i.ReceivedAt,
+		&i.CompletedAt,
+		&i.CancelledAt,
+		&i.CancelReason,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const nextWorkOrderNumber = `-- name: NextWorkOrderNumber :one
 SELECT (COALESCE(MAX(number), 0) + 1)::int AS number FROM work_order WHERE workshop_id = $1
 `
@@ -178,6 +211,36 @@ func (q *Queries) NextWorkOrderNumber(ctx context.Context, workshopID pgtype.UUI
 	var number int32
 	err := row.Scan(&number)
 	return number, err
+}
+
+const transitionWorkOrderStatus = `-- name: TransitionWorkOrderStatus :execrows
+UPDATE work_order SET status = $1, completed_at = $2, cancelled_at = $3, cancel_reason = $4 WHERE id = $5 AND workshop_id = $6 AND status = $7
+`
+
+type TransitionWorkOrderStatusParams struct {
+	Status         WorkOrderStatus    `json:"status"`
+	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt    pgtype.Timestamptz `json:"cancelled_at"`
+	CancelReason   *string            `json:"cancel_reason"`
+	ID             pgtype.UUID        `json:"id"`
+	WorkshopID     pgtype.UUID        `json:"workshop_id"`
+	PreviousStatus WorkOrderStatus    `json:"previous_status"`
+}
+
+func (q *Queries) TransitionWorkOrderStatus(ctx context.Context, arg TransitionWorkOrderStatusParams) (int64, error) {
+	result, err := q.db.Exec(ctx, transitionWorkOrderStatus,
+		arg.Status,
+		arg.CompletedAt,
+		arg.CancelledAt,
+		arg.CancelReason,
+		arg.ID,
+		arg.WorkshopID,
+		arg.PreviousStatus,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }
 
 const updateWorkOrderStatus = `-- name: UpdateWorkOrderStatus :execrows

@@ -82,3 +82,10 @@ La API usa la cookie `kilora_session` (HttpOnly, SameSite=Lax; Secure en producc
 - `POST /api/v1/workshops`: `name`, `branch_name`, `nit` opcional; `GET /api/v1/workshops/{workshopID}` devuelve el taller y las sucursales accesibles.
 
 En desarrollo el correo se escribe en el log; con `RESEND_API_KEY` y `EMAIL_FROM` se envía mediante Resend. El registro inicia sesión sin esperar la verificación del correo. Los enlaces de verificación y recuperación expiran en 24 horas y una hora, respectivamente.
+
+Las rutas siguientes requieren sesión y membresía en el taller. Los mecánicos tienen acceso de lectura; recepción puede escribir en las sucursales asignadas y administración en cualquiera del taller. Los identificadores ajenos al taller responden 404.
+
+- `POST /api/v1/workshops/{workshopID}/vehicles` crea un vehículo provisional; `GET` en la misma ruta lista vehículos y acepta `plate` (prefijo) e `include_archived` (booleano). `GET /vehicles/{vehicleID}` devuelve el detalle y `GET /vehicles/{vehicleID}/history` su historial proyectado.
+- `POST /api/v1/workshops/{workshopID}/work-orders` crea una orden con `vehicle_id`, `branch_id`, `reason` y opcionalmente `odometer_km` e `internal_notes`. `GET` lista órdenes con filtros `status` y `branch_id`; `GET /work-orders/{orderID}` incluye trabajos y piezas.
+- `PATCH /api/v1/workshops/{workshopID}/work-orders/{orderID}/status` cambia el estado; para cancelar se requiere `cancel_reason`.
+- `POST /work-orders/{orderID}/jobs` y `DELETE /work-orders/{orderID}/jobs/{jobID}` gestionan trabajos. `POST /work-orders/{orderID}/jobs/{jobID}/parts` y `DELETE /work-orders/{orderID}/jobs/{jobID}/parts/{partID}` gestionan piezas. Los importes se reciben como números o cadenas decimales con hasta dos decimales, en USD.

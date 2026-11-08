@@ -17,3 +17,9 @@ SELECT wo.*, v.plate, v.make, v.model FROM work_order wo JOIN vehicle v ON v.id 
 
 -- name: UpdateWorkOrderStatus :execrows
 UPDATE work_order SET status = sqlc.arg(status), completed_at = sqlc.narg(completed_at), cancelled_at = sqlc.narg(cancelled_at), cancel_reason = sqlc.narg(cancel_reason) WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id);
+
+-- name: TransitionWorkOrderStatus :execrows
+UPDATE work_order SET status = sqlc.arg(status), completed_at = sqlc.narg(completed_at), cancelled_at = sqlc.narg(cancelled_at), cancel_reason = sqlc.narg(cancel_reason) WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id) AND status = sqlc.arg(previous_status);
+
+-- name: LockWorkOrder :one
+SELECT * FROM work_order WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id) FOR UPDATE;

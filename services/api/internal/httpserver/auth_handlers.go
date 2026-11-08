@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"kilora/api/internal/auth"
+	"kilora/api/internal/database"
 	"kilora/api/internal/database/sqlc"
 	"net/http"
 	"net/mail"
@@ -29,20 +30,21 @@ func (s *server) setCookie(w http.ResponseWriter, token string) {
 func (s *server) clearCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{Name: "kilora_session", Path: "/", HttpOnly: true, Secure: s.secure, SameSite: http.SameSiteLaxMode, MaxAge: -1})
 }
-func createSession(ctx context.Context, tx pgx.Tx, user uuid.UUID, r *http.Request) (string, error) {
+func createSession(ctx context.Context, q *sqlc.Queries, user uuid.UUID, r *http.Request) (string, error) {
 	token, err := auth.NewToken()
 	if err != nil {
 		return "", err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO session(id,user_id,expires_at,user_agent,ip) VALUES($1,$2,now()+interval '30 days',$3,$4)`, auth.HashToken(token), user, r.UserAgent(), clientIP(r))
+	agent, ip := r.UserAgent(), clientIP(r)
+	err = q.CreateSession(ctx, sqlc.CreateSessionParams{ID: auth.HashToken(token), UserID: dbUUID(user), ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(30 * 24 * time.Hour), Valid: true}, UserAgent: &agent, Ip: &ip})
 	return token, err
 }
-func createToken(ctx context.Context, tx pgx.Tx, user uuid.UUID, purpose string, ttl time.Duration) (string, error) {
+func createToken(ctx context.Context, q *sqlc.Queries, user uuid.UUID, purpose string, ttl time.Duration) (string, error) {
 	token, err := auth.NewToken()
 	if err != nil {
 		return "", err
 	}
-	_, err = tx.Exec(ctx, `INSERT INTO auth_token(token_hash,user_id,purpose,expires_at) VALUES($1,$2,$3,$4)`, auth.HashToken(token), user, purpose, time.Now().Add(ttl))
+	err = q.CreateAuthToken(ctx, sqlc.CreateAuthTokenParams{TokenHash: auth.HashToken(token), UserID: dbUUID(user), Purpose: sqlc.AuthTokenPurpose(purpose), ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(ttl), Valid: true}})
 	return token, err
 }
 func (s *server) register(w http.ResponseWriter, r *http.Request) {
@@ -64,14 +66,25 @@ func (s *server) register(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, err.Error())
 		return
 	}
-	tx, err := s.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	defer tx.Rollback(r.Context())
 	var u userResponse
-	err = tx.QueryRow(r.Context(), `INSERT INTO app_user(email,password_hash,full_name) VALUES($1,$2,$3) RETURNING id,email,full_name,email_verified_at`, in.Email, hash, in.FullName).Scan(&u.ID, &u.Email, &u.FullName, &u.EmailVerifiedAt)
+	var verify, token string
+	err = database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
+		created, e := q.CreateUser(r.Context(), sqlc.CreateUserParams{Email: in.Email, PasswordHash: hash, FullName: in.FullName})
+		if e != nil {
+			return e
+		}
+		u = userResponse{ID: uuid.UUID(created.ID.Bytes), Email: created.Email, FullName: created.FullName}
+		verify, e = createToken(r.Context(), q, u.ID, "verify_email", 24*time.Hour)
+		if e != nil {
+			return e
+		}
+		token, e = createSession(r.Context(), q, u.ID, r)
+		if e != nil {
+			return e
+		}
+		_, e = q.InsertAuditEvent(r.Context(), sqlc.InsertAuditEventParams{ActorUserID: dbUUID(u.ID), EntityID: dbUUID(u.ID), Entity: "user", Action: "user.register"})
+		return e
+	})
 	if err != nil {
 		var pe *pgconn.PgError
 		if errors.As(err, &pe) && pe.Code == "23505" {
@@ -79,25 +92,6 @@ func (s *server) register(w http.ResponseWriter, r *http.Request) {
 		} else {
 			fail(w, 500, "Error interno")
 		}
-		return
-	}
-	verify, err := createToken(r.Context(), tx, u.ID, "verify_email", 24*time.Hour)
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	token, err := createSession(r.Context(), tx, u.ID, r)
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	_, err = sqlc.New(tx).InsertAuditEvent(r.Context(), sqlc.InsertAuditEventParams{ActorUserID: pgtype.UUID{Bytes: u.ID, Valid: true}, EntityID: pgtype.UUID{Bytes: u.ID, Valid: true}, Entity: "user", Action: "user.register"})
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	if err = tx.Commit(r.Context()); err != nil {
-		fail(w, 500, "Error interno")
 		return
 	}
 	if err = s.mailer.Send(r.Context(), u.Email, "Verifica tu correo", s.origin+"/verificar?token="+verify); err != nil {
@@ -118,23 +112,16 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 	}
 	var id uuid.UUID
 	var hash string
-	err := s.db.QueryRow(r.Context(), `SELECT id,password_hash FROM app_user WHERE email=$1`, in.Email).Scan(&id, &hash)
+	user, err := sqlc.New(s.db).GetUserByEmail(r.Context(), in.Email)
+	id = uuid.UUID(user.ID.Bytes)
+	hash = user.PasswordHash
 	if err != nil || !auth.VerifyPassword(in.Password, hash) {
 		fail(w, 401, "Correo o contraseña incorrectos")
 		return
 	}
-	tx, err := s.db.Begin(r.Context())
+	var token string
+	err = database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error { var e error; token, e = createSession(r.Context(), q, id, r); return e })
 	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	token, err := createSession(r.Context(), tx, id, r)
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	if tx.Commit(r.Context()) != nil {
 		fail(w, 500, "Error interno")
 		return
 	}
@@ -143,7 +130,7 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) {
 }
 func (s *server) logout(w http.ResponseWriter, r *http.Request) {
 	if u := currentUser(r.Context()); u != nil {
-		if _, err := s.db.Exec(r.Context(), `DELETE FROM session WHERE id=$1`, u.SessionHash); err != nil {
+		if err := sqlc.New(s.db).DeleteSession(r.Context(), u.SessionHash); err != nil {
 			fail(w, 500, "Error interno")
 			return
 		}
@@ -153,25 +140,14 @@ func (s *server) logout(w http.ResponseWriter, r *http.Request) {
 }
 func (s *server) me(w http.ResponseWriter, r *http.Request) {
 	u := currentUser(r.Context())
-	rows, err := s.db.Query(r.Context(), `SELECT m.workshop_id,w.name,m.branch_id,b.name,m.role FROM membership m JOIN workshop w ON w.id=m.workshop_id JOIN branch b ON b.id=m.branch_id AND b.workshop_id=m.workshop_id WHERE m.user_id=$1 ORDER BY w.name,b.name`, u.ID)
+	rows, err := sqlc.New(s.db).ListMembershipsByUser(r.Context(), dbUUID(u.ID))
 	if err != nil {
 		fail(w, 500, "Error interno")
 		return
 	}
-	defer rows.Close()
 	memberships := []map[string]any{}
-	for rows.Next() {
-		var wid, bid uuid.UUID
-		var wn, bn, role string
-		if rows.Scan(&wid, &wn, &bid, &bn, &role) != nil {
-			fail(w, 500, "Error interno")
-			return
-		}
-		memberships = append(memberships, map[string]any{"workshop_id": wid, "workshop_name": wn, "branch_id": bid, "branch_name": bn, "role": role})
-	}
-	if rows.Err() != nil {
-		fail(w, 500, "Error interno")
-		return
+	for _, row := range rows {
+		memberships = append(memberships, map[string]any{"workshop_id": uuid.UUID(row.WorkshopID.Bytes), "workshop_name": row.WorkshopName, "branch_id": uuid.UUID(row.BranchID.Bytes), "branch_name": row.BranchName, "role": row.Role})
 	}
 	writeJSON(w, 200, map[string]any{"user": userResponse{u.ID, u.Email, u.FullName, u.VerifiedAt}, "memberships": memberships})
 }
@@ -180,24 +156,19 @@ func (s *server) verify(w http.ResponseWriter, r *http.Request) {
 	if !decode(w, r, &in) {
 		return
 	}
-	tx, err := s.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	var id uuid.UUID
-	err = tx.QueryRow(r.Context(), `UPDATE auth_token SET used_at=now() WHERE token_hash=$1 AND purpose='verify_email' AND used_at IS NULL AND expires_at>now() RETURNING user_id`, auth.HashToken(in.Token)).Scan(&id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			fail(w, 400, "Token inválido o vencido")
-		} else {
-			fail(w, 500, "Error interno")
+	err := database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
+		id, e := q.ConsumeAuthToken(r.Context(), sqlc.ConsumeAuthTokenParams{TokenHash: auth.HashToken(in.Token), Purpose: sqlc.AuthTokenPurposeVerifyEmail})
+		if e != nil {
+			return e
 		}
+		_, e = q.MarkUserEmailVerified(r.Context(), id)
+		return e
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 400, "Token inválido o vencido")
 		return
 	}
-	_, err = tx.Exec(r.Context(), `UPDATE app_user SET email_verified_at=COALESCE(email_verified_at,now()) WHERE id=$1`, id)
-	if err != nil || tx.Commit(r.Context()) != nil {
+	if err != nil {
 		fail(w, 500, "Error interno")
 		return
 	}
@@ -209,21 +180,18 @@ func (s *server) forgot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := normalizedEmail(in.Email)
-	var id uuid.UUID
-	if err := s.db.QueryRow(r.Context(), `SELECT id FROM app_user WHERE email=$1`, email).Scan(&id); err == nil {
-		tx, e := s.db.Begin(r.Context())
+	if user, err := sqlc.New(s.db).GetUserByEmail(r.Context(), email); err == nil {
+		var token string
+		e := database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
+			var e error
+			token, e = createToken(r.Context(), q, uuid.UUID(user.ID.Bytes), "reset_password", time.Hour)
+			return e
+		})
 		if e == nil {
-			defer tx.Rollback(r.Context())
-			token, e := createToken(r.Context(), tx, id, "reset_password", time.Hour)
-			if e == nil {
-				e = tx.Commit(r.Context())
-				if e == nil {
-					e = s.mailer.Send(r.Context(), email, "Restablece tu contraseña", s.origin+"/restablecer?token="+token)
-				}
-			}
-			if e != nil {
-				s.logger.Error("error enviando recuperación", "error", e)
-			}
+			e = s.mailer.Send(r.Context(), email, "Restablece tu contraseña", s.origin+"/restablecer?token="+token)
+		}
+		if e != nil {
+			s.logger.Error("error enviando recuperación", "error", e)
 		}
 	}
 	w.WriteHeader(204)
@@ -238,30 +206,26 @@ func (s *server) reset(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, err.Error())
 		return
 	}
-	tx, err := s.db.Begin(r.Context())
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	defer tx.Rollback(r.Context())
-	var id uuid.UUID
-	err = tx.QueryRow(r.Context(), `UPDATE auth_token SET used_at=now() WHERE token_hash=$1 AND purpose='reset_password' AND used_at IS NULL AND expires_at>now() RETURNING user_id`, auth.HashToken(in.Token)).Scan(&id)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			fail(w, 400, "Token inválido o vencido")
-		} else {
-			fail(w, 500, "Error interno")
+	err = database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
+		id, e := q.ConsumeAuthToken(r.Context(), sqlc.ConsumeAuthTokenParams{TokenHash: auth.HashToken(in.Token), Purpose: sqlc.AuthTokenPurposeResetPassword})
+		if e != nil {
+			return e
 		}
+		_, e = q.UpdateUserPassword(r.Context(), sqlc.UpdateUserPasswordParams{ID: id, PasswordHash: hash})
+		if e != nil {
+			return e
+		}
+		if e = q.DeleteUserSessions(r.Context(), id); e != nil {
+			return e
+		}
+		_, e = q.InsertAuditEvent(r.Context(), sqlc.InsertAuditEventParams{ActorUserID: id, EntityID: id, Entity: "user", Action: "user.password_reset"})
+		return e
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		fail(w, 400, "Token inválido o vencido")
 		return
 	}
-	_, err = tx.Exec(r.Context(), `UPDATE app_user SET password_hash=$2 WHERE id=$1`, id, hash)
-	if err == nil {
-		_, err = tx.Exec(r.Context(), `DELETE FROM session WHERE user_id=$1`, id)
-	}
-	if err == nil {
-		_, err = sqlc.New(tx).InsertAuditEvent(r.Context(), sqlc.InsertAuditEventParams{ActorUserID: pgtype.UUID{Bytes: id, Valid: true}, EntityID: pgtype.UUID{Bytes: id, Valid: true}, Entity: "user", Action: "user.password_reset"})
-	}
-	if err != nil || tx.Commit(r.Context()) != nil {
+	if err != nil {
 		fail(w, 500, "Error interno")
 		return
 	}
