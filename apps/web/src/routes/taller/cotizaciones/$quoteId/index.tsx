@@ -30,18 +30,13 @@ import {
 	rememberQuoteShare,
 } from "@/features/taller/quotes";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
+import { quoteOutcomeActions } from "@/lib/domain";
 import { date, day, money, quoteCode } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 
 export const Route = createFileRoute("/taller/cotizaciones/$quoteId/")({
 	component: QuoteDetailPage,
 });
-
-const outcomeActions = [
-	["acepto", "Aceptó"],
-	["rechazo", "Rechazó"],
-	["no_respondio", "No respondió"],
-] as const;
 
 function vehicleLine(quote: components["schemas"]["CounterQuote"]) {
 	const name = [quote.vehicle_make, quote.vehicle_model, quote.vehicle_year]
@@ -261,7 +256,7 @@ function QuoteDetailPage() {
 						El cliente no firma. Recepción deja constancia de lo que pasó.
 					</p>
 					<div className="flex flex-wrap gap-2">
-						{outcomeActions.map(([value, label]) => (
+						{quoteOutcomeActions.map(([value, label]) => (
 							<Button
 								key={value}
 								type="button"

@@ -1,4 +1,3 @@
-import { cn } from "cn";
 import { format, isValid, parse } from "date-fns";
 import { es } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
@@ -10,6 +9,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const ISO_DATE = "yyyy-MM-dd";
 

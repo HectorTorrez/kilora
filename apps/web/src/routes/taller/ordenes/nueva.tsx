@@ -1,7 +1,24 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, Lock, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, Check, Lock, Plus, X } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import {
+	applyFormError,
+	FormError,
+	NumberField,
+	RootError,
+	SelectField,
+	TextareaField,
+	TextField,
+} from "@/components/kilora/form-fields";
+import {
+	kmField,
+	optionalText,
+	requiredText,
+} from "@/components/kilora/form-schemas";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
 import {
 	PageBody,
@@ -10,21 +27,13 @@ import {
 	SectionCard,
 } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
+import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { createOrderAction } from "@/features/taller/orders";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
-import { vehiclesQuery } from "@/features/taller/vehicles";
+import { matchesVehicle, vehiclesQuery } from "@/features/taller/vehicles";
 import { km as formatKm } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -44,41 +53,71 @@ const reasons = [
 	"Diagnóstico general",
 ];
 
+const receptionSchema = z.object({
+	branch: z.string().min(1, "Elegí una sucursal"),
+	reason: requiredText("Ingresá el motivo de ingreso"),
+	km: kmField(),
+	notes: optionalText,
+});
+
 function NewOrderPage() {
 	const workshopID = useWorkshopId();
 	const { vehiculo } = Route.useSearch();
 	const { me } = useTallerContext();
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
 	const navigate = useNavigate();
-	const [branch, setBranch] = useState("");
+
 	const [search, setSearch] = useState("");
 	const [vehicle, setVehicle] = useState(vehiculo ?? "");
 	const [creating, setCreating] = useState(false);
-	const [reason, setReason] = useState("");
-	const [km, setKm] = useState("");
-	const [notes, setNotes] = useState("");
-	const { data, isLoading } = useQuery({
+	const form = useForm({
+		resolver: zodResolver(receptionSchema),
+		defaultValues: {
+			branch: branches[0]?.branch_id ?? "",
+			reason: "",
+			km: "",
+			notes: "",
+		},
+	});
+	const { branch: branchID, reason, km } = form.watch();
+	const { data, isLoading, error } = useQuery({
 		...vehiclesQuery(workshopID),
 		enabled: !!workshopID,
 	});
-	const create = useWorkshopMutation(workshopID, createOrderAction(workshopID));
+	const create = useWorkshopMutation(
+		workshopID,
+		createOrderAction(workshopID),
+		{ inlineErrors: true },
+	);
 	const q = search.trim().toLowerCase().replace(/[\s-]/g, "");
 	const all = data ?? [];
-	const matches = (
-		q
-			? all.filter((v) =>
-					[v.plate, v.make, v.model, v.contact_name]
-						.filter(Boolean)
-						.some((x) =>
-							String(x).toLowerCase().replace(/[\s-]/g, "").includes(q),
-						),
-				)
-			: all
-	).slice(0, 6);
+	const matches = all
+		.filter((vehicle) => matchesVehicle(vehicle, q))
+		.slice(0, 6);
 	const chosen = all.find((v) => v.id === vehicle);
 	const lastKm = chosen?.last_odometer_km;
 	const kmBelow = km !== "" && lastKm != null && Number(km) < lastKm;
-	const branchID = branch || branches[0]?.branch_id || "";
+	const submit = form.handleSubmit(async (values) => {
+		if (!chosen) {
+			form.setError("root", { message: "Elegí un vehículo del taller" });
+			return;
+		}
+		try {
+			const order = await create.mutateAsync({
+				vehicle_id: vehicle,
+				branch_id: values.branch,
+				reason: values.reason,
+				odometer_km: values.km ? Number(values.km) : null,
+				internal_notes: values.notes || null,
+			});
+			await navigate({
+				to: "/taller/ordenes/$orderId",
+				params: { orderId: order.id },
+			});
+		} catch (error) {
+			applyFormError(form, error);
+		}
+	});
 
 	return (
 		<PageBody className="max-w-5xl">
@@ -97,25 +136,7 @@ function NewOrderPage() {
 				/>
 			</div>
 
-			<form
-				className="grid items-start gap-6 lg:grid-cols-[1fr_300px]"
-				onSubmit={async (e) => {
-					e.preventDefault();
-					try {
-						const order = await create.mutateAsync({
-							vehicle_id: vehicle,
-							branch_id: branchID,
-							reason,
-							odometer_km: km ? Number(km) : null,
-							internal_notes: notes || null,
-						});
-						await navigate({
-							to: "/taller/ordenes/$orderId",
-							params: { orderId: order.id },
-						});
-					} catch {}
-				}}
-			>
+			<div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
 				<div className="space-y-6">
 					<SectionCard
 						title={
@@ -177,18 +198,17 @@ function NewOrderPage() {
 							/>
 						) : (
 							<div className="space-y-3">
-								<div className="relative">
-									<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3" />
-									<Input
-										autoFocus
-										aria-label="Buscar vehículo"
-										placeholder="Buscar por placa, marca o contacto"
-										value={search}
-										onChange={(e) => setSearch(e.target.value)}
-										className="pl-9"
-									/>
-								</div>
-								{isLoading ? (
+								<SearchInput
+									containerClassName=""
+									autoFocus
+									aria-label="Buscar vehículo"
+									placeholder="Buscar por placa, marca o contacto"
+									value={search}
+									onChange={(e) => setSearch(e.target.value)}
+								/>
+								{error ? (
+									<FormError error={error} />
+								) : isLoading ? (
 									<Skeleton className="h-24" />
 								) : matches.length ? (
 									<ul className="grid gap-2 sm:grid-cols-2">
@@ -228,100 +248,92 @@ function NewOrderPage() {
 						)}
 					</SectionCard>
 
-					<SectionCard
-						title={
-							<span className="flex items-center gap-2">
-								<Step n={2} done={!!reason} />
-								Recepción
-							</span>
-						}
-					>
-						<div className="grid gap-4">
-							<div className="grid gap-2">
-								<Label htmlFor="reason">Motivo de ingreso</Label>
-								<Input
-									id="reason"
-									required
-									placeholder="¿Qué reporta el cliente?"
-									value={reason}
-									onChange={(e) => setReason(e.target.value)}
-								/>
-								<div className="flex flex-wrap gap-1.5">
-									{reasons.map((r) => (
-										<button
-											key={r}
-											type="button"
-											onClick={() => setReason(r)}
-											className={cn(
-												"rounded-full border px-2.5 py-1 text-xs text-ink-2 hover:border-seal/40 hover:text-seal",
-												reason === r && "border-seal bg-seal-soft text-seal",
-											)}
-										>
-											{r}
-										</button>
-									))}
-								</div>
-							</div>
-							<div className="grid gap-4 sm:grid-cols-2">
-								<div className="grid gap-2">
-									<Label htmlFor="km">Kilometraje actual</Label>
-									<Input
-										id="km"
-										type="number"
-										inputMode="numeric"
-										min="0"
-										placeholder={lastKm != null ? String(lastKm) : "Ej. 85000"}
-										value={km}
-										onChange={(e) => setKm(e.target.value)}
-										aria-describedby="km-hint"
-									/>
-									<p
-										id="km-hint"
-										className={cn(
-											"text-xs text-ink-3",
-											kmBelow && "font-medium text-warn",
-										)}
-									>
-										{kmBelow
-											? `Es menor que la última lectura (${formatKm(lastKm)}).`
-											: lastKm != null
-												? `Última lectura: ${formatKm(lastKm)}`
-												: "Opcional"}
-									</p>
-								</div>
-								<div className="grid content-start gap-2">
-									<Label htmlFor="branch">Sucursal</Label>
-									<Select value={branchID} onValueChange={setBranch} required>
-										<SelectTrigger id="branch" className="w-full">
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											{branches.map((b) => (
-												<SelectItem key={b.branch_id} value={b.branch_id}>
-													{b.branch_name}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-							</div>
-							<div className="grid gap-2">
-								<Label htmlFor="notes" className="flex items-center gap-1.5">
-									<Lock className="size-3.5 text-ink-3" />
-									Notas internas
-									<span className="font-normal text-ink-3">
-										· privadas del taller
+					<Form {...form}>
+						<form id="new-order" onSubmit={submit} noValidate>
+							<SectionCard
+								title={
+									<span className="flex items-center gap-2">
+										<Step n={2} done={!!reason} />
+										Recepción
 									</span>
-								</Label>
-								<Textarea
-									id="notes"
-									placeholder="Nunca se muestran al propietario ni a otros talleres"
-									value={notes}
-									onChange={(e) => setNotes(e.target.value)}
-								/>
-							</div>
-						</div>
-					</SectionCard>
+								}
+							>
+								<div className="grid gap-4">
+									<div className="grid gap-2">
+										<TextField
+											name="reason"
+											label="Motivo de ingreso"
+											required
+											placeholder="¿Qué reporta el cliente?"
+										/>
+										<div className="flex flex-wrap gap-1.5">
+											{reasons.map((r) => (
+												<button
+													key={r}
+													type="button"
+													onClick={() =>
+														form.setValue("reason", r, { shouldValidate: true })
+													}
+													className={cn(
+														"rounded-full border px-2.5 py-1 text-xs text-ink-2 hover:border-seal/40 hover:text-seal",
+														reason === r &&
+															"border-seal bg-seal-soft text-seal",
+													)}
+												>
+													{r}
+												</button>
+											))}
+										</div>
+									</div>
+									<div className="grid gap-4 sm:grid-cols-2">
+										<NumberField
+											name="km"
+											label="Kilometraje actual"
+											min="0"
+											placeholder={
+												lastKm != null ? String(lastKm) : "Ej. 85000"
+											}
+											description={
+												<span
+													className={
+														kmBelow ? "font-medium text-warn" : undefined
+													}
+												>
+													{kmBelow
+														? `Es menor que la última lectura (${formatKm(lastKm)}).`
+														: lastKm != null
+															? `Última lectura: ${formatKm(lastKm)}`
+															: "Opcional"}
+												</span>
+											}
+										/>
+										<SelectField
+											name="branch"
+											label="Sucursal"
+											required
+											options={branches.map((b) => ({
+												value: b.branch_id,
+												label: b.branch_name,
+											}))}
+										/>
+									</div>
+									<TextareaField
+										name="notes"
+										label={
+											<>
+												<Lock className="size-3.5 text-ink-3" /> Notas internas{" "}
+												<span className="font-normal text-ink-3">
+													· privadas del taller
+												</span>
+											</>
+										}
+										placeholder="Nunca se muestran al propietario ni a otros talleres"
+									/>
+									<RootError />
+								</div>
+							</SectionCard>
+						</form>
+					</Form>
 				</div>
 
 				<aside className="space-y-3 lg:sticky lg:top-6">
@@ -357,8 +369,10 @@ function NewOrderPage() {
 							</div>
 						</dl>
 						<Button
+							type="submit"
+							form="new-order"
 							className="mt-5 w-full"
-							disabled={!vehicle || !reason || create.isPending}
+							disabled={!chosen || !reason || create.isPending}
 						>
 							{create.isPending ? "Registrando…" : "Registrar orden"}
 						</Button>
@@ -367,7 +381,7 @@ function NewOrderPage() {
 						</p>
 					</SectionCard>
 				</aside>
-			</form>
+			</div>
 		</PageBody>
 	);
 }

@@ -16,34 +16,12 @@ import {
 } from "@/components/ui/select";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import {
-	adminActions,
+	recommendationActions,
 	vehicleRecommendationsQuery,
-} from "@/features/taller/team";
+} from "@/features/taller/recommendations";
 import { categoryLabels } from "@/lib/domain";
-import { day, km, todayISO } from "@/lib/format";
+import { dueText, type Urgency, urgency } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
-
-type Rec = components["schemas"]["Recommendation"];
-export type Urgency = "vencida" | "proxima" | "programada";
-
-export function urgency(rec: Rec, currentKm?: number | null): Urgency {
-	const today = todayISO();
-	const soon = new Date(`${today}T00:00:00Z`);
-	soon.setUTCDate(soon.getUTCDate() + 30);
-	const soonISO = soon.toISOString().slice(0, 10);
-	const kmKnown = currentKm != null && rec.due_km != null;
-	if (
-		(rec.due_date && rec.due_date < today) ||
-		(kmKnown && (currentKm as number) >= (rec.due_km as number))
-	)
-		return "vencida";
-	if (
-		(rec.due_date && rec.due_date <= soonISO) ||
-		(kmKnown && (rec.due_km as number) - (currentKm as number) <= 1000)
-	)
-		return "proxima";
-	return "programada";
-}
 
 const urgencyStyle: Record<Urgency, string> = {
 	vencida: "bg-destructive/10 text-destructive",
@@ -69,11 +47,6 @@ export function UrgencyBadge({ value }: { value: Urgency }) {
 	);
 }
 
-export const dueText = (rec: Rec) =>
-	[rec.due_date && day(rec.due_date), rec.due_km != null && km(rec.due_km)]
-		.filter(Boolean)
-		.join(" o ");
-
 export function RecommendationsCard({
 	workshopID,
 	vehicleID,
@@ -88,7 +61,7 @@ export function RecommendationsCard({
 	const { data = [], isLoading } = useQuery(
 		vehicleRecommendationsQuery(workshopID, vehicleID),
 	);
-	const a = adminActions(workshopID);
+	const a = recommendationActions(workshopID);
 	const create = useWorkshopMutation(workshopID, a.recommend);
 	const resolve = useWorkshopMutation(workshopID, a.resolve);
 	const [open, setOpen] = useState(false);

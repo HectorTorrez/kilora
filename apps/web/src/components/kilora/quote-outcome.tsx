@@ -1,20 +1,18 @@
 import { Badge } from "@/components/ui/badge";
+import { quoteOutcomeLabels } from "@/lib/domain";
 import { cn } from "@/lib/utils";
 
 const outcomes = {
 	pendiente: {
-		label: "Pendiente",
 		className: "bg-secondary text-ink-2",
 		dot: "bg-ink-3",
 	},
-	acepto: { label: "Aceptó", className: "bg-ok-soft text-ok", dot: "bg-ok" },
+	acepto: { className: "bg-ok-soft text-ok", dot: "bg-ok" },
 	rechazo: {
-		label: "Rechazó",
 		className: "bg-warn-soft text-warn",
 		dot: "bg-warn",
 	},
 	no_respondio: {
-		label: "No respondió",
 		className: "bg-secondary text-ink-2",
 		dot: "bg-ink-3",
 	},
@@ -38,7 +36,7 @@ export function QuoteOutcomeBadge({
 			)}
 		>
 			<span className={cn("size-1.5 rounded-full", item.dot)} />
-			{item.label}
+			{quoteOutcomeLabels[outcome]}
 		</Badge>
 	);
 }

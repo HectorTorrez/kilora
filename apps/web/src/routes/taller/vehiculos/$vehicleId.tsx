@@ -1,10 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ClipboardList, MessageCircle, Plus } from "lucide-react";
-import {
-	HistoryTimeline,
-	lastByCategory,
-} from "@/components/kilora/history-timeline";
+import { HistoryTimeline } from "@/components/kilora/history-timeline";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
@@ -22,6 +19,7 @@ import { ordersQuery } from "@/features/taller/orders";
 import { useWorkshopId } from "@/features/taller/session";
 import { historyQuery, vehicleQuery } from "@/features/taller/vehicles";
 import { date, day, km } from "@/lib/format";
+import { lastByCategory } from "@/lib/history";
 
 export const Route = createFileRoute("/taller/vehiculos/$vehicleId")({
 	component: VehiclePage,

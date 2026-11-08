@@ -11,11 +11,7 @@ import {
 	Plus,
 	Wrench,
 } from "lucide-react";
-import {
-	dueText,
-	UrgencyBadge,
-	urgency,
-} from "@/components/kilora/recommendations";
+import { UrgencyBadge } from "@/components/kilora/recommendations";
 import {
 	EmptyState,
 	OrderStatusBadge,
@@ -31,10 +27,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ordersQuery } from "@/features/taller/orders";
+import { recommendationsQuery } from "@/features/taller/recommendations";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
-import { recommendationsQuery } from "@/features/taller/team";
 import { vehiclesQuery } from "@/features/taller/vehicles";
 import { statusLabel, TIME_ZONE } from "@/lib/format";
+import { dueText, urgency } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
 
 type S = components["schemas"];

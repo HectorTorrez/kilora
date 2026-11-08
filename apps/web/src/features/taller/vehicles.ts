@@ -4,6 +4,23 @@ import { api, unwrap } from "@/lib/api";
 
 type S = components["schemas"];
 
+export function matchesVehicle(vehicle: S["Vehicle"], query: string) {
+	const normalize = (value: string) =>
+		value.toLowerCase().replace(/[\s-]/g, "");
+	return normalize(
+		[
+			vehicle.plate,
+			vehicle.make,
+			vehicle.model,
+			vehicle.contact_name,
+			vehicle.contact_phone,
+			vehicle.vin,
+		]
+			.filter(Boolean)
+			.join(" "),
+	).includes(normalize(query.trim()));
+}
+
 export const vehiclesQuery = (workshopID: string) =>
 	queryOptions({
 		queryKey: ["workshop", workshopID, "vehicles"],

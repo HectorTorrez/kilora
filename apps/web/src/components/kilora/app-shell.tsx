@@ -205,7 +205,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 						</Link>
 					</Button>
 				</header>
-				<WorkshopProvider value={active?.workshop_id ?? ""}>
+				<WorkshopProvider
+					key={active?.workshop_id}
+					value={active?.workshop_id ?? ""}
+				>
 					<div className="print:hidden">
 						<DemoBanner email={me.user.email} />
 					</div>

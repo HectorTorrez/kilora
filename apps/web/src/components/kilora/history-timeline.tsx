@@ -1,27 +1,10 @@
 import type { components } from "@kilora/contracts";
 import { BadgeCheck, EyeOff, History as HistoryIcon, Lock } from "lucide-react";
+import { HistoryItems } from "@/components/kilora/history-record";
 import { EmptyState } from "@/components/kilora/workshop-ui";
-import { categoryLabels, trackedCategories } from "@/lib/domain";
 import { day, km, money } from "@/lib/format";
 
 type S = components["schemas"];
-
-export function lastByCategory(records: S["HistoryRecord"][]) {
-	const sorted = [...records].sort((a, b) =>
-		b.performed_on.localeCompare(a.performed_on),
-	);
-	return trackedCategories.map((category) => {
-		const record = sorted.find((r) =>
-			r.items.some((i) => i.category === category),
-		);
-		return {
-			category,
-			label: categoryLabels[category],
-			record,
-			item: record?.items.find((i) => i.category === category),
-		};
-	});
-}
 
 export function HistoryTimeline({
 	records,
@@ -77,31 +60,7 @@ export function HistoryTimeline({
 								</>
 							)}
 						</p>
-						{r.items.length > 0 && (
-							<ul className="mt-2.5 divide-y rounded-md border bg-background/50 text-[13px]">
-								{r.items.map((item, i) => (
-									<li
-										// biome-ignore lint/suspicious/noArrayIndexKey: items have no IDs.
-										key={i}
-										className="flex items-center justify-between gap-3 px-3 py-1.5"
-									>
-										<span className="min-w-0">
-											{item.description || item.name}
-											{item.category && (
-												<span className="ml-2 rounded bg-secondary px-1.5 py-px text-[10.5px] font-medium text-ink-2">
-													{categoryLabels[item.category]}
-												</span>
-											)}
-										</span>
-										{item.price && (
-											<span className="font-mono text-xs tabular-nums">
-												{money(item.price)}
-											</span>
-										)}
-									</li>
-								))}
-							</ul>
-						)}
+						<HistoryItems items={r.items} appearance="categorized" />
 						{(r.total || r.internal_cost) && (
 							<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
 								{r.total && (

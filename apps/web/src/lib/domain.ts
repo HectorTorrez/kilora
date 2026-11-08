@@ -30,3 +30,15 @@ export const trackedCategories: S["PartCategory"][] = [
 	"bateria",
 	"llantas",
 ];
+
+export const quoteOutcomeLabels: Record<S["CounterQuote"]["outcome"], string> =
+	{
+		pendiente: "Pendiente",
+		acepto: "Aceptó",
+		rechazo: "Rechazó",
+		no_respondio: "No respondió",
+	};
+
+export const quoteOutcomeActions = (
+	["acepto", "rechazo", "no_respondio"] as const
+).map((value) => [value, quoteOutcomeLabels[value]] as const);
