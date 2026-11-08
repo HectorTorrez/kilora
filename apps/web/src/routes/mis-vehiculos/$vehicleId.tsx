@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { day, km as formatKm, money, plural } from "@/lib/format";
+import { date, day, km as formatKm, money, plural } from "@/lib/format";
 import {
 	ownerActions,
 	ownerHistoryQuery,
@@ -37,6 +37,15 @@ function Page() {
 	const [form, setForm] = useState<"manual" | "km" | string>("");
 	const [warning, setWarning] = useState("");
 	const [itemIds, setItemIds] = useState([0]);
+	const [correctionItems, setCorrectionItems] = useState<
+		{
+			id: string;
+			kind: "trabajo" | "pieza";
+			description: string;
+			price: string;
+		}[]
+	>([]);
+	const [editItems, setEditItems] = useState(false);
 	const manual = useOwnerMutation(
 		(body: Parameters<typeof ownerActions.manual>[1]) =>
 			ownerActions.manual(id, body),
@@ -200,6 +209,9 @@ function Page() {
 										(r.source === "propietario"
 											? "Registro personal"
 											: "Taller")}
+									{r.workshop_verified_at && (
+										<span className="ml-2 text-sm text-seal">✓ Verificado</span>
+									)}
 								</p>
 								<ul className="mt-3 space-y-1">
 									{r.items.map((item) => (
@@ -239,7 +251,18 @@ function Page() {
 										variant="outline"
 										size="sm"
 										className="mt-4"
-										onClick={() => setForm(r.id)}
+										onClick={() => {
+											setCorrectionItems(
+												r.items.map((item) => ({
+													id: crypto.randomUUID(),
+													kind: item.kind === "pieza" ? "pieza" : "trabajo",
+													description: item.description,
+													price: item.price ?? "",
+												})),
+											);
+											setEditItems(false);
+											setForm(r.id);
+										}}
 									>
 										Corregir
 									</Button>
@@ -262,6 +285,17 @@ function Page() {
 														history_record_id: r.id,
 														reason: String(f.get("reason")),
 														changes: {
+															...(editItems
+																? {
+																		items: correctionItems.map(
+																			({ kind, description, price }) => ({
+																				kind,
+																				description: description.trim(),
+																				...(price ? { price } : {}),
+																			}),
+																		),
+																	}
+																: {}),
 															...(f.get("summary")
 																? { summary: String(f.get("summary")) }
 																: {}),
@@ -294,6 +328,83 @@ function Page() {
 												min="0"
 												placeholder="Nuevo kilometraje"
 											/>
+											<label className="flex items-center gap-2 text-sm">
+												<input
+													type="checkbox"
+													checked={editItems}
+													onChange={(e) => setEditItems(e.target.checked)}
+												/>{" "}
+												Corregir ítems
+											</label>
+											{editItems && (
+												<div className="grid gap-2">
+													{correctionItems.map((item, index) => (
+														<div className="flex gap-2" key={item.id}>
+															<Input
+																aria-label="Descripción del ítem"
+																value={item.description}
+																required
+																onChange={(e) =>
+																	setCorrectionItems(
+																		correctionItems.map((v, i) =>
+																			i === index
+																				? { ...v, description: e.target.value }
+																				: v,
+																		),
+																	)
+																}
+															/>
+															<Input
+																aria-label="Precio del ítem"
+																type="number"
+																min="0"
+																step="0.01"
+																placeholder="Precio"
+																value={item.price}
+																onChange={(e) =>
+																	setCorrectionItems(
+																		correctionItems.map((v, i) =>
+																			i === index
+																				? { ...v, price: e.target.value }
+																				: v,
+																		),
+																	)
+																}
+															/>
+															<Button
+																type="button"
+																variant="outline"
+																onClick={() =>
+																	setCorrectionItems(
+																		correctionItems.filter(
+																			(_, i) => i !== index,
+																		),
+																	)
+																}
+															>
+																Quitar
+															</Button>
+														</div>
+													))}
+													<Button
+														type="button"
+														variant="outline"
+														onClick={() =>
+															setCorrectionItems([
+																...correctionItems,
+																{
+																	id: crypto.randomUUID(),
+																	kind: "trabajo",
+																	description: "",
+																	price: "",
+																},
+															])
+														}
+													>
+														Agregar ítem
+													</Button>
+												</div>
+											)}
 											<Button>Guardar corrección</Button>
 											{correction.error && (
 												<p role="alert">{correction.error.message}</p>
@@ -311,11 +422,7 @@ function Page() {
 						{(v.workshops || []).length ? (
 							v.workshops?.map((w) => (
 								<p className="mt-2 text-sm" key={JSON.stringify(w)}>
-									{String(
-										(w as Record<string, unknown>).name ||
-											(w as Record<string, unknown>).workshop_name ||
-											"Taller",
-									)}
+									{w.name}
 								</p>
 							))
 						) : (
@@ -327,17 +434,7 @@ function Page() {
 						{(v.odometer_readings || []).length ? (
 							v.odometer_readings?.map((o) => (
 								<p className="mt-2 text-sm" key={JSON.stringify(o)}>
-									{formatKm(
-										(o as Record<string, unknown>).km as number | undefined,
-									)}{" "}
-									·{" "}
-									{day(
-										String(
-											(o as Record<string, unknown>).read_at ||
-												(o as Record<string, unknown>).created_at ||
-												"",
-										),
-									)}
+									{formatKm(o.km)} · {date(o.read_at)}
 								</p>
 							))
 						) : (

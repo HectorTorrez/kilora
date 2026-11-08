@@ -92,16 +92,9 @@ function Page() {
 						<p className="mt-4 text-sm text-ink-3">
 							Último servicio:{" "}
 							{v.last_service
-								? String(
-										(v.last_service as Record<string, unknown>).summary ||
-											day(
-												String(
-													(v.last_service as Record<string, unknown>)
-														.performed_on ?? "",
-												),
-											) ||
-											"Registrado",
-									)
+								? v.last_service.summary ||
+									day(v.last_service.performed_on) ||
+									"Registrado"
 								: "Sin servicios"}
 						</p>
 						<p className="text-sm text-ink-3">

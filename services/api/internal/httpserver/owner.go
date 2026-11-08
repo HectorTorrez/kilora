@@ -36,28 +36,55 @@ func ownerError(w http.ResponseWriter, e error) bool {
 	}
 	return true
 }
-func ownerBase(v sqlc.Vehicle) map[string]any {
-	return map[string]any{"id": uuid.UUID(v.ID.Bytes), "plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year, "status": v.Status}
+
+type ownerLastService struct {
+	PerformedOn string `json:"performed_on"`
+	Summary     string `json:"summary"`
 }
-func (s *server) ownerVehicleData(q *sqlc.Queries, r *http.Request, v sqlc.Vehicle) (map[string]any, error) {
+type ownerWorkshop struct {
+	Name       string     `json:"name"`
+	VerifiedAt *time.Time `json:"verified_at"`
+}
+type ownerReading struct {
+	Km     int32               `json:"km"`
+	ReadAt time.Time           `json:"read_at"`
+	Source sqlc.OdometerSource `json:"source"`
+}
+type ownerVehicleDTO struct {
+	ID               uuid.UUID          `json:"id"`
+	Plate            *string            `json:"plate"`
+	Make             string             `json:"make"`
+	Model            string             `json:"model"`
+	Year             *int32             `json:"year"`
+	Status           sqlc.VehicleStatus `json:"status"`
+	LastOdometerKm   *int32             `json:"last_odometer_km"`
+	HistoryCount     *int               `json:"history_count,omitempty"`
+	LastService      *ownerLastService  `json:"last_service"`
+	OdometerReadings []ownerReading     `json:"odometer_readings,omitempty"`
+	Workshops        []ownerWorkshop    `json:"workshops,omitempty"`
+}
+
+func ownerBase(v sqlc.Vehicle) ownerVehicleDTO {
+	return ownerVehicleDTO{ID: uuid.UUID(v.ID.Bytes), Plate: v.Plate, Make: v.Make, Model: v.Model, Year: v.Year, Status: v.Status}
+}
+func (s *server) ownerVehicleData(q *sqlc.Queries, r *http.Request, v sqlc.Vehicle) (ownerVehicleDTO, error) {
 	uid := dbUUID(currentUser(r.Context()).ID)
 	out := ownerBase(v)
 	readings, e := q.ListOdometerReadingsForOwner(r.Context(), sqlc.ListOdometerReadingsForOwnerParams{VehicleID: v.ID, OwnerUserID: uid})
 	if e != nil {
-		return nil, e
+		return out, e
 	}
-	out["last_odometer_km"] = nil
 	if len(readings) > 0 {
-		out["last_odometer_km"] = readings[0].Km
+		out.LastOdometerKm = &readings[0].Km
 	}
 	rows, e := q.ListHistoryForOwner(r.Context(), sqlc.ListHistoryForOwnerParams{VehicleID: v.ID, OwnerUserID: uid})
 	if e != nil {
-		return nil, e
+		return out, e
 	}
-	out["history_count"] = len(rows)
-	out["last_service"] = nil
+	count := len(rows)
+	out.HistoryCount = &count
 	if len(rows) > 0 {
-		out["last_service"] = map[string]any{"performed_on": rows[0].PerformedOn.Time.Format("2006-01-02"), "summary": rows[0].Summary}
+		out.LastService = &ownerLastService{PerformedOn: rows[0].PerformedOn.Time.Format("2006-01-02"), Summary: rows[0].Summary}
 	}
 	return out, nil
 }
@@ -67,7 +94,7 @@ func (s *server) listOwnerVehicles(w http.ResponseWriter, r *http.Request) {
 	if ownerError(w, e) {
 		return
 	}
-	out := []map[string]any{}
+	out := []ownerVehicleDTO{}
 	for _, v := range vs {
 		item, e := s.ownerVehicleData(q, r, v)
 		if ownerError(w, e) {
@@ -95,16 +122,23 @@ func (s *server) getOwnerVehicle(w http.ResponseWriter, r *http.Request) {
 	if len(readings) > 10 {
 		readings = readings[:10]
 	}
-	out["odometer_readings"] = readings
+	out.OdometerReadings = make([]ownerReading, 0, len(readings))
+	for _, reading := range readings {
+		out.OdometerReadings = append(out.OdometerReadings, ownerReading{Km: reading.Km, ReadAt: reading.ReadAt.Time, Source: reading.Source})
+	}
 	ws, e := q.ListOwnerWorkshops(r.Context(), sqlc.ListOwnerWorkshopsParams{ID: v.ID, OwnerUserID: uid})
 	if ownerError(w, e) {
 		return
 	}
-	workshops := []map[string]any{}
+	workshops := []ownerWorkshop{}
 	for _, x := range ws {
-		workshops = append(workshops, map[string]any{"name": x.Name, "verified_at": x.VerifiedAt})
+		var verified *time.Time
+		if x.VerifiedAt.Valid {
+			verified = &x.VerifiedAt.Time
+		}
+		workshops = append(workshops, ownerWorkshop{Name: x.Name, VerifiedAt: verified})
 	}
-	out["workshops"] = workshops
+	out.Workshops = workshops
 	writeJSON(w, 200, out)
 }
 func (s *server) createOwnerVehicle(w http.ResponseWriter, r *http.Request) {

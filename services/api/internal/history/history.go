@@ -53,21 +53,22 @@ type Correction struct {
 	CreatedAt time.Time
 }
 type Record struct {
-	ID            uuid.UUID
-	WorkshopID    *uuid.UUID
-	WorkshopName  *string
-	Source        string
-	PerformedOn   time.Time
-	OdometerKm    *int32
-	Summary       string
-	Items         []Item
-	Total         *string
-	Currency      string
-	WorkshopNotes *string
-	InternalCost  *string
-	InternalNotes *string
-	CreatedBy     *uuid.UUID
-	Corrections   []Correction
+	ID                 uuid.UUID
+	WorkshopID         *uuid.UUID
+	WorkshopName       *string
+	WorkshopVerifiedAt *time.Time
+	Source             string
+	PerformedOn        time.Time
+	OdometerKm         *int32
+	Summary            string
+	Items              []Item
+	Total              *string
+	Currency           string
+	WorkshopNotes      *string
+	InternalCost       *string
+	InternalNotes      *string
+	CreatedBy          *uuid.UUID
+	Corrections        []Correction
 }
 type ProjectedCorrection struct {
 	ID        uuid.UUID                  `json:"id"`
@@ -77,21 +78,22 @@ type ProjectedCorrection struct {
 	CreatedBy *uuid.UUID                 `json:"created_by,omitempty"`
 }
 type Projected struct {
-	ID            uuid.UUID             `json:"id"`
-	PerformedOn   string                `json:"performed_on"`
-	OdometerKm    *int32                `json:"odometer_km,omitempty"`
-	Source        string                `json:"source"`
-	Summary       string                `json:"summary"`
-	Items         []Item                `json:"items"`
-	Total         *string               `json:"total,omitempty"`
-	Currency      *string               `json:"currency,omitempty"`
-	WorkshopID    *uuid.UUID            `json:"workshop_id,omitempty"`
-	WorkshopName  *string               `json:"workshop_name,omitempty"`
-	WorkshopNotes *string               `json:"workshop_notes,omitempty"`
-	InternalCost  *string               `json:"internal_cost,omitempty"`
-	InternalNotes *string               `json:"internal_notes,omitempty"`
-	CreatedBy     *uuid.UUID            `json:"created_by,omitempty"`
-	Corrections   []ProjectedCorrection `json:"corrections,omitempty"`
+	ID                 uuid.UUID             `json:"id"`
+	PerformedOn        string                `json:"performed_on"`
+	OdometerKm         *int32                `json:"odometer_km,omitempty"`
+	Source             string                `json:"source"`
+	Summary            string                `json:"summary"`
+	Items              []Item                `json:"items"`
+	Total              *string               `json:"total,omitempty"`
+	Currency           *string               `json:"currency,omitempty"`
+	WorkshopID         *uuid.UUID            `json:"workshop_id,omitempty"`
+	WorkshopName       *string               `json:"workshop_name,omitempty"`
+	WorkshopVerifiedAt *time.Time            `json:"workshop_verified_at,omitempty"`
+	WorkshopNotes      *string               `json:"workshop_notes,omitempty"`
+	InternalCost       *string               `json:"internal_cost,omitempty"`
+	InternalNotes      *string               `json:"internal_notes,omitempty"`
+	CreatedBy          *uuid.UUID            `json:"created_by,omitempty"`
+	Corrections        []ProjectedCorrection `json:"corrections,omitempty"`
 }
 
 func ResolveViewer(rec Record, v Viewer) ViewerKind {
@@ -170,6 +172,7 @@ func Project(kind ViewerKind, rec Record) (Projected, bool) {
 		p.Currency = &rec.Currency
 		p.WorkshopID = rec.WorkshopID
 		p.WorkshopName = rec.WorkshopName
+		p.WorkshopVerifiedAt = rec.WorkshopVerifiedAt
 		p.WorkshopNotes = rec.WorkshopNotes
 	}
 	if kind == ViewerAuthorWorkshop {

@@ -3867,6 +3867,10 @@
             "items": {
               "$ref": "#/components/schemas/Correction"
             }
+          },
+          "workshop_verified_at": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4373,21 +4377,25 @@
             "type": "integer"
           },
           "last_service": {
-            "type": [
-              "object",
-              "null"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastService"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "odometer_readings": {
             "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/OdometerReading"
             }
           },
           "workshops": {
             "type": "array",
             "items": {
-              "type": "object"
+              "$ref": "#/components/schemas/LinkedWorkshop"
             }
           }
         },
@@ -4481,6 +4489,61 @@
           "history_record_id",
           "reason",
           "changes"
+        ]
+      },
+      "LastService": {
+        "type": "object",
+        "properties": {
+          "performed_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "summary": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "performed_on",
+          "summary"
+        ]
+      },
+      "LinkedWorkshop": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "name",
+          "verified_at"
+        ]
+      },
+      "OdometerReading": {
+        "type": "object",
+        "properties": {
+          "km": {
+            "type": "integer"
+          },
+          "read_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "km",
+          "read_at",
+          "source"
         ]
       }
     }

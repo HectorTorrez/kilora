@@ -59,27 +59,31 @@ func (s *server) history(w http.ResponseWriter, r *http.Request) {
 	for _, c := range corrections {
 		grouped[c.HistoryRecordID] = append(grouped[c.HistoryRecordID], c)
 	}
-	names := make(map[pgtype.UUID]string)
+	workshops := make(map[pgtype.UUID]sqlc.Workshop)
 	records := make([]history.Projected, 0, len(rows))
 	for _, row := range rows {
 		var name *string
 		if row.WorkshopID.Valid {
-			n, ok := names[row.WorkshopID]
+			workshop, ok := workshops[row.WorkshopID]
 			if !ok {
-				workshop, e := q.GetWorkshop(ctx, row.WorkshopID)
+				var e error
+				workshop, e = q.GetWorkshop(ctx, row.WorkshopID)
 				if e != nil {
 					fail(w, 500, "Error interno")
 					return
 				}
-				n = workshop.Name
-				names[row.WorkshopID] = n
+				workshops[row.WorkshopID] = workshop
 			}
-			name = &n
+			name = &workshop.Name
 		}
 		rec, e := history.FromSQLC(row, name, grouped[row.ID])
 		if e != nil {
 			fail(w, 500, "Error interno")
 			return
+		}
+		if row.WorkshopID.Valid && workshops[row.WorkshopID].VerifiedAt.Valid {
+			verified := workshops[row.WorkshopID].VerifiedAt.Time
+			rec.WorkshopVerifiedAt = &verified
 		}
 		if p, ok := history.Project(history.ResolveViewer(rec, viewer), rec); ok {
 			records = append(records, p)

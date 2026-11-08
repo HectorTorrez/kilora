@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AuthPage } from "@/components/kilora/auth-page";
 export const Route = createFileRoute("/restablecer")({
-	validateSearch: (search: Record<string, unknown>) => ({
+	validateSearch: (search: { [key: string]: unknown }) => ({
 		token: typeof search.token === "string" ? search.token : "",
 	}),
 	component: Page,

@@ -2942,6 +2942,8 @@ export interface components {
             /** Format: uuid */
             created_by?: string;
             corrections?: components["schemas"]["Correction"][];
+            /** Format: date-time */
+            workshop_verified_at?: string;
         };
         HistoryVehicle: {
             /** Format: uuid */
@@ -3065,9 +3067,9 @@ export interface components {
             status?: string;
             last_odometer_km?: number | null;
             history_count?: number;
-            last_service?: Record<string, never> | null;
-            odometer_readings?: Record<string, never>[];
-            workshops?: Record<string, never>[];
+            last_service?: components["schemas"]["LastService"] | null;
+            odometer_readings?: components["schemas"]["OdometerReading"][];
+            workshops?: components["schemas"]["LinkedWorkshop"][];
         };
         ManualItem: {
             /** @enum {string} */
@@ -3093,6 +3095,22 @@ export interface components {
                 summary?: string;
                 items?: components["schemas"]["ManualItem"][];
             };
+        };
+        LastService: {
+            /** Format: date */
+            performed_on: string;
+            summary: string;
+        };
+        LinkedWorkshop: {
+            name: string;
+            /** Format: date-time */
+            verified_at: string | null;
+        };
+        OdometerReading: {
+            km: number;
+            /** Format: date-time */
+            read_at: string;
+            source: string;
         };
     };
     responses: never;
