@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import { QuoteOutcomeBadge } from "@/components/kilora/quote-outcome";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -26,9 +25,9 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { counterQuotesQuery } from "@/features/taller/quotes";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import { date, money, quoteCode } from "@/lib/format";
-import { counterQuotesQuery } from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
 
 export const Route = createFileRoute("/taller/cotizaciones/")({
 	loader: async ({ context }) => {
@@ -60,7 +59,7 @@ function vehicleLabel(row: Row) {
 function QuotesPage() {
 	const workshopID = useWorkshopId();
 	const initial = Route.useLoaderData();
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const [q, setQ] = useState("");
 	const [outcome, setOutcome] = useState<Outcome | "">("");
 	const { data, isLoading, error, isFetching } = useQuery({

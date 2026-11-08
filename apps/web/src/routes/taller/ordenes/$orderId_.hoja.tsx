@@ -3,24 +3,21 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Printer } from "lucide-react";
 import QRCode from "qrcode";
 import { type ReactNode, useEffect, useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
-import {
-	categoryLabels,
-	lastByCategory,
-} from "@/components/kilora/history-timeline";
+import { lastByCategory } from "@/components/kilora/history-timeline";
 import { dueText, urgency } from "@/components/kilora/recommendations";
 import { PageBody } from "@/components/kilora/workshop-ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { date, day, km, statusLabel } from "@/lib/format";
+import { orderQuery } from "@/features/taller/orders";
+import { useWorkshopId } from "@/features/taller/session";
 import {
-	historyQuery,
-	orderQuery,
-	vehicleQuery,
 	vehicleRecommendationsQuery,
 	workshopQuery,
-} from "@/lib/workshop";
+} from "@/features/taller/team";
+import { historyQuery, vehicleQuery } from "@/features/taller/vehicles";
+import { categoryLabels } from "@/lib/domain";
+import { date, day, km, statusLabel } from "@/lib/format";
 
 export const Route = createFileRoute("/taller/ordenes/$orderId_/hoja")({
 	head: () => ({ meta: [{ title: "Hoja del mecánico · Kilora" }] }),
@@ -183,7 +180,7 @@ function MechanicSheet() {
 									<div>
 										<p className="font-semibold">
 											{j.description}
-											{j.category && categoryLabels[j.category] && (
+											{j.category && (
 												<span className="ml-2 text-xs font-normal text-[#667180]">
 													[{categoryLabels[j.category]}]
 												</span>

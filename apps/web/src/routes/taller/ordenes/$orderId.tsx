@@ -18,8 +18,6 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { useWorkshopId } from "@/components/kilora/app-shell";
-import { categoryLabels } from "@/components/kilora/history-timeline";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
@@ -50,14 +48,14 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useWorkshopMutation } from "@/features/taller/mutation";
+import { orderActions, orderQuery } from "@/features/taller/orders";
+import { useWorkshopId } from "@/features/taller/session";
+import { vehicleQuery } from "@/features/taller/vehicles";
+import { categoryLabels } from "@/lib/domain";
 import { date, km as formatKm, money, statusLabel } from "@/lib/format";
+import { amountCents, formatCents, lineCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import {
-	actions,
-	orderQuery,
-	useWorkshopMutation,
-	vehicleQuery,
-} from "@/lib/workshop";
 
 type S = components["schemas"];
 export const Route = createFileRoute("/taller/ordenes/$orderId")({
@@ -131,7 +129,7 @@ function OrderDetail({
 	order: S["WorkOrderDetail"];
 	vehicle?: S["Vehicle"];
 }) {
-	const a = actions(workshopID, order.id);
+	const a = orderActions(workshopID, order.id);
 	const status = useWorkshopMutation(workshopID, a.status);
 	const [cancelOpen, setCancelOpen] = useState(false);
 	const [cancelReason, setCancelReason] = useState("");
@@ -379,7 +377,7 @@ function JobsCard({
 	order: S["WorkOrderDetail"];
 	locked: boolean;
 }) {
-	const a = actions(workshopID, order.id);
+	const a = orderActions(workshopID, order.id);
 	const job = useWorkshopMutation(workshopID, a.job);
 	const deleteJob = useWorkshopMutation(workshopID, a.deleteJob);
 	const part = useWorkshopMutation(workshopID, a.part);
@@ -394,11 +392,8 @@ function JobsCard({
 	const total = order.jobs.reduce(
 		(sum, j) =>
 			sum +
-			Number(j.labor_price || 0) +
-			j.parts.reduce(
-				(s, p) => s + Number(p.quantity) * Number(p.unit_price || 0),
-				0,
-			),
+			amountCents(j.labor_price) +
+			j.parts.reduce((s, p) => s + lineCents(p.quantity, p.unit_price), 0),
 		0,
 	);
 
@@ -422,7 +417,7 @@ function JobsCard({
 								<div className="min-w-0 flex-1">
 									<p className="text-[13.5px] font-semibold">
 										{j.description}
-										{j.category && categoryLabels[j.category] && (
+										{j.category && (
 											<span className="ml-2 rounded bg-secondary px-1.5 py-px align-middle text-[10.5px] font-medium text-ink-2">
 												{categoryLabels[j.category]}
 											</span>
@@ -462,7 +457,9 @@ function JobsCard({
 												{Number(p.quantity)} × {money(p.unit_price || 0)}
 											</span>
 											<span className="w-20 text-right font-mono text-[13px] tabular-nums">
-												{money(Number(p.quantity) * Number(p.unit_price || 0))}
+												{money(
+													formatCents(lineCents(p.quantity, p.unit_price)),
+												)}
 											</span>
 											{!locked && (
 												<Button
@@ -603,7 +600,6 @@ function JobsCard({
 									{label}
 								</SelectItem>
 							))}
-							<SelectItem value="otro">Otro</SelectItem>
 						</SelectContent>
 					</Select>
 					<Input
@@ -625,7 +621,7 @@ function JobsCard({
 			<div className="flex items-center justify-between border-t px-4 py-3 sm:px-5">
 				<span className="text-[13px] text-ink-3">Total a cobrar</span>
 				<span className="font-display text-xl font-bold tabular-nums">
-					{money(total)}
+					{money(formatCents(total))}
 				</span>
 			</div>
 		</SectionCard>
@@ -645,7 +641,7 @@ function QuoteCard({
 	workshopID: string;
 	order: S["WorkOrderDetail"];
 }) {
-	const a = actions(workshopID, order.id);
+	const a = orderActions(workshopID, order.id);
 	const quote = useWorkshopMutation(workshopID, a.quote);
 	const share = useWorkshopMutation(workshopID, a.share);
 	const outcome = useWorkshopMutation(workshopID, a.outcome);
@@ -659,7 +655,7 @@ function QuoteCard({
 	const update = (i: number, patch: Partial<S["QuoteItem"]>) =>
 		setItems(items.map((x, n) => (n === i ? { ...x, ...patch } : x)));
 	const total = items.reduce(
-		(sum, i) => sum + Number(i.quantity) * Number(i.unit_price),
+		(sum, i) => sum + lineCents(i.quantity, i.unit_price),
 		0,
 	);
 	const cmp = order.quote_comparison;
@@ -750,7 +746,7 @@ function QuoteCard({
 					<p className="text-[13px] text-ink-3">
 						Total cotizado{" "}
 						<strong className="ml-1 font-display text-lg text-foreground tabular-nums">
-							{money(total)}
+							{money(formatCents(total))}
 						</strong>
 					</p>
 				</div>
@@ -872,7 +868,7 @@ function OrderDataCard({
 }) {
 	const edit = useWorkshopMutation(
 		workshopID,
-		actions(workshopID, order.id).edit,
+		orderActions(workshopID, order.id).edit,
 	);
 	const [reason, setReason] = useState(order.reason);
 	const [km, setKm] = useState(order.odometer_km?.toString() || "");

@@ -1,24 +1,17 @@
 import type { components } from "@kilora/contracts";
 import { BadgeCheck, EyeOff, History as HistoryIcon, Lock } from "lucide-react";
 import { EmptyState } from "@/components/kilora/workshop-ui";
+import { categoryLabels, trackedCategories } from "@/lib/domain";
 import { day, km, money } from "@/lib/format";
 
 type S = components["schemas"];
-
-export const categoryLabels: Record<string, string> = {
-	aceite: "Aceite",
-	frenos: "Frenos",
-	amortiguadores: "Amortiguadores",
-	bateria: "Batería",
-	llantas: "Llantas",
-};
 
 /** Último registro por categoría de pieza, a partir del historial proyectado. */
 export function lastByCategory(records: S["HistoryRecord"][]) {
 	const sorted = [...records].sort((a, b) =>
 		b.performed_on.localeCompare(a.performed_on),
 	);
-	return Object.keys(categoryLabels).map((category) => {
+	return trackedCategories.map((category) => {
 		const record = sorted.find((r) =>
 			r.items.some((i) => i.category === category),
 		);
@@ -33,10 +26,8 @@ export function lastByCategory(records: S["HistoryRecord"][]) {
 
 export function HistoryTimeline({
 	records,
-	showPrivate = true,
 }: {
 	records: S["HistoryRecord"][];
-	showPrivate?: boolean;
 }) {
 	if (!records.length)
 		return (
@@ -97,7 +88,7 @@ export function HistoryTimeline({
 									>
 										<span className="min-w-0">
 											{item.description || item.name}
-											{item.category && categoryLabels[item.category] && (
+											{item.category && (
 												<span className="ml-2 rounded bg-secondary px-1.5 py-px text-[10.5px] font-medium text-ink-2">
 													{categoryLabels[item.category]}
 												</span>
@@ -112,7 +103,7 @@ export function HistoryTimeline({
 								))}
 							</ul>
 						)}
-						{(r.total || (showPrivate && r.internal_cost)) && (
+						{(r.total || r.internal_cost) && (
 							<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
 								{r.total && (
 									<span>
@@ -122,7 +113,7 @@ export function HistoryTimeline({
 										</strong>
 									</span>
 								)}
-								{showPrivate && r.internal_cost && (
+								{r.internal_cost && (
 									<span className="inline-flex items-center gap-1 text-ink-3">
 										<Lock className="size-3" />
 										Costo interno {money(r.internal_cost)}
@@ -135,7 +126,7 @@ export function HistoryTimeline({
 								<span className="font-medium">Notas:</span> {r.workshop_notes}
 							</p>
 						)}
-						{showPrivate && r.internal_notes && (
+						{r.internal_notes && (
 							<p className="mt-1 inline-flex items-start gap-1 text-xs text-ink-3">
 								<Lock className="mt-0.5 size-3 shrink-0" />
 								{r.internal_notes}

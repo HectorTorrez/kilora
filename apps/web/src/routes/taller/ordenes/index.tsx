@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ClipboardList, Plus, Search } from "lucide-react";
 import { useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import {
 	EmptyState,
 	OrderStatusBadge,
@@ -32,10 +31,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { ordersQuery } from "@/features/taller/orders";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import { date } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ordersQuery } from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
 
 type Status = components["schemas"]["WorkOrderStatus"];
 const statusValues: Status[] = [
@@ -73,7 +72,7 @@ function OrdersPage() {
 	const initial = Route.useLoaderData();
 	const { estado } = Route.useSearch();
 	const navigate = useNavigate({ from: "/taller/ordenes/" });
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
 	const [branch, setBranch] = useState("");
 	const [query, setQuery] = useState("");

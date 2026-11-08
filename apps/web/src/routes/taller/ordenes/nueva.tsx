@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, Check, Lock, Plus, Search, X } from "lucide-react";
 import { useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
 import {
 	PageBody,
@@ -22,10 +21,12 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useWorkshopMutation } from "@/features/taller/mutation";
+import { createOrderAction } from "@/features/taller/orders";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
+import { vehiclesQuery } from "@/features/taller/vehicles";
 import { km as formatKm } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { actions, useWorkshopMutation, vehiclesQuery } from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
 
 export const Route = createFileRoute("/taller/ordenes/nueva")({
 	validateSearch: (search: Record<string, unknown>): { vehiculo?: string } => ({
@@ -46,7 +47,7 @@ const reasons = [
 function NewOrderPage() {
 	const workshopID = useWorkshopId();
 	const { vehiculo } = Route.useSearch();
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
 	const navigate = useNavigate();
 	const [branch, setBranch] = useState("");
@@ -60,10 +61,7 @@ function NewOrderPage() {
 		...vehiclesQuery(workshopID),
 		enabled: !!workshopID,
 	});
-	const create = useWorkshopMutation(
-		workshopID,
-		actions(workshopID).createOrder,
-	);
+	const create = useWorkshopMutation(workshopID, createOrderAction(workshopID));
 	const q = search.trim().toLowerCase().replace(/[\s-]/g, "");
 	const all = data ?? [];
 	const matches = (

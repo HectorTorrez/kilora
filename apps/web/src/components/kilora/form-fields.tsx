@@ -27,7 +27,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { errorMessage } from "./form-schemas";
+import { errorMessage } from "@/lib/api";
 
 const groupedInputClass =
 	"h-full rounded-none border-0 bg-transparent shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent";
@@ -113,7 +113,6 @@ type SharedField = {
 	optional?: boolean;
 	required?: boolean;
 	className?: string;
-	labelClassName?: string;
 	autoFocus?: boolean;
 	placeholder?: string;
 };
@@ -139,7 +138,6 @@ export function TextField({
 	optional,
 	required,
 	className,
-	labelClassName,
 	autoFocus,
 	placeholder,
 	type = "text",
@@ -187,12 +185,7 @@ export function TextField({
 				);
 				return (
 					<FormItem className={className} required={required}>
-						<FieldLabel
-							label={label}
-							optional={optional}
-							required={required}
-							className={labelClassName}
-						/>
+						<FieldLabel label={label} optional={optional} required={required} />
 						{grouped ? (
 							<InputGroup prefix={prefix} suffix={suffix}>
 								<FormControl>{input}</FormControl>
@@ -229,11 +222,9 @@ export function DateField({
 	optional,
 	required,
 	className,
-	labelClassName,
 	autoFocus,
 	placeholder = "Elegí una fecha",
-	disableFuture = true,
-}: SharedField & { disableFuture?: boolean }) {
+}: SharedField) {
 	const form = useFormContext();
 	return (
 		<FormField
@@ -241,19 +232,14 @@ export function DateField({
 			name={name as FieldPath<FieldValues>}
 			render={({ field }) => (
 				<FormItem className={className} required={required}>
-					<FieldLabel
-						label={label}
-						optional={optional}
-						required={required}
-						className={labelClassName}
-					/>
+					<FieldLabel label={label} optional={optional} required={required} />
 					<FormControl>
 						<DatePicker
 							name={field.name}
 							ref={field.ref}
 							autoFocus={autoFocus}
 							placeholder={placeholder}
-							disableFuture={disableFuture}
+							disableFuture
 							value={field.value ?? ""}
 							onBlur={field.onBlur}
 							onChange={field.onChange}
@@ -276,7 +262,6 @@ export function TextareaField({
 	optional,
 	required,
 	className,
-	labelClassName,
 	autoFocus,
 	placeholder,
 	rows = 3,
@@ -288,12 +273,7 @@ export function TextareaField({
 			name={name as FieldPath<FieldValues>}
 			render={({ field }) => (
 				<FormItem className={className} required={required}>
-					<FieldLabel
-						label={label}
-						optional={optional}
-						required={required}
-						className={labelClassName}
-					/>
+					<FieldLabel label={label} optional={optional} required={required} />
 					<FormControl>
 						<Textarea
 							rows={rows}
@@ -391,7 +371,6 @@ export function SelectField({
 	optional,
 	required,
 	className,
-	labelClassName,
 }: SharedField & {
 	options: { value: string; label: string }[];
 	placeholder?: string;
@@ -403,12 +382,7 @@ export function SelectField({
 			name={name as FieldPath<FieldValues>}
 			render={({ field }) => (
 				<FormItem className={className} required={required}>
-					<FieldLabel
-						label={label}
-						optional={optional}
-						required={required}
-						className={labelClassName}
-					/>
+					<FieldLabel label={label} optional={optional} required={required} />
 					<Select
 						value={field.value ? String(field.value) : undefined}
 						onValueChange={field.onChange}

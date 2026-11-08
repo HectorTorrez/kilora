@@ -1,27 +1,27 @@
-import { createApiClient } from "@kilora/contracts";
 import { createFileRoute, notFound } from "@tanstack/react-router";
-import { createServerFn } from "@tanstack/react-start";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { api, isNotFound, unwrap } from "@/lib/api";
 import { date, day, money } from "@/lib/format";
+import { formatCents, lineCents } from "@/lib/money";
 
-const getQuote = createServerFn({ method: "GET" })
-	.validator((token: string) => token)
-	.handler(async ({ data: token }) => {
-		const { getRequest } = await import("@tanstack/react-start/server");
-		const request = getRequest();
-		const client = createApiClient(
-			import.meta.env.VITE_API_URL || new URL(request.url).origin,
+async function getQuote(token: string) {
+	try {
+		return unwrap(
+			await api.GET("/api/v1/public/quotes/{token}", {
+				params: { path: { token } },
+			}),
 		);
-		const result = await client.GET("/api/v1/public/quotes/{token}", {
-			params: { path: { token } },
-		});
-		return result.data || null;
-	});
+	} catch (error) {
+		if (isNotFound(error)) return null;
+		throw error;
+	}
+}
+
 export const Route = createFileRoute("/c/$token")({
 	loader: async ({ params }) => {
-		const quote = await getQuote({ data: params.token });
+		const quote = await getQuote(params.token);
 		if (!quote) throw notFound();
 		return quote;
 	},
@@ -78,7 +78,9 @@ function PublicQuote() {
 									</p>
 								</TableCell>
 								<TableCell className="text-right">
-									{money(Number(item.quantity) * Number(item.unit_price))}
+									{money(
+										formatCents(lineCents(item.quantity, item.unit_price)),
+									)}
 								</TableCell>
 							</TableRow>
 						))}

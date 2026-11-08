@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Lightbulb, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { categoryLabels } from "@/components/kilora/history-timeline";
 import { SectionCard } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,21 +14,17 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { day, km } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { useWorkshopMutation } from "@/features/taller/mutation";
 import {
 	adminActions,
-	useWorkshopMutation,
 	vehicleRecommendationsQuery,
-} from "@/lib/workshop";
+} from "@/features/taller/team";
+import { categoryLabels } from "@/lib/domain";
+import { day, km, todayISO } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type Rec = components["schemas"]["Recommendation"];
 export type Urgency = "vencida" | "proxima" | "programada";
-
-const todayISO = () =>
-	new Intl.DateTimeFormat("en-CA", {
-		timeZone: "America/El_Salvador",
-	}).format(new Date());
 
 /** Vencida si pasó la fecha o el kilometraje; próxima a 30 días o 1,000 km. */
 export function urgency(rec: Rec, currentKm?: number | null): Urgency {
@@ -85,13 +80,11 @@ export function RecommendationsCard({
 	vehicleID,
 	workOrderID,
 	currentKm,
-	readOnly,
 }: {
 	workshopID: string;
 	vehicleID: string;
 	workOrderID?: string;
 	currentKm?: number | null;
-	readOnly?: boolean;
 }) {
 	const { data = [], isLoading } = useQuery(
 		vehicleRecommendationsQuery(workshopID, vehicleID),
@@ -112,7 +105,6 @@ export function RecommendationsCard({
 			title="Recomendaciones"
 			description="Trabajos sugeridos con fecha o kilometraje objetivo"
 			actions={
-				!readOnly &&
 				!open && (
 					<Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
 						<Plus className="size-4" />
@@ -203,7 +195,6 @@ export function RecommendationsCard({
 									{label}
 								</SelectItem>
 							))}
-							<SelectItem value="otro">Otro</SelectItem>
 						</SelectContent>
 					</Select>
 					<div className="flex gap-2">
@@ -245,12 +236,10 @@ export function RecommendationsCard({
 								<p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
 									<UrgencyBadge value={urgency(r, currentKm)} />
 									<span className="font-mono">{dueText(r)}</span>
-									{r.category && categoryLabels[r.category] && (
-										<span>· {categoryLabels[r.category]}</span>
-									)}
+									{r.category && <span>· {categoryLabels[r.category]}</span>}
 								</p>
 							</div>
-							{!readOnly && (
+							{
 								<div className="flex shrink-0 gap-1">
 									<Button
 										variant="ghost"
@@ -279,7 +268,7 @@ export function RecommendationsCard({
 										<X className="size-4" />
 									</Button>
 								</div>
-							)}
+							}
 						</li>
 					))}
 					{resolved.map((r) => (

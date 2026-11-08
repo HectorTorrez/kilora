@@ -1171,6 +1171,16 @@
           {
             "session": []
           }
+        ],
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
         ]
       }
     },
@@ -2347,30 +2357,47 @@
             "name": "workshopID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
             "name": "q",
             "in": "query",
-            "schema": { "type": "string" }
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "outcome",
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["pendiente", "acepto", "rechazo", "no_respondio"]
+              "enum": [
+                "pendiente",
+                "acepto",
+                "rechazo",
+                "no_respondio"
+              ]
             }
           },
           {
             "name": "limit",
             "in": "query",
-            "schema": { "type": "integer", "minimum": 1, "maximum": 100 }
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
           },
           {
             "name": "offset",
             "in": "query",
-            "schema": { "type": "integer", "minimum": 0 }
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -2378,11 +2405,15 @@
             "description": "Operación exitosa",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/CounterQuoteList" }
+                "schema": {
+                  "$ref": "#/components/schemas/CounterQuoteList"
+                }
               }
             }
           },
-          "400": { "description": "Datos inválidos" }
+          "400": {
+            "description": "Datos inválidos"
+          }
         }
       },
       "post": {
@@ -2391,14 +2422,19 @@
             "name": "workshopID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CounterQuoteInput" }
+              "schema": {
+                "$ref": "#/components/schemas/CounterQuoteInput"
+              }
             }
           }
         },
@@ -2407,12 +2443,18 @@
             "description": "Cotización creada",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+                "schema": {
+                  "$ref": "#/components/schemas/CounterQuote"
+                }
               }
             }
           },
-          "400": { "description": "Datos inválidos" },
-          "404": { "description": "No encontrado" }
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "404": {
+            "description": "No encontrado"
+          }
         }
       }
     },
@@ -2423,13 +2465,19 @@
             "name": "workshopID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
             "name": "quoteID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -2437,11 +2485,15 @@
             "description": "Operación exitosa",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+                "schema": {
+                  "$ref": "#/components/schemas/CounterQuote"
+                }
               }
             }
           },
-          "404": { "description": "No encontrado" }
+          "404": {
+            "description": "No encontrado"
+          }
         }
       },
       "put": {
@@ -2450,20 +2502,28 @@
             "name": "workshopID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
             "name": "quoteID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/CounterQuoteInput" }
+              "schema": {
+                "$ref": "#/components/schemas/CounterQuoteInput"
+              }
             }
           }
         },
@@ -2472,13 +2532,21 @@
             "description": "Operación exitosa",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+                "schema": {
+                  "$ref": "#/components/schemas/CounterQuote"
+                }
               }
             }
           },
-          "400": { "description": "Datos inválidos" },
-          "404": { "description": "No encontrado" },
-          "409": { "description": "Conflicto" }
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
         }
       }
     },
@@ -2489,20 +2557,28 @@
             "name": "workshopID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
             "name": "quoteID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/QuoteOutcomeInput" }
+              "schema": {
+                "$ref": "#/components/schemas/QuoteOutcomeInput"
+              }
             }
           }
         },
@@ -2511,13 +2587,21 @@
             "description": "Operación exitosa",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/CounterQuote" }
+                "schema": {
+                  "$ref": "#/components/schemas/CounterQuote"
+                }
               }
             }
           },
-          "400": { "description": "Datos inválidos" },
-          "404": { "description": "No encontrado" },
-          "409": { "description": "Conflicto" }
+          "400": {
+            "description": "Datos inválidos"
+          },
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
         }
       }
     },
@@ -2528,13 +2612,19 @@
             "name": "workshopID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
             "name": "quoteID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -2542,11 +2632,15 @@
             "description": "Operación exitosa",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/QuoteShare" }
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteShare"
+                }
               }
             }
           },
-          "404": { "description": "No encontrado" }
+          "404": {
+            "description": "No encontrado"
+          }
         }
       }
     },
@@ -2557,13 +2651,19 @@
             "name": "workshopID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           },
           {
             "name": "quoteID",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -2571,12 +2671,18 @@
             "description": "Orden creada a partir de la cotización",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/QuoteConvertResult" }
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteConvertResult"
+                }
               }
             }
           },
-          "404": { "description": "No encontrado" },
-          "409": { "description": "Conflicto" }
+          "404": {
+            "description": "No encontrado"
+          },
+          "409": {
+            "description": "Conflicto"
+          }
         }
       }
     },
@@ -4786,7 +4892,11 @@
         "type": "object",
         "properties": {
           "kind": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+              "trabajo",
+              "pieza"
+            ]
           },
           "description": {
             "type": "string"
@@ -4795,7 +4905,14 @@
             "type": "string"
           },
           "category": {
-            "type": "string"
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "brand": {
             "type": "string"
@@ -5190,22 +5307,72 @@
       "CounterQuoteInput": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["customer_name", "vehicle_model", "branch_id", "items"],
+        "required": [
+          "customer_name",
+          "vehicle_model",
+          "branch_id",
+          "items"
+        ],
         "properties": {
-          "customer_name": { "type": "string" },
-          "customer_phone": { "type": ["string", "null"] },
-          "vehicle_id": { "type": ["string", "null"], "format": "uuid" },
-          "vehicle_make": { "type": ["string", "null"] },
-          "vehicle_model": { "type": "string" },
-          "vehicle_year": { "type": ["integer", "null"] },
-          "vehicle_plate": { "type": ["string", "null"] },
-          "branch_id": { "type": "string", "format": "uuid" },
-          "notes": { "type": ["string", "null"] },
-          "valid_days": { "type": "integer", "minimum": 1, "maximum": 365, "default": 15 },
+          "customer_name": {
+            "type": "string"
+          },
+          "customer_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "vehicle_make": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_model": {
+            "type": "string"
+          },
+          "vehicle_year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "vehicle_plate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "valid_days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 365,
+            "default": 15
+          },
           "items": {
             "type": "array",
             "minItems": 1,
-            "items": { "$ref": "#/components/schemas/QuoteItem" }
+            "items": {
+              "$ref": "#/components/schemas/QuoteItem"
+            }
           }
         }
       },
@@ -5229,35 +5396,106 @@
           "converted_order_number"
         ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "number": { "type": "integer" },
-          "customer_name": { "type": ["string", "null"] },
-          "customer_phone": { "type": ["string", "null"] },
-          "vehicle_make": { "type": ["string", "null"] },
-          "vehicle_model": { "type": ["string", "null"] },
-          "vehicle_year": { "type": ["integer", "null"] },
-          "vehicle_plate": { "type": ["string", "null"] },
-          "total": { "type": "string" },
-          "currency": { "type": "string" },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "customer_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customer_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_make": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "vehicle_plate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "total": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
           "outcome": {
             "type": "string",
-            "enum": ["pendiente", "acepto", "rechazo", "no_respondio"]
+            "enum": [
+              "pendiente",
+              "acepto",
+              "rechazo",
+              "no_respondio"
+            ]
           },
-          "created_at": { "type": "string", "format": "date-time" },
-          "valid_until": { "type": ["string", "null"], "format": "date" },
-          "converted_order_id": { "type": ["string", "null"], "format": "uuid" },
-          "converted_order_number": { "type": ["integer", "null"] }
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "converted_order_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "converted_order_number": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
         }
       },
       "CounterQuoteList": {
         "type": "object",
-        "required": ["items", "total"],
+        "required": [
+          "items",
+          "total"
+        ],
         "properties": {
           "items": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/CounterQuoteSummary" }
+            "items": {
+              "$ref": "#/components/schemas/CounterQuoteSummary"
+            }
           },
-          "total": { "type": "integer" }
+          "total": {
+            "type": "integer"
+          }
         }
       },
       "CounterQuote": {
@@ -5292,46 +5530,170 @@
           "converted_order_number"
         ],
         "properties": {
-          "id": { "type": "string", "format": "uuid" },
-          "number": { "type": "integer" },
-          "branch_id": { "type": "string", "format": "uuid" },
-          "branch_name": { "type": "string" },
-          "workshop_name": { "type": "string" },
-          "workshop_nit": { "type": ["string", "null"] },
-          "verified_at": { "type": ["string", "null"], "format": "date-time" },
-          "customer_name": { "type": ["string", "null"] },
-          "customer_phone": { "type": ["string", "null"] },
-          "vehicle_id": { "type": ["string", "null"], "format": "uuid" },
-          "vehicle_make": { "type": ["string", "null"] },
-          "vehicle_model": { "type": ["string", "null"] },
-          "vehicle_year": { "type": ["integer", "null"] },
-          "vehicle_plate": { "type": ["string", "null"] },
-          "notes": { "type": ["string", "null"] },
-          "valid_until": { "type": ["string", "null"], "format": "date" },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "integer"
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "branch_name": {
+            "type": "string"
+          },
+          "workshop_name": {
+            "type": "string"
+          },
+          "workshop_nit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verified_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "customer_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customer_phone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "vehicle_make": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vehicle_year": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "vehicle_plate": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "valid_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
           "items": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/QuoteItem" }
+            "items": {
+              "$ref": "#/components/schemas/QuoteItem"
+            }
           },
-          "total": { "type": "string" },
-          "currency": { "type": "string" },
+          "total": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
           "outcome": {
             "type": "string",
-            "enum": ["pendiente", "acepto", "rechazo", "no_respondio"]
+            "enum": [
+              "pendiente",
+              "acepto",
+              "rechazo",
+              "no_respondio"
+            ]
           },
-          "outcome_at": { "type": ["string", "null"], "format": "date-time" },
-          "outcome_by": { "type": ["string", "null"], "format": "uuid" },
-          "shared_at": { "type": ["string", "null"], "format": "date-time" },
-          "share_expires_at": { "type": ["string", "null"], "format": "date-time" },
-          "created_at": { "type": "string", "format": "date-time" },
-          "converted_order_id": { "type": ["string", "null"], "format": "uuid" },
-          "converted_order_number": { "type": ["integer", "null"] }
+          "outcome_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "outcome_by": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "shared_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "share_expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "converted_order_id": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "converted_order_number": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
         }
       },
       "QuoteConvertResult": {
         "type": "object",
-        "required": ["order_id"],
+        "required": [
+          "order_id"
+        ],
         "properties": {
-          "order_id": { "type": "string", "format": "uuid" }
+          "order_id": {
+            "type": "string",
+            "format": "uuid"
+          }
         }
       },
       "PublicQuote": {
@@ -5384,19 +5746,31 @@
             ]
           },
           "order_number": {
-            "type": ["integer", "null"]
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "quote_number": {
             "type": "integer"
           },
           "customer_name": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "notes": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "valid_until": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "format": "date"
           },
           "items": {
@@ -5480,7 +5854,13 @@
             "type": "string"
           }
         },
-        "required": []
+        "required": [
+          "id",
+          "email",
+          "status",
+          "created_at",
+          "expires_at"
+        ]
       },
       "PublicInvitation": {
         "type": "object",
@@ -5525,7 +5905,13 @@
             "type": "string"
           }
         },
-        "required": []
+        "required": [
+          "workshop_name",
+          "workshop_verified_at",
+          "vehicle",
+          "email_hint",
+          "expires_at"
+        ]
       },
       "OwnerVehicleInput": {
         "type": "object",
@@ -5607,7 +5993,15 @@
             }
           }
         },
-        "required": []
+        "required": [
+          "id",
+          "plate",
+          "make",
+          "model",
+          "year",
+          "status",
+          "last_odometer_km"
+        ]
       },
       "ManualItem": {
         "type": "object",

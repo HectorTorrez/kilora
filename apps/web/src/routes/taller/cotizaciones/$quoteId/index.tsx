@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import {
 	CounterQuoteForm,
 	counterQuoteFormValues,
@@ -24,15 +23,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { date, day, money, quoteCode } from "@/lib/format";
-import { formatCents, lineCents } from "@/lib/money";
+import { useWorkshopMutation } from "@/features/taller/mutation";
 import {
 	counterQuoteActions,
 	counterQuoteQuery,
 	rememberQuoteShare,
-	useWorkshopMutation,
-} from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
+} from "@/features/taller/quotes";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
+import { date, day, money, quoteCode } from "@/lib/format";
+import { formatCents, lineCents } from "@/lib/money";
 
 export const Route = createFileRoute("/taller/cotizaciones/$quoteId/")({
 	component: QuoteDetailPage,
@@ -54,7 +53,7 @@ function vehicleLine(quote: components["schemas"]["CounterQuote"]) {
 function QuoteDetailPage() {
 	const { quoteId } = Route.useParams();
 	const workshopID = useWorkshopId();
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const branches = me.memberships.filter(
 		(item) => item.workshop_id === workshopID,
 	);

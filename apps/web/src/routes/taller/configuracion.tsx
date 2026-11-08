@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import {
 	PageBody,
 	PageHeader,
@@ -41,15 +40,15 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { date } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { useWorkshopMutation } from "@/features/taller/mutation";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import {
 	adminActions,
 	membersQuery,
-	useWorkshopMutation,
 	workshopQuery,
-} from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
+} from "@/features/taller/team";
+import { date } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type Role = components["schemas"]["MemberInput"]["role"];
 
@@ -88,7 +87,7 @@ const projection = [
 
 function SettingsPage() {
 	const workshopID = useWorkshopId();
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const { data, isLoading, error } = useQuery(workshopQuery(workshopID));
 	const isAdmin = data?.role === "admin";
 	const verified = data?.workshop.verified_at;

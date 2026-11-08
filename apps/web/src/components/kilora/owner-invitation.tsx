@@ -17,7 +17,11 @@ import { SectionCard } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { invitationsQuery, ownerActions, useOwnerMutation } from "@/lib/owner";
+import { useWorkshopMutation } from "@/features/taller/mutation";
+import {
+	invitationsQuery,
+	inviteOwnerAction,
+} from "@/features/taller/vehicles";
 import { cn } from "@/lib/utils";
 
 const schema = z.object({ email: emailField });
@@ -40,12 +44,11 @@ export function OwnerInvitation({
 	linked?: boolean;
 	name?: string | null;
 }) {
-	const { data = [] } = useQuery({
-		...invitationsQuery(workshopID, vehicleID),
-		enabled: !!workshopID && !!vehicleID,
-	});
-	const invite = useOwnerMutation((email: string) =>
-		ownerActions.invite(workshopID, vehicleID, email),
+	const { data = [] } = useQuery(invitationsQuery(workshopID, vehicleID));
+	const invite = useWorkshopMutation(
+		workshopID,
+		inviteOwnerAction(workshopID, vehicleID),
+		{ inlineErrors: true },
 	);
 	const [qr, setQr] = useState("");
 	const form = useForm({

@@ -10,9 +10,9 @@ import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { money } from "@/lib/format";
+import { vehiclesQuery } from "@/features/taller/vehicles";
+import { money, todayISO } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
-import { vehiclesQuery } from "@/lib/workshop";
 import {
 	applyFormError,
 	FormActions,
@@ -28,9 +28,9 @@ import {
 	maskSvPhone,
 	moneyField,
 	optionalText,
+	optionalYearField,
 	requiredText,
 	toSvPhone,
-	yearField,
 } from "./form-schemas";
 
 type Schemas = components["schemas"];
@@ -64,7 +64,7 @@ const schema = z.object({
 	vehicle_id: z.string(),
 	vehicle_make: optionalText,
 	vehicle_model: requiredText("Ingresá el modelo"),
-	vehicle_year: yearField(false),
+	vehicle_year: optionalYearField(),
 	vehicle_plate: optionalText,
 	branch_id: z.string().min(1, "Elegí una sucursal"),
 	notes: optionalText,
@@ -91,10 +91,7 @@ function blankItem(): CounterQuoteValues["items"][number] {
 }
 
 function daysUntil(value: string) {
-	const today = new Intl.DateTimeFormat("en-CA", {
-		timeZone: "America/El_Salvador",
-	}).format(new Date());
-	const start = Date.parse(`${today}T00:00:00Z`);
+	const start = Date.parse(`${todayISO()}T00:00:00Z`);
 	const end = Date.parse(`${value.slice(0, 10)}T00:00:00Z`);
 	const days = Math.round((end - start) / 86_400_000);
 	return String(Math.min(365, Math.max(days, 1)));

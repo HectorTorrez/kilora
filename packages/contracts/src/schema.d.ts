@@ -1191,7 +1191,9 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: never;
-                path?: never;
+                path: {
+                    vehicleID: string;
+                };
                 cookie?: never;
             };
             requestBody: {
@@ -3970,10 +3972,11 @@ export interface components {
             };
         };
         HistoryItem: {
-            kind: string;
+            /** @enum {string} */
+            kind: "trabajo" | "pieza";
             description: string;
             name?: string;
-            category?: string;
+            category?: components["schemas"]["PartCategory"] | null;
             brand?: string;
             model?: string;
             quantity?: number;
@@ -4197,24 +4200,24 @@ export interface components {
             expires_at: string;
         };
         Invitation: {
-            id?: string;
-            email?: string;
+            id: string;
+            email: string;
             /** @enum {string} */
-            status?: "pendiente" | "aceptada" | "expirada" | "revocada";
-            created_at?: string;
-            expires_at?: string;
+            status: "pendiente" | "aceptada" | "expirada" | "revocada";
+            created_at: string;
+            expires_at: string;
         };
         PublicInvitation: {
-            workshop_name?: string;
-            workshop_verified_at?: string | null;
-            vehicle?: {
+            workshop_name: string;
+            workshop_verified_at: string | null;
+            vehicle: {
                 plate?: string | null;
                 make?: string;
                 model?: string;
                 year?: number | null;
             };
-            email_hint?: string;
-            expires_at?: string;
+            email_hint: string;
+            expires_at: string;
         };
         OwnerVehicleInput: {
             plate?: string;
@@ -4223,13 +4226,13 @@ export interface components {
             year?: number;
         };
         OwnerVehicle: {
-            id?: string;
-            plate?: string | null;
-            make?: string;
-            model?: string;
-            year?: number | null;
-            status?: string;
-            last_odometer_km?: number | null;
+            id: string;
+            plate: string | null;
+            make: string;
+            model: string;
+            year: number | null;
+            status: string;
+            last_odometer_km: number | null;
             history_count?: number;
             last_service?: components["schemas"]["LastService"] | null;
             odometer_readings?: components["schemas"]["OdometerReading"][];

@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Car, Plus, Search } from "lucide-react";
 import { useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
 import {
 	EmptyState,
@@ -33,9 +32,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useWorkshopId } from "@/features/taller/session";
+import { vehiclesQuery } from "@/features/taller/vehicles";
 import { km } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { vehiclesQuery } from "@/lib/workshop";
 
 type VStatus = components["schemas"]["VehicleStatus"];
 

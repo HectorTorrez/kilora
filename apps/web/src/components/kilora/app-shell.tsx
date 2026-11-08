@@ -12,13 +12,7 @@ import {
 	ShieldCheck,
 	UserRound,
 } from "lucide-react";
-import {
-	createContext,
-	type ReactNode,
-	useContext,
-	useEffect,
-	useState,
-} from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { DemoBanner } from "@/components/kilora/demo";
 import { Button } from "@/components/ui/button";
@@ -38,9 +32,9 @@ import {
 	SheetDescription,
 	SheetTitle,
 } from "@/components/ui/sheet";
+import { useTallerContext, WorkshopProvider } from "@/features/taller/session";
 import { useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
-import { Route as TallerRoute } from "@/routes/taller";
 
 type NavItem = {
 	to:
@@ -96,9 +90,6 @@ function useIsActive() {
 			: pathname === to || pathname.startsWith(`${to}/`);
 }
 
-const WorkshopContext = createContext("");
-export const useWorkshopId = () => useContext(WorkshopContext);
-
 const initials = (name: string) =>
 	name
 		.split(/\s+/)
@@ -108,7 +99,7 @@ const initials = (name: string) =>
 		.join("");
 
 export function AppShell({ children }: { children: ReactNode }) {
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const logout = useLogout();
 	const navigate = useNavigate();
 	const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -214,12 +205,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 						</Link>
 					</Button>
 				</header>
-				<WorkshopContext.Provider value={active?.workshop_id ?? ""}>
+				<WorkshopProvider value={active?.workshop_id ?? ""}>
 					<div className="print:hidden">
 						<DemoBanner email={me.user.email} />
 					</div>
 					{children}
-				</WorkshopContext.Provider>
+				</WorkshopProvider>
 			</div>
 		</div>
 	);

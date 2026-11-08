@@ -2,13 +2,13 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { counterQuoteQuery, storedQuoteShare } from "@/features/taller/quotes";
+import { useWorkshopId } from "@/features/taller/session";
 import { date, day, money, quoteCode } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
-import { counterQuoteQuery, storedQuoteShare } from "@/lib/workshop";
 
 export const Route = createFileRoute("/taller/cotizaciones/$quoteId/imprimir")({
 	component: PrintQuotePage,

@@ -26,6 +26,7 @@
     "start": "./scripts/dev.sh",
     "api:test:db": "cd services/api && TEST_DATABASE_URL=postgres://kilora:kilora@localhost:5432/kilora?sslmode=disable go test ./...",
     "contracts:gen": "pnpm --filter @kilora/contracts generate",
+    "contracts:check": "pnpm contracts:gen && git diff --exit-code packages/contracts/src/schema.d.ts",
     "db:seed": "go run ./services/api/cmd/seed"
   }
 }

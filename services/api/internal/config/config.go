@@ -32,7 +32,7 @@ func Load() (Config, error) {
 	cfg := Config{
 		Addr:         env("API_ADDR", ":8080"),
 		DatabaseURL:  os.Getenv("DATABASE_URL"),
-		WebOrigin:    env("WEB_ORIGIN", "http://localhost:3000"),
+		WebOrigin:    env("WEB_ORIGIN", "http://localhost:3300"),
 		SessionKey:   os.Getenv("SESSION_SECRET"),
 		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
 		EmailFrom:    env("EMAIL_FROM", "no-reply@kilora.com"),

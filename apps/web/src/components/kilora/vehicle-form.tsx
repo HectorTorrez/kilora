@@ -2,9 +2,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { actions, useWorkshopMutation } from "@/lib/workshop";
+import { useWorkshopMutation } from "@/features/taller/mutation";
+import { createVehicleAction } from "@/features/taller/vehicles";
 import {
 	applyFormError,
 	FormActions,
@@ -18,16 +18,16 @@ import {
 	maskSvPhone,
 	optionalPhone,
 	optionalText,
+	optionalYearField,
 	requiredText,
 	toSvPhone,
 	yearBounds,
-	yearField,
 } from "./form-schemas";
 
 const schema = z.object({
 	make: requiredText("Ingresá la marca"),
 	model: requiredText("Ingresá el modelo"),
-	year: yearField(false),
+	year: optionalYearField(),
 	plate: optionalText,
 	contact_name: optionalText,
 	contact_phone: optionalPhone,
@@ -36,7 +36,6 @@ const schema = z.object({
 export function VehicleForm({
 	workshopID,
 	onCreated,
-	onCancel,
 }: {
 	workshopID: string;
 	onCreated: (vehicle: {
@@ -46,12 +45,11 @@ export function VehicleForm({
 		model: string;
 		year: number | null;
 	}) => void;
-	onCancel?: () => void;
 }) {
 	const bounds = yearBounds();
 	const create = useWorkshopMutation(
 		workshopID,
-		actions(workshopID).createVehicle,
+		createVehicleAction(workshopID),
 	);
 	const form = useForm({
 		resolver: zodResolver(schema),
@@ -115,16 +113,6 @@ export function VehicleForm({
 				/>
 				<RootError />
 				<FormActions>
-					{onCancel ? (
-						<Button
-							type="button"
-							variant="outline"
-							className="w-full sm:w-auto"
-							onClick={onCancel}
-						>
-							Cancelar
-						</Button>
-					) : null}
 					<SubmitButton pending={create.isPending}>
 						Registrar vehículo
 					</SubmitButton>
