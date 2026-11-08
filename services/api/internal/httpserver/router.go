@@ -61,7 +61,12 @@ func NewRouter(d Deps) http.Handler {
 			r.Use(requireUser)
 			r.Get("/auth/me", s.me)
 			r.Post("/workshops", s.createWorkshop)
-			r.Route("/workshops/{workshopID}", func(r chi.Router) { r.Use(s.requireWorkshop); r.Get("/", s.getWorkshop) })
+			r.Get("/me/vehicles/{vehicleID}/history", s.history)
+			r.Route("/workshops/{workshopID}", func(r chi.Router) {
+				r.Use(s.requireWorkshop)
+				r.Get("/", s.getWorkshop)
+				r.Get("/vehicles/{vehicleID}/history", s.history)
+			})
 		})
 		r.Get("/", func(w http.ResponseWriter, _ *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"service": "kilora", "version": "v1"})
