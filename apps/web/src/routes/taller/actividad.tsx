@@ -11,20 +11,19 @@ import {
 	ShieldCheck,
 	Users,
 } from "lucide-react";
-import { useState } from "react";
+import { ListPagination } from "@/components/kilora/list-pagination";
+import { QueryContent } from "@/components/kilora/query-content";
 import {
 	EmptyState,
 	PageBody,
 	PageHeader,
 	relative,
 } from "@/components/kilora/workshop-ui";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkshopId } from "@/features/taller/session";
-import { auditQuery } from "@/features/taller/team";
+import { auditPageQuery } from "@/features/taller/team";
 import { TIME_ZONE } from "@/lib/format";
+import { useListPage } from "@/lib/pagination";
 
 type Event = components["schemas"]["AuditEvent"];
 
@@ -87,7 +86,10 @@ const time = (value: string) =>
 
 function ActivityPage() {
 	const workshopID = useWorkshopId();
-	const [pages, setPages] = useState<(number | undefined)[]>([undefined]);
+	const { page, offset, setPage } = useListPage(workshopID);
+	const { data, isLoading, error, isFetching } = useQuery(
+		auditPageQuery(workshopID, offset),
+	);
 	return (
 		<PageBody className="max-w-4xl">
 			<PageHeader
@@ -96,59 +98,37 @@ function ActivityPage() {
 				description="Bitácora de auditoría del taller. Es de solo lectura: ningún registro se puede editar ni borrar."
 			/>
 			<Card className="gap-0 overflow-hidden py-0 shadow-none">
-				{pages.map((before, i) => (
-					<AuditPage
-						key={before ?? "first"}
-						workshopID={workshopID}
-						before={before}
-						last={i === pages.length - 1}
-						onMore={(id) => setPages((p) => [...p, id])}
-					/>
-				))}
+				<QueryContent
+					pending={isLoading}
+					error={
+						error?.message.includes("administrador")
+							? new Error("Solo los administradores pueden ver la bitácora.")
+							: error
+					}
+					errorClassName="m-4"
+					empty={!data?.items.length}
+					emptyState={
+						<EmptyState
+							icon={ShieldCheck}
+							title="Sin actividad registrada"
+							description="Cada cambio sensible del taller aparecerá acá."
+						/>
+					}
+				>
+					<AuditEvents events={data?.items ?? []} />
+				</QueryContent>
+				<ListPagination
+					page={page}
+					total={data?.total}
+					onPageChange={setPage}
+					pending={isFetching}
+				/>
 			</Card>
 		</PageBody>
 	);
 }
 
-function AuditPage({
-	workshopID,
-	before,
-	last,
-	onMore,
-}: {
-	workshopID: string;
-	before?: number;
-	last: boolean;
-	onMore: (before: number) => void;
-}) {
-	const { data, isLoading, error } = useQuery(auditQuery(workshopID, before));
-	if (isLoading)
-		return (
-			<div className="space-y-2 p-4">
-				<Skeleton className="h-10" />
-				<Skeleton className="h-10" />
-				<Skeleton className="h-10" />
-			</div>
-		);
-	if (error)
-		return (
-			<Alert variant="destructive" className="m-4">
-				<AlertDescription>
-					{error.message.includes("administrador")
-						? "Solo los administradores pueden ver la bitácora."
-						: error.message}
-				</AlertDescription>
-			</Alert>
-		);
-	const events = data ?? [];
-	if (!events.length && before === undefined)
-		return (
-			<EmptyState
-				icon={ShieldCheck}
-				title="Sin actividad registrada"
-				description="Cada cambio sensible del taller aparecerá acá."
-			/>
-		);
+function AuditEvents({ events }: { events: Event[] }) {
 	const groups: [string, Event[]][] = [];
 	for (const ev of events) {
 		const key = dayKey(ev.created_at);
@@ -159,7 +139,7 @@ function AuditPage({
 	return (
 		<>
 			{groups.map(([label, items]) => (
-				<section key={`${before}-${label}`}>
+				<section key={label}>
 					<h2 className="sticky top-0 border-b bg-secondary/60 px-4 py-1.5 text-[11.5px] font-semibold text-ink-2 first-letter:uppercase backdrop-blur sm:px-5">
 						{label}
 					</h2>
@@ -218,17 +198,6 @@ function AuditPage({
 					</ul>
 				</section>
 			))}
-			{last && events.length === 50 && (
-				<div className="border-t p-3 text-center">
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={() => onMore(events[events.length - 1].id)}
-					>
-						Cargar más
-					</Button>
-				</div>
-			)}
 		</>
 	);
 }

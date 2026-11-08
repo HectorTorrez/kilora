@@ -1,6 +1,7 @@
 import type { components } from "@kilora/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
+import { LIST_PAGE_SIZE } from "@/lib/pagination";
 
 type S = components["schemas"];
 
@@ -79,3 +80,22 @@ export const inviteOwnerAction =
 				{ params: { path: { workshopID, vehicleID } }, body: { email } },
 			),
 		);
+
+export const vehiclesPageQuery = (
+	workshopID: string,
+	q = "",
+	status?: Exclude<S["VehicleStatus"], "archivado">,
+	offset = 0,
+) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "vehicles", "page", q, status, offset],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/vehicles/page", {
+					params: {
+						path: { workshopID },
+						query: { q: q || undefined, status, limit: LIST_PAGE_SIZE, offset },
+					},
+				}),
+			),
+	});

@@ -11,6 +11,44 @@ import (
 	"github.com/google/uuid"
 )
 
+const countVehiclesByStatus = `-- name: CountVehiclesByStatus :many
+SELECT v.status, count(*) AS total
+FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+WHERE l.workshop_id = $1 AND v.status <> 'archivado'
+  AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
+GROUP BY v.status
+`
+
+type CountVehiclesByStatusParams struct {
+	WorkshopID uuid.UUID `json:"workshop_id"`
+	Search     *string   `json:"search"`
+}
+
+type CountVehiclesByStatusRow struct {
+	Status VehicleStatus `json:"status"`
+	Total  int64         `json:"total"`
+}
+
+func (q *Queries) CountVehiclesByStatus(ctx context.Context, arg CountVehiclesByStatusParams) ([]CountVehiclesByStatusRow, error) {
+	rows, err := q.db.Query(ctx, countVehiclesByStatus, arg.WorkshopID, arg.Search)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountVehiclesByStatusRow{}
+	for rows.Next() {
+		var i CountVehiclesByStatusRow
+		if err := rows.Scan(&i.Status, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createVehicle = `-- name: CreateVehicle :one
 INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at
 `
@@ -198,6 +236,66 @@ type ListVehiclesForWorkshopParams struct {
 
 func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesForWorkshopParams) ([]Vehicle, error) {
 	rows, err := q.db.Query(ctx, listVehiclesForWorkshop, arg.WorkshopID, arg.IncludeArchived, arg.PlatePrefix)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Vehicle{}
+	for rows.Next() {
+		var i Vehicle
+		if err := rows.Scan(
+			&i.ID,
+			&i.OwnerUserID,
+			&i.CreatedByWorkshopID,
+			&i.Status,
+			&i.Plate,
+			&i.Make,
+			&i.Model,
+			&i.Year,
+			&i.Vin,
+			&i.ContactName,
+			&i.ContactPhone,
+			&i.LastActivityAt,
+			&i.ArchivedAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listVehiclesPage = `-- name: ListVehiclesPage :many
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at
+FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+WHERE l.workshop_id = $1 AND v.status <> 'archivado'
+  AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
+  AND ($3::vehicle_status IS NULL OR v.status = $3)
+ORDER BY v.last_activity_at DESC, v.id DESC
+LIMIT $5 OFFSET $4
+`
+
+type ListVehiclesPageParams struct {
+	WorkshopID uuid.UUID      `json:"workshop_id"`
+	Search     *string        `json:"search"`
+	Status     *VehicleStatus `json:"status"`
+	RowOffset  int32          `json:"row_offset"`
+	RowLimit   int32          `json:"row_limit"`
+}
+
+func (q *Queries) ListVehiclesPage(ctx context.Context, arg ListVehiclesPageParams) ([]Vehicle, error) {
+	rows, err := q.db.Query(ctx, listVehiclesPage,
+		arg.WorkshopID,
+		arg.Search,
+		arg.Status,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

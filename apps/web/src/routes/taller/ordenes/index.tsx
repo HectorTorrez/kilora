@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ClipboardList, Plus } from "lucide-react";
 import { useState } from "react";
+import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
 import {
 	EmptyState,
@@ -30,9 +31,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import { ordersQuery } from "@/features/taller/orders";
+import { ordersPageQuery } from "@/features/taller/orders";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import { date } from "@/lib/format";
+import { useListPage } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
 type Status = components["schemas"]["WorkOrderStatus"];
@@ -52,7 +54,7 @@ export const Route = createFileRoute("/taller/ordenes/")({
 	}),
 	loader: async ({ context }) => {
 		const workshopID = context.me.memberships[0].workshop_id;
-		return context.queryClient.ensureQueryData(ordersQuery(workshopID));
+		return context.queryClient.ensureQueryData(ordersPageQuery(workshopID));
 	},
 	component: OrdersPage,
 });
@@ -75,26 +77,23 @@ function OrdersPage() {
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
 	const [branch, setBranch] = useState("");
 	const [query, setQuery] = useState("");
-	// Se pide la lista completa y se filtra en el cliente para mostrar conteos por estado.
-	const { data, isLoading, error } = useQuery({
-		...ordersQuery(workshopID, undefined, branch || undefined),
+	const q = query.trim().toLowerCase();
+	const { page, offset, setPage } = useListPage(
+		JSON.stringify([workshopID, q, estado, branch]),
+	);
+	const { data, isLoading, error, isFetching } = useQuery({
+		...ordersPageQuery(workshopID, q, estado, offset, branch || undefined),
 		initialData:
-			!branch && workshopID === me.memberships[0].workshop_id
+			!q &&
+			!estado &&
+			!branch &&
+			page === 1 &&
+			workshopID === me.memberships[0].workshop_id
 				? initial
 				: undefined,
 	});
-	const all = data ?? [];
-	const q = query.trim().toLowerCase();
-	const searched = q
-		? all.filter((o) =>
-				[o.plate, o.reason, o.make, o.model, `#${o.number}`, String(o.number)]
-					.filter(Boolean)
-					.some((v) => String(v).toLowerCase().includes(q)),
-			)
-		: all;
-	const rows = estado ? searched.filter((o) => o.status === estado) : searched;
-	const count = (s: Status | "") =>
-		s ? searched.filter((o) => o.status === s).length : searched.length;
+	const rows = data?.items ?? [];
+	const count = (s: Status | "") => data?.counts[s] ?? 0;
 
 	return (
 		<PageBody>
@@ -247,6 +246,12 @@ function OrdersPage() {
 						</TableBody>
 					</Table>
 				</QueryContent>
+				<ListPagination
+					page={page}
+					total={data?.total}
+					onPageChange={setPage}
+					pending={isFetching}
+				/>
 			</Card>
 		</PageBody>
 	);

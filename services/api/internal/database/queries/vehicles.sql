@@ -24,3 +24,19 @@ UPDATE vehicle SET last_activity_at = now() WHERE id = sqlc.arg(vehicle_id) AND 
 
 -- name: GetVehicleForOwner :one
 SELECT * FROM vehicle WHERE id = sqlc.arg(id) AND owner_user_id = sqlc.arg(owner_user_id);
+
+-- name: ListVehiclesPage :many
+SELECT v.*
+FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+WHERE l.workshop_id = sqlc.arg(workshop_id) AND v.status <> 'archivado'
+  AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
+  AND (sqlc.narg(status)::vehicle_status IS NULL OR v.status = sqlc.narg(status))
+ORDER BY v.last_activity_at DESC, v.id DESC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountVehiclesByStatus :many
+SELECT v.status, count(*) AS total
+FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+WHERE l.workshop_id = sqlc.arg(workshop_id) AND v.status <> 'archivado'
+  AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
+GROUP BY v.status;

@@ -13,3 +13,10 @@ FROM odometer_reading o
 JOIN vehicle_link l ON l.vehicle_id = o.vehicle_id
 WHERE l.workshop_id = sqlc.arg(workshop_id)
 ORDER BY o.vehicle_id, o.read_at DESC, o.created_at DESC;
+
+-- name: ListLatestOdometerForVehicles :many
+SELECT DISTINCT ON (o.vehicle_id) o.vehicle_id, o.km
+FROM odometer_reading o
+JOIN vehicle_link l ON l.vehicle_id = o.vehicle_id
+WHERE l.workshop_id = sqlc.arg(workshop_id) AND o.vehicle_id = ANY(sqlc.arg(vehicle_ids)::uuid[])
+ORDER BY o.vehicle_id, o.read_at DESC, o.created_at DESC;

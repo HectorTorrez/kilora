@@ -1,6 +1,7 @@
 import type { components } from "@kilora/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
+import { LIST_PAGE_SIZE } from "@/lib/pagination";
 
 type S = components["schemas"];
 
@@ -24,13 +25,16 @@ export const membersQuery = (workshopID: string) =>
 				}),
 			),
 	});
-export const auditQuery = (workshopID: string, before?: number) =>
+export const auditPageQuery = (workshopID: string, offset = 0) =>
 	queryOptions({
-		queryKey: ["workshop", workshopID, "audit", before],
+		queryKey: ["workshop", workshopID, "audit", "page", offset],
 		queryFn: async () =>
 			unwrap(
-				await api.GET("/api/v1/workshops/{workshopID}/audit", {
-					params: { path: { workshopID }, query: { before, limit: 50 } },
+				await api.GET("/api/v1/workshops/{workshopID}/audit/page", {
+					params: {
+						path: { workshopID },
+						query: { offset, limit: LIST_PAGE_SIZE },
+					},
 				}),
 			),
 	});

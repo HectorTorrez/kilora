@@ -80,6 +80,7 @@ func NewRouter(d Deps) http.Handler {
 				r.Get("/", s.inWorkshop(s.getWorkshop))
 				r.Post("/work-orders", s.inWorkshop(s.createOrder))
 				r.Get("/work-orders", s.inWorkshop(s.listOrders))
+				r.Get("/work-orders/page", s.inWorkshop(s.listOrdersPage))
 				r.Get("/work-orders/{orderID}", s.inWorkshop(s.getOrder))
 				r.Patch("/work-orders/{orderID}", s.inWorkshop(s.editOrder))
 				r.Patch("/work-orders/{orderID}/status", s.inWorkshop(s.changeStatus))
@@ -99,6 +100,7 @@ func NewRouter(d Deps) http.Handler {
 				r.Post("/work-orders/{orderID}/jobs/{jobID}/parts", s.inWorkshop(s.createPart))
 				r.Delete("/work-orders/{orderID}/jobs/{jobID}/parts/{partID}", s.inWorkshop(s.deletePart))
 				r.Get("/vehicles", s.inWorkshop(s.listVehicles))
+				r.Get("/vehicles/page", s.inWorkshop(s.listVehiclesPage))
 				r.Post("/vehicles", s.inWorkshop(s.createVehicle))
 				r.Get("/vehicles/{vehicleID}", s.inWorkshop(s.getVehicle))
 				r.Post("/vehicles/{vehicleID}/invitations", s.inWorkshop(s.createInvitation))
@@ -112,6 +114,7 @@ func NewRouter(d Deps) http.Handler {
 				r.Post("/members", s.inWorkshop(s.addMember))
 				r.Delete("/members/{membershipID}", s.inWorkshop(s.removeMember))
 				r.Get("/audit", s.inWorkshop(s.listAudit))
+				r.Get("/audit/page", s.inWorkshop(s.listAuditPage))
 			})
 		})
 		r.Get("/", func(w http.ResponseWriter, _ *http.Request) {

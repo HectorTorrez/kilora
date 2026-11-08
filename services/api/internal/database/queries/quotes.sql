@@ -143,3 +143,20 @@ UPDATE quote SET share_token_hash = sqlc.arg(share_token_hash), shared_at = now(
 WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id)
   AND (work_order_id IS NULL OR converted_order_id IS NOT NULL)
 RETURNING id, share_expires_at, total::text;
+
+-- name: CountCounterQuotes :one
+SELECT count(*)
+FROM quote q
+LEFT JOIN work_order o ON o.id = q.converted_order_id
+WHERE q.workshop_id = sqlc.arg(workshop_id)
+  AND q.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
+  AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
+  AND (sqlc.narg(outcome)::quote_outcome IS NULL OR q.outcome = sqlc.narg(outcome))
+  AND (
+    sqlc.narg(search)::text IS NULL
+    OR q.customer_name ILIKE sqlc.narg(search) ESCAPE '\'
+    OR COALESCE(q.customer_phone, '') ILIKE sqlc.narg(search) ESCAPE '\'
+    OR COALESCE(q.vehicle_plate, '') ILIKE sqlc.narg(search) ESCAPE '\'
+    OR q.number::text ILIKE sqlc.narg(search) ESCAPE '\'
+    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE sqlc.narg(search) ESCAPE '\'
+  );

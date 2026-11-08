@@ -12,6 +12,53 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countWorkOrdersByStatus = `-- name: CountWorkOrdersByStatus :many
+SELECT wo.status, count(*) AS total
+FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id
+WHERE wo.workshop_id = $1
+  AND wo.branch_id = ANY($2::uuid[])
+  AND ($3::uuid IS NULL OR wo.branch_id = $3)
+  AND ($4::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE $4 ESCAPE '\')
+GROUP BY wo.status
+`
+
+type CountWorkOrdersByStatusParams struct {
+	WorkshopID uuid.UUID   `json:"workshop_id"`
+	BranchIds  []uuid.UUID `json:"branch_ids"`
+	BranchID   *uuid.UUID  `json:"branch_id"`
+	Search     *string     `json:"search"`
+}
+
+type CountWorkOrdersByStatusRow struct {
+	Status WorkOrderStatus `json:"status"`
+	Total  int64           `json:"total"`
+}
+
+func (q *Queries) CountWorkOrdersByStatus(ctx context.Context, arg CountWorkOrdersByStatusParams) ([]CountWorkOrdersByStatusRow, error) {
+	rows, err := q.db.Query(ctx, countWorkOrdersByStatus,
+		arg.WorkshopID,
+		arg.BranchIds,
+		arg.BranchID,
+		arg.Search,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountWorkOrdersByStatusRow{}
+	for rows.Next() {
+		var i CountWorkOrdersByStatusRow
+		if err := rows.Scan(&i.Status, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createWorkOrder = `-- name: CreateWorkOrder :one
 INSERT INTO work_order (workshop_id, branch_id, vehicle_id, number, reason, odometer_km, internal_notes, created_by)
 SELECT $1, $2, $3, $4, $5, $6, $7, $8
@@ -220,6 +267,84 @@ func (q *Queries) ListWorkOrdersByWorkshop(ctx context.Context, arg ListWorkOrde
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PublicNotes,
+			&i.Plate,
+			&i.Make,
+			&i.Model,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listWorkOrdersPage = `-- name: ListWorkOrdersPage :many
+SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status, wo.reason, wo.odometer_km, wo.internal_notes, wo.received_at, wo.completed_at, wo.cancelled_at, wo.cancel_reason, wo.created_by, wo.created_at, wo.updated_at, wo.public_notes, v.plate, v.make, v.model
+FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id
+WHERE wo.workshop_id = $1
+  AND wo.branch_id = ANY($2::uuid[])
+  AND ($3::uuid IS NULL OR wo.branch_id = $3)
+  AND ($4::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE $4 ESCAPE '\')
+  AND ($5::work_order_status IS NULL OR wo.status = $5)
+ORDER BY wo.received_at DESC, wo.id DESC
+LIMIT $7 OFFSET $6
+`
+
+type ListWorkOrdersPageParams struct {
+	WorkshopID uuid.UUID        `json:"workshop_id"`
+	BranchIds  []uuid.UUID      `json:"branch_ids"`
+	BranchID   *uuid.UUID       `json:"branch_id"`
+	Search     *string          `json:"search"`
+	Status     *WorkOrderStatus `json:"status"`
+	RowOffset  int32            `json:"row_offset"`
+	RowLimit   int32            `json:"row_limit"`
+}
+
+type ListWorkOrdersPageRow struct {
+	WorkOrder WorkOrder `json:"work_order"`
+	Plate     *string   `json:"plate"`
+	Make      string    `json:"make"`
+	Model     string    `json:"model"`
+}
+
+func (q *Queries) ListWorkOrdersPage(ctx context.Context, arg ListWorkOrdersPageParams) ([]ListWorkOrdersPageRow, error) {
+	rows, err := q.db.Query(ctx, listWorkOrdersPage,
+		arg.WorkshopID,
+		arg.BranchIds,
+		arg.BranchID,
+		arg.Search,
+		arg.Status,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListWorkOrdersPageRow{}
+	for rows.Next() {
+		var i ListWorkOrdersPageRow
+		if err := rows.Scan(
+			&i.WorkOrder.ID,
+			&i.WorkOrder.WorkshopID,
+			&i.WorkOrder.BranchID,
+			&i.WorkOrder.VehicleID,
+			&i.WorkOrder.Number,
+			&i.WorkOrder.Status,
+			&i.WorkOrder.Reason,
+			&i.WorkOrder.OdometerKm,
+			&i.WorkOrder.InternalNotes,
+			&i.WorkOrder.ReceivedAt,
+			&i.WorkOrder.CompletedAt,
+			&i.WorkOrder.CancelledAt,
+			&i.WorkOrder.CancelReason,
+			&i.WorkOrder.CreatedBy,
+			&i.WorkOrder.CreatedAt,
+			&i.WorkOrder.UpdatedAt,
+			&i.WorkOrder.PublicNotes,
 			&i.Plate,
 			&i.Make,
 			&i.Model,

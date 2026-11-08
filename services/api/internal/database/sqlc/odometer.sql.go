@@ -73,6 +73,44 @@ func (q *Queries) GetLatestOdometerReading(ctx context.Context, arg GetLatestOdo
 	return i, err
 }
 
+const listLatestOdometerForVehicles = `-- name: ListLatestOdometerForVehicles :many
+SELECT DISTINCT ON (o.vehicle_id) o.vehicle_id, o.km
+FROM odometer_reading o
+JOIN vehicle_link l ON l.vehicle_id = o.vehicle_id
+WHERE l.workshop_id = $1 AND o.vehicle_id = ANY($2::uuid[])
+ORDER BY o.vehicle_id, o.read_at DESC, o.created_at DESC
+`
+
+type ListLatestOdometerForVehiclesParams struct {
+	WorkshopID uuid.UUID   `json:"workshop_id"`
+	VehicleIds []uuid.UUID `json:"vehicle_ids"`
+}
+
+type ListLatestOdometerForVehiclesRow struct {
+	VehicleID uuid.UUID `json:"vehicle_id"`
+	Km        int32     `json:"km"`
+}
+
+func (q *Queries) ListLatestOdometerForVehicles(ctx context.Context, arg ListLatestOdometerForVehiclesParams) ([]ListLatestOdometerForVehiclesRow, error) {
+	rows, err := q.db.Query(ctx, listLatestOdometerForVehicles, arg.WorkshopID, arg.VehicleIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListLatestOdometerForVehiclesRow{}
+	for rows.Next() {
+		var i ListLatestOdometerForVehiclesRow
+		if err := rows.Scan(&i.VehicleID, &i.Km); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLatestOdometerForWorkshop = `-- name: ListLatestOdometerForWorkshop :many
 SELECT DISTINCT ON (o.vehicle_id) o.vehicle_id, o.km
 FROM odometer_reading o

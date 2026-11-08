@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Car, Plus } from "lucide-react";
 import { useState } from "react";
+import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
 import {
@@ -33,11 +34,12 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { useWorkshopId } from "@/features/taller/session";
-import { matchesVehicle, vehiclesQuery } from "@/features/taller/vehicles";
+import { vehiclesPageQuery } from "@/features/taller/vehicles";
 import { km } from "@/lib/format";
+import { useListPage } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
-type VStatus = components["schemas"]["VehicleStatus"];
+type VStatus = Exclude<components["schemas"]["VehicleStatus"], "archivado">;
 
 export const Route = createFileRoute("/taller/vehiculos/")({
 	component: VehiclesPage,
@@ -55,14 +57,15 @@ function VehiclesPage() {
 	const [query, setQuery] = useState("");
 	const [filter, setFilter] = useState<VStatus | "">("");
 	const [open, setOpen] = useState(false);
-	const { data, isLoading, error } = useQuery({
-		...vehiclesQuery(workshopID),
+	const q = query.trim().toLowerCase().replace(/[\s-]/g, "");
+	const { page, offset, setPage } = useListPage(
+		JSON.stringify([workshopID, q, filter]),
+	);
+	const { data, isLoading, error, isFetching } = useQuery({
+		...vehiclesPageQuery(workshopID, q, filter || undefined, offset),
 		enabled: !!workshopID,
 	});
-	const q = query.trim().toLowerCase().replace(/[\s-]/g, "");
-	const all = data ?? [];
-	const searched = all.filter((vehicle) => matchesVehicle(vehicle, q));
-	const rows = filter ? searched.filter((v) => v.status === filter) : searched;
+	const rows = data?.items ?? [];
 
 	return (
 		<PageBody>
@@ -109,9 +112,7 @@ function VehiclesPage() {
 							>
 								{label}
 								<span className="ml-1.5 font-mono text-[10.5px] text-ink-3 tabular-nums">
-									{value
-										? searched.filter((v) => v.status === value).length
-										: searched.length}
+									{data?.counts[value] ?? 0}
 								</span>
 							</button>
 						))}
@@ -215,6 +216,12 @@ function VehiclesPage() {
 						</TableBody>
 					</Table>
 				</QueryContent>
+				<ListPagination
+					page={page}
+					total={data?.total}
+					onPageChange={setPage}
+					pending={isFetching}
+				/>
 			</Card>
 
 			<Dialog open={open} onOpenChange={setOpen}>

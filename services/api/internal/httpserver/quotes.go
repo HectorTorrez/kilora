@@ -464,7 +464,7 @@ func pageWindow(r *http.Request) (limit, offset int32, err error) {
 	}
 	if v := r.URL.Query().Get("offset"); v != "" {
 		n, e := strconv.Atoi(v)
-		if e != nil || n < 0 {
+		if e != nil || n < 0 || n > 2147483647 {
 			return 0, 0, badRequest("Desplazamiento inválido")
 		}
 		offset = int32(n)
@@ -499,6 +499,12 @@ func (s *server) listCounterQuotes(w http.ResponseWriter, r *http.Request, wc wo
 		return err
 	}
 	var total int64
+	if len(rows) == 0 {
+		total, err = sqlc.New(s.db).CountCounterQuotes(r.Context(), sqlc.CountCounterQuotesParams{WorkshopID: wc.workshopID, BranchIds: wc.branchIDs, Outcome: outcome, Search: searchPattern(r.URL.Query().Get("q"))})
+		if err != nil {
+			return err
+		}
+	}
 	items := []any{}
 	for _, v := range rows {
 		total = v.TotalCount

@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { FileText } from "lucide-react";
 import { useState } from "react";
+import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
 import { QuoteOutcomeBadge } from "@/components/kilora/quote-outcome";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { counterQuotesQuery } from "@/features/taller/quotes";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import { quoteOutcomeActions, quoteOutcomeLabels } from "@/lib/domain";
 import { date, money, quoteCode } from "@/lib/format";
+import { useListPage } from "@/lib/pagination";
 
 export const Route = createFileRoute("/taller/cotizaciones/")({
 	loader: async ({ context }) => {
@@ -61,10 +63,16 @@ function QuotesPage() {
 	const { me } = useTallerContext();
 	const [q, setQ] = useState("");
 	const [outcome, setOutcome] = useState<Outcome | "">("");
+	const { page, offset, setPage } = useListPage(
+		JSON.stringify([workshopID, q.trim(), outcome]),
+	);
 	const { data, isLoading, error, isFetching } = useQuery({
-		...counterQuotesQuery(workshopID, q.trim(), outcome || undefined),
+		...counterQuotesQuery(workshopID, q.trim(), outcome || undefined, offset),
 		initialData:
-			!q && !outcome && workshopID === me.memberships[0].workshop_id
+			!q &&
+			!outcome &&
+			page === 1 &&
+			workshopID === me.memberships[0].workshop_id
 				? initial
 				: undefined,
 	});
@@ -213,6 +221,12 @@ function QuotesPage() {
 					<p className="text-sm text-ink-3">Actualizando…</p>
 				) : null}
 			</QueryContent>
+			<ListPagination
+				page={page}
+				total={data?.total}
+				onPageChange={setPage}
+				pending={isFetching}
+			/>
 		</main>
 	);
 }

@@ -1,6 +1,7 @@
 import type { components } from "@kilora/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
+import { LIST_PAGE_SIZE } from "@/lib/pagination";
 
 type S = components["schemas"];
 
@@ -8,15 +9,28 @@ export const counterQuotesQuery = (
 	workshopID: string,
 	q = "",
 	outcome?: S["CounterQuote"]["outcome"],
+	offset = 0,
 ) =>
 	queryOptions({
-		queryKey: ["workshop", workshopID, "counter-quotes", q, outcome ?? ""],
+		queryKey: [
+			"workshop",
+			workshopID,
+			"counter-quotes",
+			q,
+			outcome ?? "",
+			offset,
+		],
 		queryFn: async () =>
 			unwrap(
 				await api.GET("/api/v1/workshops/{workshopID}/quotes", {
 					params: {
 						path: { workshopID },
-						query: { q: q || undefined, outcome, limit: 50 },
+						query: {
+							q: q || undefined,
+							outcome,
+							limit: LIST_PAGE_SIZE,
+							offset,
+						},
 					},
 				}),
 			),

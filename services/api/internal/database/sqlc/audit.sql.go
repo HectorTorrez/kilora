@@ -12,6 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countAuditEvents = `-- name: CountAuditEvents :one
+SELECT count(*) FROM audit_event WHERE workshop_id = $1
+`
+
+func (q *Queries) CountAuditEvents(ctx context.Context, workshopID *uuid.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countAuditEvents, workshopID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const insertAuditEvent = `-- name: InsertAuditEvent :one
 INSERT INTO audit_event (actor_user_id, workshop_id, entity, entity_id, action, diff) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, actor_user_id, workshop_id, entity, entity_id, action, diff, created_at
 `
@@ -80,6 +91,56 @@ func (q *Queries) ListAuditEventsByWorkshop(ctx context.Context, arg ListAuditEv
 	items := []ListAuditEventsByWorkshopRow{}
 	for rows.Next() {
 		var i ListAuditEventsByWorkshopRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Entity,
+			&i.EntityID,
+			&i.Action,
+			&i.CreatedAt,
+			&i.ActorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditEventsPage = `-- name: ListAuditEventsPage :many
+SELECT a.id, a.entity, a.entity_id, a.action, a.created_at, u.full_name AS actor_name
+FROM audit_event a LEFT JOIN app_user u ON u.id = a.actor_user_id
+WHERE a.workshop_id = $1
+ORDER BY a.id DESC
+LIMIT $3 OFFSET $2
+`
+
+type ListAuditEventsPageParams struct {
+	WorkshopID *uuid.UUID `json:"workshop_id"`
+	RowOffset  int32      `json:"row_offset"`
+	RowLimit   int32      `json:"row_limit"`
+}
+
+type ListAuditEventsPageRow struct {
+	ID        int64              `json:"id"`
+	Entity    string             `json:"entity"`
+	EntityID  *uuid.UUID         `json:"entity_id"`
+	Action    string             `json:"action"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ActorName *string            `json:"actor_name"`
+}
+
+func (q *Queries) ListAuditEventsPage(ctx context.Context, arg ListAuditEventsPageParams) ([]ListAuditEventsPageRow, error) {
+	rows, err := q.db.Query(ctx, listAuditEventsPage, arg.WorkshopID, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAuditEventsPageRow{}
+	for rows.Next() {
+		var i ListAuditEventsPageRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.Entity,

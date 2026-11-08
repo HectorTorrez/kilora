@@ -12,6 +12,43 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countCounterQuotes = `-- name: CountCounterQuotes :one
+SELECT count(*)
+FROM quote q
+LEFT JOIN work_order o ON o.id = q.converted_order_id
+WHERE q.workshop_id = $1
+  AND q.branch_id = ANY($2::uuid[])
+  AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
+  AND ($3::quote_outcome IS NULL OR q.outcome = $3)
+  AND (
+    $4::text IS NULL
+    OR q.customer_name ILIKE $4 ESCAPE '\'
+    OR COALESCE(q.customer_phone, '') ILIKE $4 ESCAPE '\'
+    OR COALESCE(q.vehicle_plate, '') ILIKE $4 ESCAPE '\'
+    OR q.number::text ILIKE $4 ESCAPE '\'
+    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $4 ESCAPE '\'
+  )
+`
+
+type CountCounterQuotesParams struct {
+	WorkshopID uuid.UUID     `json:"workshop_id"`
+	BranchIds  []uuid.UUID   `json:"branch_ids"`
+	Outcome    *QuoteOutcome `json:"outcome"`
+	Search     *string       `json:"search"`
+}
+
+func (q *Queries) CountCounterQuotes(ctx context.Context, arg CountCounterQuotesParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countCounterQuotes,
+		arg.WorkshopID,
+		arg.BranchIds,
+		arg.Outcome,
+		arg.Search,
+	)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCounterQuote = `-- name: CreateCounterQuote :one
 INSERT INTO quote (
   workshop_id, branch_id, number, customer_name, customer_phone, vehicle_id,

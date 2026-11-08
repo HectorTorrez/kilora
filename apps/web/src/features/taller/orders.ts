@@ -1,6 +1,7 @@
 import type { components } from "@kilora/contracts";
 import { queryOptions } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api";
+import { LIST_PAGE_SIZE } from "@/lib/pagination";
 
 type S = components["schemas"];
 
@@ -104,3 +105,38 @@ export const orderActions = (workshopID: string, orderID: string) => {
 			),
 	};
 };
+
+export const ordersPageQuery = (
+	workshopID: string,
+	q = "",
+	status?: S["WorkOrderStatus"],
+	offset = 0,
+	branch_id?: string,
+) =>
+	queryOptions({
+		queryKey: [
+			"workshop",
+			workshopID,
+			"work-orders",
+			"page",
+			q,
+			status,
+			offset,
+			branch_id,
+		],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/work-orders/page", {
+					params: {
+						path: { workshopID },
+						query: {
+							q: q || undefined,
+							status,
+							limit: LIST_PAGE_SIZE,
+							offset,
+							branch_id,
+						},
+					},
+				}),
+			),
+	});

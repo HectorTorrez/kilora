@@ -25,3 +25,23 @@ UPDATE work_order SET reason = sqlc.arg(reason), odometer_km = sqlc.narg(odomete
 
 -- name: GetHistoryIDByOrder :one
 SELECT id FROM history_record WHERE work_order_id = sqlc.arg(work_order_id);
+
+-- name: ListWorkOrdersPage :many
+SELECT sqlc.embed(wo), v.plate, v.make, v.model
+FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id
+WHERE wo.workshop_id = sqlc.arg(workshop_id)
+  AND wo.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
+  AND (sqlc.narg(branch_id)::uuid IS NULL OR wo.branch_id = sqlc.narg(branch_id))
+  AND (sqlc.narg(search)::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE sqlc.narg(search) ESCAPE '\')
+  AND (sqlc.narg(status)::work_order_status IS NULL OR wo.status = sqlc.narg(status))
+ORDER BY wo.received_at DESC, wo.id DESC
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
+
+-- name: CountWorkOrdersByStatus :many
+SELECT wo.status, count(*) AS total
+FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id
+WHERE wo.workshop_id = sqlc.arg(workshop_id)
+  AND wo.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
+  AND (sqlc.narg(branch_id)::uuid IS NULL OR wo.branch_id = sqlc.narg(branch_id))
+  AND (sqlc.narg(search)::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE sqlc.narg(search) ESCAPE '\')
+GROUP BY wo.status;
