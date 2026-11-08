@@ -1,6 +1,12 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ClipboardList, LayoutDashboard, ShieldCheck } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { ClipboardList, LayoutDashboard } from "lucide-react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+	useState,
+} from "react";
 import { useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Route as TallerRoute } from "@/routes/taller";
@@ -23,6 +29,9 @@ function useIsActive() {
 	return (to: string, exact: boolean) =>
 		exact ? pathname === to : pathname.startsWith(to);
 }
+
+const WorkshopContext = createContext("");
+export const useWorkshopId = () => useContext(WorkshopContext);
 
 export function AppShell({ children }: { children: ReactNode }) {
 	const isActive = useIsActive();
@@ -82,16 +91,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 							>
 								<Icon className="size-4 opacity-80" aria-hidden="true" />
 								{item.label}
-								{item.to === "/taller" ? (
-									<span
-										className={cn(
-											"ml-auto font-mono text-[10px] text-ink-3",
-											active && "text-seal",
-										)}
-									>
-										128
-									</span>
-								) : null}
 							</Link>
 						);
 					})}
@@ -123,15 +122,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 						</select>
 					)}
 				</div>
-
-				<Link
-					to="/h/$placa"
-					params={{ placa: "P-482-913" }}
-					className="flex items-center gap-2 px-0.5 text-[11px] text-ink-3 transition-colors hover:text-seal"
-				>
-					<ShieldCheck className="size-3.5" aria-hidden="true" />
-					Ver historial del propietario
-				</Link>
 
 				<div className="flex items-center gap-2.5 px-0.5">
 					<div className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-[10.5px] font-semibold text-ink-2">
@@ -202,7 +192,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 						{logout.error.message}
 					</p>
 				)}
-				{children}
+				<WorkshopContext.Provider value={active?.workshop_id ?? ""}>
+					{children}
+				</WorkshopContext.Provider>
 			</div>
 		</div>
 	);

@@ -17,9 +17,11 @@ import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as RestablecerRouteImport } from './routes/restablecer'
 import { Route as TallerRouteImport } from './routes/taller'
 import { Route as VerificarRouteImport } from './routes/verificar'
+import { Route as CTokenRouteImport } from './routes/c/$token'
 import { Route as HPlacaRouteImport } from './routes/h.$placa'
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
 import { Route as TallerOrdenesIndexRouteImport } from './routes/taller/ordenes/index'
+import { Route as TallerOrdenesOrderIdRouteImport } from './routes/taller/ordenes/$orderId'
 import { Route as TallerOrdenesNuevaRouteImport } from './routes/taller/ordenes/nueva'
 
 const IndexRoute = IndexRouteImport.update({
@@ -62,6 +64,11 @@ const VerificarRoute = VerificarRouteImport.update({
   path: '/verificar',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CTokenRoute = CTokenRouteImport.update({
+  id: '/c/$token',
+  path: '/c/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const HPlacaRoute = HPlacaRouteImport.update({
   id: '/h/$placa',
   path: '/h/$placa',
@@ -75,6 +82,11 @@ const TallerIndexRoute = TallerIndexRouteImport.update({
 const TallerOrdenesIndexRoute = TallerOrdenesIndexRouteImport.update({
   id: '/ordenes/',
   path: '/ordenes/',
+  getParentRoute: () => TallerRoute,
+} as any)
+const TallerOrdenesOrderIdRoute = TallerOrdenesOrderIdRouteImport.update({
+  id: '/ordenes/$orderId',
+  path: '/ordenes/$orderId',
   getParentRoute: () => TallerRoute,
 } as any)
 const TallerOrdenesNuevaRoute = TallerOrdenesNuevaRouteImport.update({
@@ -92,8 +104,10 @@ export interface FileRoutesByFullPath {
   '/restablecer': typeof RestablecerRoute
   '/taller': typeof TallerRouteWithChildren
   '/verificar': typeof VerificarRoute
+  '/c/$token': typeof CTokenRoute
   '/h/$placa': typeof HPlacaRoute
   '/taller/': typeof TallerIndexRoute
+  '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
   '/taller/ordenes/': typeof TallerOrdenesIndexRoute
 }
@@ -105,8 +119,10 @@ export interface FileRoutesByTo {
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
   '/verificar': typeof VerificarRoute
+  '/c/$token': typeof CTokenRoute
   '/h/$placa': typeof HPlacaRoute
   '/taller': typeof TallerIndexRoute
+  '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
   '/taller/ordenes': typeof TallerOrdenesIndexRoute
 }
@@ -120,8 +136,10 @@ export interface FileRoutesById {
   '/restablecer': typeof RestablecerRoute
   '/taller': typeof TallerRouteWithChildren
   '/verificar': typeof VerificarRoute
+  '/c/$token': typeof CTokenRoute
   '/h/$placa': typeof HPlacaRoute
   '/taller/': typeof TallerIndexRoute
+  '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
   '/taller/ordenes/': typeof TallerOrdenesIndexRoute
 }
@@ -136,8 +154,10 @@ export interface FileRouteTypes {
     | '/restablecer'
     | '/taller'
     | '/verificar'
+    | '/c/$token'
     | '/h/$placa'
     | '/taller/'
+    | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
     | '/taller/ordenes/'
   fileRoutesByTo: FileRoutesByTo
@@ -149,8 +169,10 @@ export interface FileRouteTypes {
     | '/registro'
     | '/restablecer'
     | '/verificar'
+    | '/c/$token'
     | '/h/$placa'
     | '/taller'
+    | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
     | '/taller/ordenes'
   id:
@@ -163,8 +185,10 @@ export interface FileRouteTypes {
     | '/restablecer'
     | '/taller'
     | '/verificar'
+    | '/c/$token'
     | '/h/$placa'
     | '/taller/'
+    | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
     | '/taller/ordenes/'
   fileRoutesById: FileRoutesById
@@ -178,6 +202,7 @@ export interface RootRouteChildren {
   RestablecerRoute: typeof RestablecerRoute
   TallerRoute: typeof TallerRouteWithChildren
   VerificarRoute: typeof VerificarRoute
+  CTokenRoute: typeof CTokenRoute
   HPlacaRoute: typeof HPlacaRoute
 }
 
@@ -239,6 +264,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof VerificarRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/c/$token': {
+      id: '/c/$token'
+      path: '/c/$token'
+      fullPath: '/c/$token'
+      preLoaderRoute: typeof CTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/h/$placa': {
       id: '/h/$placa'
       path: '/h/$placa'
@@ -260,6 +292,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TallerOrdenesIndexRouteImport
       parentRoute: typeof TallerRoute
     }
+    '/taller/ordenes/$orderId': {
+      id: '/taller/ordenes/$orderId'
+      path: '/ordenes/$orderId'
+      fullPath: '/taller/ordenes/$orderId'
+      preLoaderRoute: typeof TallerOrdenesOrderIdRouteImport
+      parentRoute: typeof TallerRoute
+    }
     '/taller/ordenes/nueva': {
       id: '/taller/ordenes/nueva'
       path: '/ordenes/nueva'
@@ -272,12 +311,14 @@ declare module '@tanstack/react-router' {
 
 interface TallerRouteChildren {
   TallerIndexRoute: typeof TallerIndexRoute
+  TallerOrdenesOrderIdRoute: typeof TallerOrdenesOrderIdRoute
   TallerOrdenesNuevaRoute: typeof TallerOrdenesNuevaRoute
   TallerOrdenesIndexRoute: typeof TallerOrdenesIndexRoute
 }
 
 const TallerRouteChildren: TallerRouteChildren = {
   TallerIndexRoute: TallerIndexRoute,
+  TallerOrdenesOrderIdRoute: TallerOrdenesOrderIdRoute,
   TallerOrdenesNuevaRoute: TallerOrdenesNuevaRoute,
   TallerOrdenesIndexRoute: TallerOrdenesIndexRoute,
 }
@@ -294,6 +335,7 @@ const rootRouteChildren: RootRouteChildren = {
   RestablecerRoute: RestablecerRoute,
   TallerRoute: TallerRouteWithChildren,
   VerificarRoute: VerificarRoute,
+  CTokenRoute: CTokenRoute,
   HPlacaRoute: HPlacaRoute,
 }
 export const routeTree = rootRouteImport
