@@ -33,9 +33,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 				},
 				{ title: "Kilora" },
 				{ name: "description", content: "Historial digital del vehículo" },
+				{ name: "application-name", content: "Kilora" },
 			],
 			links: [
 				{ rel: "stylesheet", href: appCss },
+				{ rel: "icon", href: "/favicon.ico", sizes: "48x48" },
+				{ rel: "icon", href: "/icon.svg", type: "image/svg+xml" },
+				{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+				{ rel: "manifest", href: "/site.webmanifest" },
 				{ rel: "preconnect", href: "https://fonts.googleapis.com" },
 				{
 					rel: "preconnect",
@@ -56,7 +61,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 	const { queryClient } = Route.useRouteContext();
 
 	return (
-		<html lang="es">
+		<html lang="es-SV">
 			<head>
 				<HeadContent />
 			</head>

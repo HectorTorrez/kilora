@@ -1,69 +1,150 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Demo } from "@/components/kilora/demo";
-import { buttonVariants } from "@/components/ui/button";
+import {
+	Audiences,
+	FaqSection,
+	FinalCta,
+	Hero,
+	HowItWorks,
+	LandingFooter,
+	LandingHeader,
+	Problem,
+	TwoLayers,
+} from "@/components/kilora/landing";
 import { demoQuery } from "@/lib/demo-accounts";
+import {
+	FAQS,
+	OG_IMAGE,
+	SITE_DESCRIPTION,
+	SITE_NAME,
+	SITE_TITLE,
+	SITE_URL,
+} from "@/lib/site";
+
+const structuredData = {
+	"@context": "https://schema.org",
+	"@graph": [
+		{
+			"@type": "Organization",
+			"@id": `${SITE_URL}/#organization`,
+			name: SITE_NAME,
+			url: SITE_URL,
+			logo: `${SITE_URL}/icon.svg`,
+			description: SITE_DESCRIPTION,
+			areaServed: { "@type": "Country", name: "El Salvador" },
+		},
+		{
+			"@type": "WebSite",
+			"@id": `${SITE_URL}/#website`,
+			url: SITE_URL,
+			name: SITE_NAME,
+			inLanguage: "es-SV",
+			publisher: { "@id": `${SITE_URL}/#organization` },
+		},
+		{
+			"@type": "SoftwareApplication",
+			"@id": `${SITE_URL}/#app`,
+			name: SITE_NAME,
+			url: SITE_URL,
+			applicationCategory: "BusinessApplication",
+			applicationSubCategory: "Software para talleres mecánicos",
+			operatingSystem: "Web",
+			inLanguage: "es-SV",
+			description: SITE_DESCRIPTION,
+			areaServed: { "@type": "Country", name: "El Salvador" },
+			audience: [
+				{ "@type": "BusinessAudience", audienceType: "Talleres automotrices" },
+				{ "@type": "Audience", audienceType: "Propietarios de vehículos" },
+			],
+			featureList: [
+				"Órdenes de servicio en menos de 5 minutos",
+				"Historial del vehículo con kilometraje y fotos",
+				"Historial en dos capas: vista completa para el propietario y vista ciega para otros talleres",
+				"Invitaciones por correo, link y QR compartible por WhatsApp",
+				"Cotizaciones registradas como constancia",
+				"Registros append-only con correcciones fechadas",
+				"Sello de taller verificado",
+			],
+			publisher: { "@id": `${SITE_URL}/#organization` },
+		},
+		{
+			"@type": "FAQPage",
+			"@id": `${SITE_URL}/#faq`,
+			mainEntity: FAQS.map((f) => ({
+				"@type": "Question",
+				name: f.q,
+				acceptedAnswer: { "@type": "Answer", text: f.a },
+			})),
+		},
+	],
+};
+
 export const Route = createFileRoute("/")({
 	loader: ({ context }) => context.queryClient.ensureQueryData(demoQuery()),
+	head: () => ({
+		meta: [
+			{ title: SITE_TITLE },
+			{ name: "description", content: SITE_DESCRIPTION },
+			{ name: "robots", content: "index, follow, max-image-preview:large" },
+			{ name: "geo.region", content: "SV" },
+			{ name: "geo.placename", content: "El Salvador" },
+			{ property: "og:type", content: "website" },
+			{ property: "og:site_name", content: SITE_NAME },
+			{ property: "og:locale", content: "es_SV" },
+			{ property: "og:url", content: `${SITE_URL}/` },
+			{ property: "og:title", content: SITE_TITLE },
+			{ property: "og:description", content: SITE_DESCRIPTION },
+			{ property: "og:image", content: OG_IMAGE },
+			{ property: "og:image:width", content: "1200" },
+			{ property: "og:image:height", content: "630" },
+			{
+				property: "og:image:alt",
+				content:
+					"Kilora: el historial de tu carro no debería quedarse en el taller.",
+			},
+			{ name: "twitter:card", content: "summary_large_image" },
+			{ name: "twitter:title", content: SITE_TITLE },
+			{ name: "twitter:description", content: SITE_DESCRIPTION },
+			{ name: "twitter:image", content: OG_IMAGE },
+		],
+		links: [
+			{ rel: "canonical", href: `${SITE_URL}/` },
+			{ rel: "alternate", hrefLang: "es-SV", href: `${SITE_URL}/` },
+			{ rel: "alternate", hrefLang: "x-default", href: `${SITE_URL}/` },
+		],
+		scripts: [
+			{
+				type: "application/ld+json",
+				children: JSON.stringify(structuredData),
+			},
+		],
+	}),
 	component: Landing,
 });
+
 function Landing() {
 	const demo = Route.useLoaderData();
+	const hasDemo = demo.enabled && demo.accounts.length > 0;
 	return (
-		<main className="min-h-dvh bg-background">
-			<header className="mx-auto flex max-w-6xl items-center justify-between border-b px-6 py-6">
-				<span className="font-display text-xl font-bold tracking-[0.2em]">
-					KILORA
-				</span>
-				<Link
-					to="/login"
-					search={{ redirect: undefined }}
-					className={buttonVariants()}
-				>
-					Ingresar
-				</Link>
-			</header>
-			<section className="mx-auto grid max-w-6xl gap-12 px-6 py-24 md:grid-cols-2 md:items-center">
-				<div>
-					<p className="font-mono text-xs uppercase tracking-widest text-ink-3">
-						Historial digital del vehículo
-					</p>
-					<h1 className="mt-6 font-display text-5xl font-bold tracking-tight md:text-6xl">
-						El historial de tu carro no debería quedar{" "}
-						<span className="text-seal">en el taller.</span>
-					</h1>
-					<p className="mt-6 max-w-lg leading-relaxed text-ink-3">
-						Kilora guarda cada servicio y kilometraje. Cambiá de taller y el
-						historial viaja con el carro.
-					</p>
-					<Link
-						to="/login"
-						search={{ redirect: undefined }}
-						className={`${buttonVariants()} mt-8`}
-					>
-						Entrar
-					</Link>
-					<Link
-						to="/registro"
-						search={{ redirect: undefined }}
-						className={`${buttonVariants({ variant: "outline" })} mt-8 ml-3`}
-					>
-						Crear cuenta
-					</Link>
-				</div>
-				<div className="rounded-xl border bg-card p-8 shadow-sm">
-					<p className="font-mono text-xs uppercase tracking-widest text-ink-3">
-						Un historial para siempre
-					</p>
-					<h2 className="mt-4 font-display text-2xl font-bold">
-						Cada servicio cuenta.
-					</h2>
-					<p className="mt-4 leading-relaxed text-ink-3">
-						Registrá el trabajo de tu taller y ayudá a tus clientes a conservar
-						la historia de su vehículo.
-					</p>
-				</div>
-			</section>
-			<Demo demo={demo} />
-		</main>
+		<div className="min-h-dvh bg-background">
+			<a
+				href="#contenido"
+				className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:shadow"
+			>
+				Saltar al contenido
+			</a>
+			<LandingHeader />
+			<main id="contenido">
+				<Hero hasDemo={hasDemo} />
+				<Problem />
+				<HowItWorks />
+				<TwoLayers />
+				<Audiences />
+				<Demo demo={demo} />
+				<FaqSection />
+				<FinalCta hasDemo={hasDemo} />
+			</main>
+			<LandingFooter />
+		</div>
 	);
 }

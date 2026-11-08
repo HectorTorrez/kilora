@@ -1,0 +1,30 @@
+# Kilora
+
+> Kilora es el historial digital del vehículo para talleres independientes y propietarios de carros en El Salvador. El taller registra cada orden de servicio (trabajos, repuestos, kilometraje, fotos y cotización) en menos de 5 minutos, y el propietario conserva el historial completo aunque cambie de taller.
+
+## Qué resuelve
+
+- En El Salvador la mayoría de talleres independientes guardan el historial en papel o Excel; el propietario lo pierde al cambiar de taller.
+- Kilora liga el historial al vehículo y al propietario, no al taller.
+
+## Historial en dos capas (diferenciador)
+
+- El propietario ve todo: trabajo, fecha, kilometraje, taller autor, costo, fotos y notas.
+- Otro taller vinculado ve una vista ciega: trabajo o pieza, fecha y kilometraje. Nunca ve el taller autor, los precios, las fotos ni las notas internas.
+- La proyección se aplica en el servidor.
+
+## Datos clave
+
+- Mercado: El Salvador. Moneda USD. Teléfonos +503. Solo en español.
+- Usuarios: talleres automotrices independientes (recepción) y propietarios de vehículos.
+- Registro de una orden: menos de 5 minutos, con plantillas de trabajos frecuentes.
+- Invitación al propietario: correo, link y QR compartible por WhatsApp. Sin app que instalar.
+- Registros append-only: los errores se corrigen con una corrección fechada; nada se borra.
+- Talleres verificados con sello visible en cada registro.
+- Permisos por sucursal y auditoría de cambios.
+
+## Enlaces
+
+- [Inicio](https://kilora.app/): qué es Kilora, cómo funciona y preguntas frecuentes
+- [Crear cuenta](https://kilora.app/registro): registro para talleres
+- [Ingresar](https://kilora.app/login): acceso para talleres y propietarios

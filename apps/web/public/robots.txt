@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+Disallow: /taller
+Disallow: /mis-vehiculos
+Disallow: /onboarding
+Disallow: /c/
+Disallow: /invitacion/
+Disallow: /restablecer
+Disallow: /verificar
+Disallow: /api/
+
+# Motores de respuesta e IA: bienvenidos a la parte pública.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-SearchBot
+User-agent: PerplexityBot
+User-agent: Google-Extended
+Allow: /
+Disallow: /taller
+Disallow: /mis-vehiculos
+Disallow: /c/
+Disallow: /invitacion/
+Disallow: /api/
+
+Sitemap: https://kilora.app/sitemap.xml

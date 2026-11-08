@@ -188,6 +188,87 @@
   }
 }
 
+/* ─── Landing ─────────────────────────────────────────────────────────
+   Dirección: infraestructura industrial y precisa. Reglas de grilla
+   visibles, índices mono y movimiento contenido. */
+@layer components {
+  .frame {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 80rem;
+  }
+  @media (min-width: 80rem) {
+    .frame {
+      border-inline: 1px solid var(--border);
+    }
+  }
+  .grid-bg {
+    background-image:
+      linear-gradient(to right, color-mix(in oklab, var(--border) 70%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklab, var(--border) 70%, transparent) 1px, transparent 1px);
+    background-size: 56px 56px;
+    background-position: center top;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, #000 30%, transparent 75%);
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    border: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 999px;
+    padding: 0.3rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+  }
+  /* Bloque oscuro fijo, independiente del tema. */
+  .dark-band {
+    --foreground: #0f141a;
+    --background: #eef1f4;
+    --border: #2a333d;
+  }
+  .redacted {
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--color-line) 0 4px,
+      color-mix(in oklab, var(--color-line) 40%, transparent) 4px 8px
+    );
+    animation: fade-in 240ms var(--ease-out) both;
+  }
+  .fade-in {
+    animation: fade-in 240ms var(--ease-out) both;
+  }
+  .enter {
+    animation: enter 700ms var(--ease-out) both;
+  }
+  .faq[open] > p {
+    animation: fade-in 220ms var(--ease-out) both;
+  }
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: enter linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 60%;
+    }
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
