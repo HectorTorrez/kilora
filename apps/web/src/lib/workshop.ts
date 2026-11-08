@@ -26,6 +26,17 @@ export const vehiclesQuery = (workshopID: string, plate = "") =>
 				}),
 			),
 	});
+export const workshopQuery = (workshopID: string) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "detail"],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/", {
+					params: { path: { workshopID } },
+				}),
+			),
+		enabled: !!workshopID,
+	});
 export const vehicleQuery = (workshopID: string, vehicleID: string) =>
 	queryOptions({
 		queryKey: ["workshop", workshopID, "vehicle", vehicleID],

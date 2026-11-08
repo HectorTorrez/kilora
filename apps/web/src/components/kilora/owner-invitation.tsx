@@ -1,11 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
+import { BadgeCheck, Copy, MessageCircle, Send } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { SectionCard } from "@/components/kilora/workshop-ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { invitationsQuery, ownerActions, useOwnerMutation } from "@/lib/owner";
+import { cn } from "@/lib/utils";
+
+const invitationStatus: Record<string, string> = {
+	pendiente: "Pendiente",
+	aceptada: "Aceptada",
+	expirada: "Vencida",
+	revocada: "Revocada",
+};
+
 export function OwnerInvitation({
 	workshopID,
 	vehicleID,
@@ -17,86 +28,139 @@ export function OwnerInvitation({
 	linked?: boolean;
 	name?: string | null;
 }) {
-	const { data = [] } = useQuery(invitationsQuery(workshopID, vehicleID));
+	const { data = [] } = useQuery({
+		...invitationsQuery(workshopID, vehicleID),
+		enabled: !!workshopID && !!vehicleID,
+	});
 	const invite = useOwnerMutation((email: string) =>
 		ownerActions.invite(workshopID, vehicleID, email),
 	);
 	const [qr, setQr] = useState("");
 	useEffect(() => {
-		if (invite.data?.url) void QRCode.toDataURL(invite.data.url).then(setQr);
+		if (invite.data?.url)
+			void QRCode.toDataURL(invite.data.url, { margin: 1 }).then(setQr);
 	}, [invite.data?.url]);
+
 	return (
-		<Card className="space-y-3 gap-0 p-5 shadow-none">
-			<h2 className="font-display text-xl font-bold">Propietario</h2>
-			{linked ? (
-				<p>Vinculado a {name || "propietario"}</p>
-			) : (
-				<form
-					className="flex flex-wrap gap-2"
-					onSubmit={async (e) => {
-						e.preventDefault();
-						const f = new FormData(e.currentTarget);
-						try {
-							await invite.mutateAsync(String(f.get("email")));
-						} catch {}
-					}}
-				>
-					<Input
-						type="email"
-						name="email"
-						placeholder="Correo del propietario"
-						required
-					/>
-					<Button disabled={invite.isPending}>Invitar al propietario</Button>
-				</form>
-			)}
-			{invite.error && (
-				<Alert variant="destructive" className="text-destructive">
-					<AlertDescription>{invite.error.message}</AlertDescription>
-				</Alert>
-			)}
-			{invite.data && (
-				<div className="space-y-3">
-					<p className="break-all text-sm">{invite.data.url}</p>
-					<div className="flex flex-wrap gap-2">
-						<Button
-							variant="outline"
-							onClick={() =>
-								void navigator.clipboard.writeText(invite.data.url)
-							}
-						>
-							Copiar enlace
+		<SectionCard
+			title="Propietario"
+			description={
+				linked
+					? "Ve el historial completo desde su cuenta"
+					: "Invitalo para que conserve el historial aunque cambie de taller"
+			}
+		>
+			<div className="space-y-4">
+				{linked ? (
+					<div className="flex items-center gap-3 rounded-md bg-seal-soft p-3 text-seal">
+						<BadgeCheck className="size-5 shrink-0" />
+						<div className="text-[13px] leading-tight">
+							<p className="font-semibold">Vinculado</p>
+							<p className="opacity-80">{name || "Propietario con cuenta"}</p>
+						</div>
+					</div>
+				) : (
+					<form
+						className="flex gap-2"
+						onSubmit={async (e) => {
+							e.preventDefault();
+							const f = new FormData(e.currentTarget);
+							try {
+								await invite.mutateAsync(String(f.get("email")));
+							} catch {}
+						}}
+					>
+						<Input
+							type="email"
+							name="email"
+							aria-label="Correo del propietario"
+							placeholder="correo@ejemplo.com"
+							required
+						/>
+						<Button disabled={invite.isPending} className="shrink-0">
+							<Send className="size-4" />
+							{invite.isPending ? "Enviando…" : "Invitar"}
 						</Button>
-						<Button asChild variant="outline">
+					</form>
+				)}
+				{invite.error && (
+					<Alert variant="destructive">
+						<AlertDescription>{invite.error.message}</AlertDescription>
+					</Alert>
+				)}
+				{invite.data && (
+					<div className="space-y-3 rounded-md border bg-background/50 p-3">
+						<p className="text-xs font-medium text-ok">
+							Invitación creada. Compartila por WhatsApp o mostrá el QR.
+						</p>
+						<div className="flex gap-2">
+							<Input
+								readOnly
+								value={invite.data.url}
+								aria-label="Enlace de invitación"
+								className="font-mono text-xs"
+							/>
+							<Button
+								variant="outline"
+								size="icon"
+								aria-label="Copiar enlace"
+								onClick={async () => {
+									await navigator.clipboard.writeText(invite.data.url);
+									toast.success("Enlace copiado");
+								}}
+							>
+								<Copy className="size-4" />
+							</Button>
+						</div>
+						<Button asChild variant="outline" className="w-full">
 							<a
 								href={invite.data.whatsapp_url}
 								target="_blank"
 								rel="noreferrer"
 							>
+								<MessageCircle className="size-4" />
 								Compartir por WhatsApp
 							</a>
 						</Button>
+						{qr && (
+							<img
+								src={qr}
+								alt="Código QR de la invitación"
+								width="160"
+								height="160"
+								className="mx-auto rounded"
+							/>
+						)}
 					</div>
-					{qr && (
-						<img
-							src={qr}
-							alt="Código QR de la invitación"
-							width="180"
-							height="180"
-						/>
-					)}
-				</div>
-			)}
-			{data.length > 0 && (
-				<div>
-					<h3 className="font-semibold">Invitaciones</h3>
-					{data.map((i) => (
-						<p key={i.id} className="text-sm text-ink-3">
-							{i.email} · {i.status}
+				)}
+				{data.length > 0 && (
+					<div>
+						<p className="mb-1.5 text-xs font-medium text-ink-3">
+							Invitaciones enviadas
 						</p>
-					))}
-				</div>
-			)}
-		</Card>
+						<ul className="divide-y rounded-md border text-[13px]">
+							{data.map((i) => (
+								<li
+									key={i.id ?? i.email}
+									className="flex items-center justify-between gap-2 px-3 py-2"
+								>
+									<span className="min-w-0 truncate">{i.email}</span>
+									<span
+										className={cn(
+											"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+											i.status === "aceptada"
+												? "bg-ok-soft text-ok"
+												: "bg-secondary text-ink-2",
+										)}
+									>
+										{invitationStatus[i.status ?? ""] ?? i.status}
+									</span>
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
+			</div>
+		</SectionCard>
 	);
 }

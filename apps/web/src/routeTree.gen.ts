@@ -23,9 +23,13 @@ import { Route as InvitacionTokenRouteImport } from './routes/invitacion/$token'
 import { Route as MisVehiculosIndexRouteImport } from './routes/mis-vehiculos/index'
 import { Route as MisVehiculosVehicleIdRouteImport } from './routes/mis-vehiculos/$vehicleId'
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
+import { Route as TallerConfiguracionRouteImport } from './routes/taller/configuracion'
 import { Route as TallerOrdenesIndexRouteImport } from './routes/taller/ordenes/index'
 import { Route as TallerOrdenesOrderIdRouteImport } from './routes/taller/ordenes/$orderId'
 import { Route as TallerOrdenesNuevaRouteImport } from './routes/taller/ordenes/nueva'
+import { Route as TallerVehiculosIndexRouteImport } from './routes/taller/vehiculos/index'
+import { Route as TallerVehiculosVehicleIdRouteImport } from './routes/taller/vehiculos/$vehicleId'
+import { Route as TallerOrdenesOrderIdHojaRouteImport } from './routes/taller/ordenes/$orderId_.hoja'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -97,6 +101,11 @@ const TallerIndexRoute = TallerIndexRouteImport.update({
   path: '/',
   getParentRoute: () => TallerRoute,
 } as any)
+const TallerConfiguracionRoute = TallerConfiguracionRouteImport.update({
+  id: '/configuracion',
+  path: '/configuracion',
+  getParentRoute: () => TallerRoute,
+} as any)
 const TallerOrdenesIndexRoute = TallerOrdenesIndexRouteImport.update({
   id: '/ordenes/',
   path: '/ordenes/',
@@ -112,6 +121,23 @@ const TallerOrdenesNuevaRoute = TallerOrdenesNuevaRouteImport.update({
   path: '/ordenes/nueva',
   getParentRoute: () => TallerRoute,
 } as any)
+const TallerVehiculosIndexRoute = TallerVehiculosIndexRouteImport.update({
+  id: '/vehiculos/',
+  path: '/vehiculos/',
+  getParentRoute: () => TallerRoute,
+} as any)
+const TallerVehiculosVehicleIdRoute =
+  TallerVehiculosVehicleIdRouteImport.update({
+    id: '/vehiculos/$vehicleId',
+    path: '/vehiculos/$vehicleId',
+    getParentRoute: () => TallerRoute,
+  } as any)
+const TallerOrdenesOrderIdHojaRoute =
+  TallerOrdenesOrderIdHojaRouteImport.update({
+    id: '/ordenes/$orderId_/hoja',
+    path: '/ordenes/$orderId/hoja',
+    getParentRoute: () => TallerRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -126,11 +152,15 @@ export interface FileRoutesByFullPath {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
+  '/taller/vehiculos/$vehicleId': typeof TallerVehiculosVehicleIdRoute
   '/taller/ordenes/': typeof TallerOrdenesIndexRoute
+  '/taller/vehiculos/': typeof TallerVehiculosIndexRoute
+  '/taller/ordenes/$orderId/hoja': typeof TallerOrdenesOrderIdHojaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -143,11 +173,15 @@ export interface FileRoutesByTo {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos': typeof MisVehiculosIndexRoute
   '/taller': typeof TallerIndexRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
+  '/taller/vehiculos/$vehicleId': typeof TallerVehiculosVehicleIdRoute
   '/taller/ordenes': typeof TallerOrdenesIndexRoute
+  '/taller/vehiculos': typeof TallerVehiculosIndexRoute
+  '/taller/ordenes/$orderId/hoja': typeof TallerOrdenesOrderIdHojaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -163,11 +197,15 @@ export interface FileRoutesById {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
+  '/taller/vehiculos/$vehicleId': typeof TallerVehiculosVehicleIdRoute
   '/taller/ordenes/': typeof TallerOrdenesIndexRoute
+  '/taller/vehiculos/': typeof TallerVehiculosIndexRoute
+  '/taller/ordenes/$orderId_/hoja': typeof TallerOrdenesOrderIdHojaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -184,11 +222,15 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/taller/configuracion'
     | '/mis-vehiculos/'
     | '/taller/'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
+    | '/taller/vehiculos/$vehicleId'
     | '/taller/ordenes/'
+    | '/taller/vehiculos/'
+    | '/taller/ordenes/$orderId/hoja'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -201,11 +243,15 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/taller/configuracion'
     | '/mis-vehiculos'
     | '/taller'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
+    | '/taller/vehiculos/$vehicleId'
     | '/taller/ordenes'
+    | '/taller/vehiculos'
+    | '/taller/ordenes/$orderId/hoja'
   id:
     | '__root__'
     | '/'
@@ -220,11 +266,15 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/taller/configuracion'
     | '/mis-vehiculos/'
     | '/taller/'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
+    | '/taller/vehiculos/$vehicleId'
     | '/taller/ordenes/'
+    | '/taller/vehiculos/'
+    | '/taller/ordenes/$orderId_/hoja'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -341,6 +391,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TallerIndexRouteImport
       parentRoute: typeof TallerRoute
     }
+    '/taller/configuracion': {
+      id: '/taller/configuracion'
+      path: '/configuracion'
+      fullPath: '/taller/configuracion'
+      preLoaderRoute: typeof TallerConfiguracionRouteImport
+      parentRoute: typeof TallerRoute
+    }
     '/taller/ordenes/': {
       id: '/taller/ordenes/'
       path: '/ordenes'
@@ -362,6 +419,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TallerOrdenesNuevaRouteImport
       parentRoute: typeof TallerRoute
     }
+    '/taller/vehiculos/': {
+      id: '/taller/vehiculos/'
+      path: '/vehiculos'
+      fullPath: '/taller/vehiculos/'
+      preLoaderRoute: typeof TallerVehiculosIndexRouteImport
+      parentRoute: typeof TallerRoute
+    }
+    '/taller/vehiculos/$vehicleId': {
+      id: '/taller/vehiculos/$vehicleId'
+      path: '/vehiculos/$vehicleId'
+      fullPath: '/taller/vehiculos/$vehicleId'
+      preLoaderRoute: typeof TallerVehiculosVehicleIdRouteImport
+      parentRoute: typeof TallerRoute
+    }
+    '/taller/ordenes/$orderId_/hoja': {
+      id: '/taller/ordenes/$orderId_/hoja'
+      path: '/ordenes/$orderId/hoja'
+      fullPath: '/taller/ordenes/$orderId/hoja'
+      preLoaderRoute: typeof TallerOrdenesOrderIdHojaRouteImport
+      parentRoute: typeof TallerRoute
+    }
   }
 }
 
@@ -380,17 +458,25 @@ const MisVehiculosRouteWithChildren = MisVehiculosRoute._addFileChildren(
 )
 
 interface TallerRouteChildren {
+  TallerConfiguracionRoute: typeof TallerConfiguracionRoute
   TallerIndexRoute: typeof TallerIndexRoute
   TallerOrdenesOrderIdRoute: typeof TallerOrdenesOrderIdRoute
   TallerOrdenesNuevaRoute: typeof TallerOrdenesNuevaRoute
+  TallerVehiculosVehicleIdRoute: typeof TallerVehiculosVehicleIdRoute
   TallerOrdenesIndexRoute: typeof TallerOrdenesIndexRoute
+  TallerVehiculosIndexRoute: typeof TallerVehiculosIndexRoute
+  TallerOrdenesOrderIdHojaRoute: typeof TallerOrdenesOrderIdHojaRoute
 }
 
 const TallerRouteChildren: TallerRouteChildren = {
+  TallerConfiguracionRoute: TallerConfiguracionRoute,
   TallerIndexRoute: TallerIndexRoute,
   TallerOrdenesOrderIdRoute: TallerOrdenesOrderIdRoute,
   TallerOrdenesNuevaRoute: TallerOrdenesNuevaRoute,
+  TallerVehiculosVehicleIdRoute: TallerVehiculosVehicleIdRoute,
   TallerOrdenesIndexRoute: TallerOrdenesIndexRoute,
+  TallerVehiculosIndexRoute: TallerVehiculosIndexRoute,
+  TallerOrdenesOrderIdHojaRoute: TallerOrdenesOrderIdHojaRoute,
 }
 
 const TallerRouteWithChildren =
