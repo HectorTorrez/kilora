@@ -8,7 +8,7 @@ package sqlc
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createUser = `-- name: CreateUser :one
@@ -67,7 +67,7 @@ const getUserByID = `-- name: GetUserByID :one
 SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at FROM app_user WHERE id = $1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id pgtype.UUID) (AppUser, error) {
+func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (AppUser, error) {
 	row := q.db.QueryRow(ctx, getUserByID, id)
 	var i AppUser
 	err := row.Scan(
@@ -87,7 +87,7 @@ const markUserEmailVerified = `-- name: MarkUserEmailVerified :execrows
 UPDATE app_user SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1
 `
 
-func (q *Queries) MarkUserEmailVerified(ctx context.Context, id pgtype.UUID) (int64, error) {
+func (q *Queries) MarkUserEmailVerified(ctx context.Context, id uuid.UUID) (int64, error) {
 	result, err := q.db.Exec(ctx, markUserEmailVerified, id)
 	if err != nil {
 		return 0, err
@@ -100,8 +100,8 @@ UPDATE app_user SET password_hash = $1 WHERE id = $2
 `
 
 type UpdateUserPasswordParams struct {
-	PasswordHash string      `json:"password_hash"`
-	ID           pgtype.UUID `json:"id"`
+	PasswordHash string    `json:"password_hash"`
+	ID           uuid.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) (int64, error) {

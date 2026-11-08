@@ -8,7 +8,7 @@ package sqlc
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createVehicle = `-- name: CreateVehicle :one
@@ -16,8 +16,8 @@ INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make,
 `
 
 type CreateVehicleParams struct {
-	OwnerUserID         pgtype.UUID   `json:"owner_user_id"`
-	CreatedByWorkshopID pgtype.UUID   `json:"created_by_workshop_id"`
+	OwnerUserID         *uuid.UUID    `json:"owner_user_id"`
+	CreatedByWorkshopID *uuid.UUID    `json:"created_by_workshop_id"`
 	Status              VehicleStatus `json:"status"`
 	Plate               *string       `json:"plate"`
 	Make                string        `json:"make"`
@@ -67,8 +67,8 @@ SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.mak
 `
 
 type GetVehicleParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) GetVehicle(ctx context.Context, arg GetVehicleParams) (Vehicle, error) {
@@ -99,8 +99,8 @@ SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, ye
 `
 
 type GetVehicleForOwnerParams struct {
-	ID          pgtype.UUID `json:"id"`
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
+	ID          uuid.UUID  `json:"id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
 }
 
 func (q *Queries) GetVehicleForOwner(ctx context.Context, arg GetVehicleForOwnerParams) (Vehicle, error) {
@@ -126,29 +126,13 @@ func (q *Queries) GetVehicleForOwner(ctx context.Context, arg GetVehicleForOwner
 	return i, err
 }
 
-const getVehicleLink = `-- name: GetVehicleLink :one
-SELECT vehicle_id, workshop_id, created_at FROM vehicle_link WHERE vehicle_id = $1 AND workshop_id = $2
-`
-
-type GetVehicleLinkParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
-}
-
-func (q *Queries) GetVehicleLink(ctx context.Context, arg GetVehicleLinkParams) (VehicleLink, error) {
-	row := q.db.QueryRow(ctx, getVehicleLink, arg.VehicleID, arg.WorkshopID)
-	var i VehicleLink
-	err := row.Scan(&i.VehicleID, &i.WorkshopID, &i.CreatedAt)
-	return i, err
-}
-
 const linkVehicleToWorkshop = `-- name: LinkVehicleToWorkshop :exec
 INSERT INTO vehicle_link (vehicle_id, workshop_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
 `
 
 type LinkVehicleToWorkshopParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VehicleID  uuid.UUID `json:"vehicle_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) LinkVehicleToWorkshop(ctx context.Context, arg LinkVehicleToWorkshopParams) error {
@@ -160,7 +144,7 @@ const listVehiclesByOwner = `-- name: ListVehiclesByOwner :many
 SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE owner_user_id = $1 ORDER BY last_activity_at DESC
 `
 
-func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID pgtype.UUID) ([]Vehicle, error) {
+func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID *uuid.UUID) ([]Vehicle, error) {
 	rows, err := q.db.Query(ctx, listVehiclesByOwner, ownerUserID)
 	if err != nil {
 		return nil, err
@@ -197,16 +181,23 @@ func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID pgtype.UU
 }
 
 const listVehiclesForWorkshop = `-- name: ListVehiclesForWorkshop :many
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE l.workshop_id = $1 AND (COALESCE($2::boolean, false) OR v.status <> 'archivado') ORDER BY v.last_activity_at DESC
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at
+FROM vehicle v
+JOIN vehicle_link l ON l.vehicle_id = v.id
+WHERE l.workshop_id = $1
+  AND ($2::boolean OR v.status <> 'archivado')
+  AND ($3::text = '' OR starts_with(v.plate, $3::text))
+ORDER BY v.last_activity_at DESC
 `
 
 type ListVehiclesForWorkshopParams struct {
-	WorkshopID      pgtype.UUID `json:"workshop_id"`
-	IncludeArchived *bool       `json:"include_archived"`
+	WorkshopID      uuid.UUID `json:"workshop_id"`
+	IncludeArchived bool      `json:"include_archived"`
+	PlatePrefix     string    `json:"plate_prefix"`
 }
 
 func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesForWorkshopParams) ([]Vehicle, error) {
-	rows, err := q.db.Query(ctx, listVehiclesForWorkshop, arg.WorkshopID, arg.IncludeArchived)
+	rows, err := q.db.Query(ctx, listVehiclesForWorkshop, arg.WorkshopID, arg.IncludeArchived, arg.PlatePrefix)
 	if err != nil {
 		return nil, err
 	}
@@ -239,69 +230,6 @@ func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesF
 		return nil, err
 	}
 	return items, nil
-}
-
-const searchVehiclesForWorkshop = `-- name: SearchVehiclesForWorkshop :many
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE l.workshop_id = $1 AND v.plate LIKE $2::text || '%' AND v.status <> 'archivado' ORDER BY v.last_activity_at DESC
-`
-
-type SearchVehiclesForWorkshopParams struct {
-	WorkshopID  pgtype.UUID `json:"workshop_id"`
-	PlatePrefix string      `json:"plate_prefix"`
-}
-
-func (q *Queries) SearchVehiclesForWorkshop(ctx context.Context, arg SearchVehiclesForWorkshopParams) ([]Vehicle, error) {
-	rows, err := q.db.Query(ctx, searchVehiclesForWorkshop, arg.WorkshopID, arg.PlatePrefix)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Vehicle{}
-	for rows.Next() {
-		var i Vehicle
-		if err := rows.Scan(
-			&i.ID,
-			&i.OwnerUserID,
-			&i.CreatedByWorkshopID,
-			&i.Status,
-			&i.Plate,
-			&i.Make,
-			&i.Model,
-			&i.Year,
-			&i.Vin,
-			&i.ContactName,
-			&i.ContactPhone,
-			&i.LastActivityAt,
-			&i.ArchivedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const setVehicleOwner = `-- name: SetVehicleOwner :execrows
-UPDATE vehicle SET owner_user_id = $1, status = 'vinculado' WHERE id = $2 AND EXISTS (SELECT 1 FROM vehicle_link WHERE vehicle_id = vehicle.id AND workshop_id = $3)
-`
-
-type SetVehicleOwnerParams struct {
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
-	VehicleID   pgtype.UUID `json:"vehicle_id"`
-	WorkshopID  pgtype.UUID `json:"workshop_id"`
-}
-
-func (q *Queries) SetVehicleOwner(ctx context.Context, arg SetVehicleOwnerParams) (int64, error) {
-	result, err := q.db.Exec(ctx, setVehicleOwner, arg.OwnerUserID, arg.VehicleID, arg.WorkshopID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }
 
 const touchVehicleActivity = `-- name: TouchVehicleActivity :execrows
@@ -309,8 +237,8 @@ UPDATE vehicle SET last_activity_at = now() WHERE id = $1 AND EXISTS (SELECT 1 F
 `
 
 type TouchVehicleActivityParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VehicleID  uuid.UUID `json:"vehicle_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) TouchVehicleActivity(ctx context.Context, arg TouchVehicleActivityParams) (int64, error) {

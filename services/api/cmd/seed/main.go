@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -73,7 +74,7 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 			}
 		}
 	}
-	hash, err := auth.HashPassword("demo1234")
+	hash, err := auth.HashPassword(auth.DemoPassword)
 	if err != nil {
 		return err
 	}
@@ -126,7 +127,10 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 		cost := []string{"12.00", "12.00", "22.00", "30.00", "12.00", "90.00", "60.00", "12.00"}[i]
 		notes := "Revisar en próximo servicio"
 		qty := 1.0
-		items, _ := history.EncodeItems([]history.Item{{Kind: "trabajo", Description: desc, Category: &cat, Price: &price, InternalCost: &cost, MechanicNotes: &notes}, {Kind: "pieza", Description: desc, Name: &desc, Brand: &brand, Quantity: &qty, Price: &price, InternalCost: &cost}})
+		items, err := json.Marshal([]history.Item{{Kind: "trabajo", Description: desc, Category: &cat, Price: &price, InternalCost: &cost, MechanicNotes: &notes}, {Kind: "pieza", Description: desc, Name: &desc, Brand: &brand, Quantity: &qty, Price: &price, InternalCost: &cost}})
+		if err != nil {
+			return err
+		}
 		for _, q := range []struct {
 			sql  string
 			args []any
@@ -149,7 +153,10 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 		}
 	}
 	manualPrice := "35.00"
-	manualItems, _ := history.EncodeItems([]history.Item{{Kind: "trabajo", Description: "Lavado de inyectores", Price: &manualPrice}})
+	manualItems, err := json.Marshal([]history.Item{{Kind: "trabajo", Description: "Lavado de inyectores", Price: &manualPrice}})
+	if err != nil {
+		return err
+	}
 	if err = exec("INSERT INTO history_record(vehicle_id,source,performed_on,odometer_km,summary,items,total,workshop_notes,created_by) VALUES($1,'propietario',current_date-250,63000,'Lavado de inyectores',$3,35,'Realizado en: Servicentro',$2)", vehicle, users[2], manualItems); err != nil {
 		return err
 	}

@@ -11,12 +11,7 @@ import {
 	Plus,
 	Wrench,
 } from "lucide-react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
-import {
-	dueText,
-	UrgencyBadge,
-	urgency,
-} from "@/components/kilora/recommendations";
+import { UrgencyBadge } from "@/components/kilora/recommendations";
 import {
 	EmptyState,
 	OrderStatusBadge,
@@ -31,14 +26,13 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { statusLabel } from "@/lib/format";
+import { ordersQuery } from "@/features/taller/orders";
+import { recommendationsQuery } from "@/features/taller/recommendations";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
+import { vehiclesQuery } from "@/features/taller/vehicles";
+import { statusLabel, TIME_ZONE } from "@/lib/format";
+import { dueText, urgency } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
-import {
-	ordersQuery,
-	recommendationsQuery,
-	vehiclesQuery,
-} from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
 
 type S = components["schemas"];
 
@@ -56,7 +50,7 @@ const greeting = () => {
 		new Intl.DateTimeFormat("es-SV", {
 			hour: "numeric",
 			hour12: false,
-			timeZone: "America/El_Salvador",
+			timeZone: TIME_ZONE,
 		}).format(new Date()),
 	);
 	return hour < 12
@@ -68,7 +62,7 @@ const greeting = () => {
 
 function DashboardPage() {
 	const workshopID = useWorkshopId();
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const orders = useQuery({
 		...ordersQuery(workshopID),
 		enabled: !!workshopID,
@@ -101,7 +95,7 @@ function DashboardPage() {
 		weekday: "long",
 		day: "numeric",
 		month: "long",
-		timeZone: "America/El_Salvador",
+		timeZone: TIME_ZONE,
 	}).format(new Date());
 
 	return (

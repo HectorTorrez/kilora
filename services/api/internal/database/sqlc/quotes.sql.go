@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -22,12 +23,12 @@ INSERT INTO quote (
 `
 
 type CreateCounterQuoteParams struct {
-	WorkshopID    pgtype.UUID    `json:"workshop_id"`
-	BranchID      pgtype.UUID    `json:"branch_id"`
+	WorkshopID    uuid.UUID      `json:"workshop_id"`
+	BranchID      uuid.UUID      `json:"branch_id"`
 	Number        int32          `json:"number"`
 	CustomerName  *string        `json:"customer_name"`
 	CustomerPhone *string        `json:"customer_phone"`
-	VehicleID     pgtype.UUID    `json:"vehicle_id"`
+	VehicleID     *uuid.UUID     `json:"vehicle_id"`
 	VehicleMake   *string        `json:"vehicle_make"`
 	VehicleModel  *string        `json:"vehicle_model"`
 	VehicleYear   *int32         `json:"vehicle_year"`
@@ -35,7 +36,7 @@ type CreateCounterQuoteParams struct {
 	Notes         *string        `json:"notes"`
 	ValidUntil    pgtype.Date    `json:"valid_until"`
 	Total         pgtype.Numeric `json:"total"`
-	CreatedBy     pgtype.UUID    `json:"created_by"`
+	CreatedBy     uuid.UUID      `json:"created_by"`
 }
 
 func (q *Queries) CreateCounterQuote(ctx context.Context, arg CreateCounterQuoteParams) (Quote, error) {
@@ -92,7 +93,7 @@ INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_pri
 `
 
 type CreateQuoteItemParams struct {
-	QuoteID     pgtype.UUID    `json:"quote_id"`
+	QuoteID     uuid.UUID      `json:"quote_id"`
 	Position    int32          `json:"position"`
 	Kind        QuoteItemKind  `json:"kind"`
 	Description string         `json:"description"`
@@ -116,7 +117,7 @@ const deleteQuoteItems = `-- name: DeleteQuoteItems :exec
 DELETE FROM quote_item WHERE quote_id = $1
 `
 
-func (q *Queries) DeleteQuoteItems(ctx context.Context, quoteID pgtype.UUID) error {
+func (q *Queries) DeleteQuoteItems(ctx context.Context, quoteID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteQuoteItems, quoteID)
 	return err
 }
@@ -125,7 +126,7 @@ const getCounterQuote = `-- name: GetCounterQuote :one
 SELECT
   q.id, q.workshop_id, q.branch_id, q.number, q.customer_name, q.customer_phone, q.vehicle_id,
   q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate, q.notes, q.valid_until,
-  q.total::text AS total, q.currency, q.outcome::text AS outcome, q.outcome_at, q.outcome_by,
+  q.total::text AS total, q.currency, q.outcome, q.outcome_at, q.outcome_by,
   q.shared_at, q.share_expires_at, q.created_at, q.work_order_id, q.converted_order_id,
   w.name AS workshop_name, w.nit AS workshop_nit, w.verified_at, b.name AS branch_name,
   o.number AS converted_order_number
@@ -138,18 +139,18 @@ WHERE q.id = $1 AND q.workshop_id = $2
 `
 
 type GetCounterQuoteParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 type GetCounterQuoteRow struct {
-	ID                   pgtype.UUID        `json:"id"`
-	WorkshopID           pgtype.UUID        `json:"workshop_id"`
-	BranchID             pgtype.UUID        `json:"branch_id"`
+	ID                   uuid.UUID          `json:"id"`
+	WorkshopID           uuid.UUID          `json:"workshop_id"`
+	BranchID             uuid.UUID          `json:"branch_id"`
 	Number               int32              `json:"number"`
 	CustomerName         *string            `json:"customer_name"`
 	CustomerPhone        *string            `json:"customer_phone"`
-	VehicleID            pgtype.UUID        `json:"vehicle_id"`
+	VehicleID            *uuid.UUID         `json:"vehicle_id"`
 	VehicleMake          *string            `json:"vehicle_make"`
 	VehicleModel         *string            `json:"vehicle_model"`
 	VehicleYear          *int32             `json:"vehicle_year"`
@@ -158,14 +159,14 @@ type GetCounterQuoteRow struct {
 	ValidUntil           pgtype.Date        `json:"valid_until"`
 	Total                string             `json:"total"`
 	Currency             string             `json:"currency"`
-	Outcome              string             `json:"outcome"`
+	Outcome              QuoteOutcome       `json:"outcome"`
 	OutcomeAt            pgtype.Timestamptz `json:"outcome_at"`
-	OutcomeBy            pgtype.UUID        `json:"outcome_by"`
+	OutcomeBy            *uuid.UUID         `json:"outcome_by"`
 	SharedAt             pgtype.Timestamptz `json:"shared_at"`
 	ShareExpiresAt       pgtype.Timestamptz `json:"share_expires_at"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	WorkOrderID          pgtype.UUID        `json:"work_order_id"`
-	ConvertedOrderID     pgtype.UUID        `json:"converted_order_id"`
+	WorkOrderID          *uuid.UUID         `json:"work_order_id"`
+	ConvertedOrderID     *uuid.UUID         `json:"converted_order_id"`
 	WorkshopName         string             `json:"workshop_name"`
 	WorkshopNit          *string            `json:"workshop_nit"`
 	VerifiedAt           pgtype.Timestamptz `json:"verified_at"`
@@ -214,13 +215,13 @@ SELECT id, number FROM quote WHERE work_order_id = $1 AND workshop_id = $2
 `
 
 type GetOrderQuoteMetaParams struct {
-	WorkOrderID pgtype.UUID `json:"work_order_id"`
-	WorkshopID  pgtype.UUID `json:"workshop_id"`
+	WorkOrderID *uuid.UUID `json:"work_order_id"`
+	WorkshopID  uuid.UUID  `json:"workshop_id"`
 }
 
 type GetOrderQuoteMetaRow struct {
-	ID     pgtype.UUID `json:"id"`
-	Number int32       `json:"number"`
+	ID     uuid.UUID `json:"id"`
+	Number int32     `json:"number"`
 }
 
 func (q *Queries) GetOrderQuoteMeta(ctx context.Context, arg GetOrderQuoteMetaParams) (GetOrderQuoteMetaRow, error) {
@@ -251,7 +252,7 @@ WHERE q.share_token_hash = $1 AND q.share_expires_at > now()
 `
 
 type GetPublicQuoteRow struct {
-	ID             pgtype.UUID        `json:"id"`
+	ID             uuid.UUID          `json:"id"`
 	Name           string             `json:"name"`
 	VerifiedAt     pgtype.Timestamptz `json:"verified_at"`
 	Plate          *string            `json:"plate"`
@@ -299,7 +300,7 @@ type GetQuoteContactRow struct {
 	ContactPhone *string `json:"contact_phone"`
 }
 
-func (q *Queries) GetQuoteContact(ctx context.Context, id pgtype.UUID) (GetQuoteContactRow, error) {
+func (q *Queries) GetQuoteContact(ctx context.Context, id uuid.UUID) (GetQuoteContactRow, error) {
 	row := q.db.QueryRow(ctx, getQuoteContact, id)
 	var i GetQuoteContactRow
 	err := row.Scan(&i.Name, &i.Plate, &i.ContactPhone)
@@ -307,20 +308,20 @@ func (q *Queries) GetQuoteContact(ctx context.Context, id pgtype.UUID) (GetQuote
 }
 
 const getQuoteData = `-- name: GetQuoteData :one
-SELECT total::text, currency, outcome::text, outcome_at, outcome_by, shared_at, share_expires_at FROM quote WHERE id = $1
+SELECT total::text, currency, outcome, outcome_at, outcome_by, shared_at, share_expires_at FROM quote WHERE id = $1
 `
 
 type GetQuoteDataRow struct {
 	Total          string             `json:"total"`
 	Currency       string             `json:"currency"`
-	Outcome        string             `json:"outcome"`
+	Outcome        QuoteOutcome       `json:"outcome"`
 	OutcomeAt      pgtype.Timestamptz `json:"outcome_at"`
-	OutcomeBy      pgtype.UUID        `json:"outcome_by"`
+	OutcomeBy      *uuid.UUID         `json:"outcome_by"`
 	SharedAt       pgtype.Timestamptz `json:"shared_at"`
 	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
 }
 
-func (q *Queries) GetQuoteData(ctx context.Context, id pgtype.UUID) (GetQuoteDataRow, error) {
+func (q *Queries) GetQuoteData(ctx context.Context, id uuid.UUID) (GetQuoteDataRow, error) {
 	row := q.db.QueryRow(ctx, getQuoteData, id)
 	var i GetQuoteDataRow
 	err := row.Scan(
@@ -335,46 +336,32 @@ func (q *Queries) GetQuoteData(ctx context.Context, id pgtype.UUID) (GetQuoteDat
 	return i, err
 }
 
-const getQuoteIDByOrder = `-- name: GetQuoteIDByOrder :one
-SELECT id FROM quote WHERE work_order_id = $1 AND workshop_id = $2
-`
-
-type GetQuoteIDByOrderParams struct {
-	WorkOrderID pgtype.UUID `json:"work_order_id"`
-	WorkshopID  pgtype.UUID `json:"workshop_id"`
-}
-
-func (q *Queries) GetQuoteIDByOrder(ctx context.Context, arg GetQuoteIDByOrderParams) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, getQuoteIDByOrder, arg.WorkOrderID, arg.WorkshopID)
-	var id pgtype.UUID
-	err := row.Scan(&id)
-	return id, err
-}
-
 const listCounterQuotes = `-- name: ListCounterQuotes :many
 SELECT
   q.id, q.number, q.customer_name, q.customer_phone, q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate,
-  q.total::text AS total, q.currency, q.outcome::text AS outcome, q.created_at, q.valid_until,
+  q.total::text AS total, q.currency, q.outcome, q.created_at, q.valid_until,
   q.converted_order_id, o.number AS converted_order_number, COUNT(*) OVER() AS total_count
 FROM quote q
 LEFT JOIN work_order o ON o.id = q.converted_order_id
 WHERE q.workshop_id = $1
+  AND q.branch_id = ANY($2::uuid[])
   AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
-  AND ($2::quote_outcome IS NULL OR q.outcome = $2)
+  AND ($3::quote_outcome IS NULL OR q.outcome = $3)
   AND (
-    $3::text IS NULL
-    OR q.customer_name ILIKE $3 ESCAPE '\'
-    OR COALESCE(q.customer_phone, '') ILIKE $3 ESCAPE '\'
-    OR COALESCE(q.vehicle_plate, '') ILIKE $3 ESCAPE '\'
-    OR q.number::text ILIKE $3 ESCAPE '\'
-    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $3 ESCAPE '\'
+    $4::text IS NULL
+    OR q.customer_name ILIKE $4 ESCAPE '\'
+    OR COALESCE(q.customer_phone, '') ILIKE $4 ESCAPE '\'
+    OR COALESCE(q.vehicle_plate, '') ILIKE $4 ESCAPE '\'
+    OR q.number::text ILIKE $4 ESCAPE '\'
+    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $4 ESCAPE '\'
   )
 ORDER BY q.created_at DESC, q.number DESC
-LIMIT $5 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type ListCounterQuotesParams struct {
-	WorkshopID pgtype.UUID   `json:"workshop_id"`
+	WorkshopID uuid.UUID     `json:"workshop_id"`
+	BranchIds  []uuid.UUID   `json:"branch_ids"`
 	Outcome    *QuoteOutcome `json:"outcome"`
 	Search     *string       `json:"search"`
 	RowOffset  int32         `json:"row_offset"`
@@ -382,7 +369,7 @@ type ListCounterQuotesParams struct {
 }
 
 type ListCounterQuotesRow struct {
-	ID                   pgtype.UUID        `json:"id"`
+	ID                   uuid.UUID          `json:"id"`
 	Number               int32              `json:"number"`
 	CustomerName         *string            `json:"customer_name"`
 	CustomerPhone        *string            `json:"customer_phone"`
@@ -392,10 +379,10 @@ type ListCounterQuotesRow struct {
 	VehiclePlate         *string            `json:"vehicle_plate"`
 	Total                string             `json:"total"`
 	Currency             string             `json:"currency"`
-	Outcome              string             `json:"outcome"`
+	Outcome              QuoteOutcome       `json:"outcome"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 	ValidUntil           pgtype.Date        `json:"valid_until"`
-	ConvertedOrderID     pgtype.UUID        `json:"converted_order_id"`
+	ConvertedOrderID     *uuid.UUID         `json:"converted_order_id"`
 	ConvertedOrderNumber *int32             `json:"converted_order_number"`
 	TotalCount           int64              `json:"total_count"`
 }
@@ -403,6 +390,7 @@ type ListCounterQuotesRow struct {
 func (q *Queries) ListCounterQuotes(ctx context.Context, arg ListCounterQuotesParams) ([]ListCounterQuotesRow, error) {
 	rows, err := q.db.Query(ctx, listCounterQuotes,
 		arg.WorkshopID,
+		arg.BranchIds,
 		arg.Outcome,
 		arg.Search,
 		arg.RowOffset,
@@ -444,17 +432,17 @@ func (q *Queries) ListCounterQuotes(ctx context.Context, arg ListCounterQuotesPa
 }
 
 const listQuoteItems = `-- name: ListQuoteItems :many
-SELECT kind::text, description, quantity::text, unit_price::text FROM quote_item WHERE quote_id = $1 ORDER BY position
+SELECT kind, description, quantity::text, unit_price::text FROM quote_item WHERE quote_id = $1 ORDER BY position
 `
 
 type ListQuoteItemsRow struct {
-	Kind        string `json:"kind"`
-	Description string `json:"description"`
-	Quantity    string `json:"quantity"`
-	UnitPrice   string `json:"unit_price"`
+	Kind        QuoteItemKind `json:"kind"`
+	Description string        `json:"description"`
+	Quantity    string        `json:"quantity"`
+	UnitPrice   string        `json:"unit_price"`
 }
 
-func (q *Queries) ListQuoteItems(ctx context.Context, quoteID pgtype.UUID) ([]ListQuoteItemsRow, error) {
+func (q *Queries) ListQuoteItems(ctx context.Context, quoteID uuid.UUID) ([]ListQuoteItemsRow, error) {
 	rows, err := q.db.Query(ctx, listQuoteItems, quoteID)
 	if err != nil {
 		return nil, err
@@ -480,7 +468,7 @@ func (q *Queries) ListQuoteItems(ctx context.Context, quoteID pgtype.UUID) ([]Li
 }
 
 const lockCounterQuote = `-- name: LockCounterQuote :one
-SELECT id, number, outcome::text AS outcome, branch_id, vehicle_id, customer_name, customer_phone,
+SELECT id, number, outcome, branch_id, vehicle_id, customer_name, customer_phone,
   vehicle_make, vehicle_model, vehicle_year, vehicle_plate, work_order_id, converted_order_id
 FROM quote
 WHERE id = $1 AND workshop_id = $2
@@ -489,24 +477,24 @@ FOR UPDATE
 `
 
 type LockCounterQuoteParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 type LockCounterQuoteRow struct {
-	ID               pgtype.UUID `json:"id"`
-	Number           int32       `json:"number"`
-	Outcome          string      `json:"outcome"`
-	BranchID         pgtype.UUID `json:"branch_id"`
-	VehicleID        pgtype.UUID `json:"vehicle_id"`
-	CustomerName     *string     `json:"customer_name"`
-	CustomerPhone    *string     `json:"customer_phone"`
-	VehicleMake      *string     `json:"vehicle_make"`
-	VehicleModel     *string     `json:"vehicle_model"`
-	VehicleYear      *int32      `json:"vehicle_year"`
-	VehiclePlate     *string     `json:"vehicle_plate"`
-	WorkOrderID      pgtype.UUID `json:"work_order_id"`
-	ConvertedOrderID pgtype.UUID `json:"converted_order_id"`
+	ID               uuid.UUID    `json:"id"`
+	Number           int32        `json:"number"`
+	Outcome          QuoteOutcome `json:"outcome"`
+	BranchID         uuid.UUID    `json:"branch_id"`
+	VehicleID        *uuid.UUID   `json:"vehicle_id"`
+	CustomerName     *string      `json:"customer_name"`
+	CustomerPhone    *string      `json:"customer_phone"`
+	VehicleMake      *string      `json:"vehicle_make"`
+	VehicleModel     *string      `json:"vehicle_model"`
+	VehicleYear      *int32       `json:"vehicle_year"`
+	VehiclePlate     *string      `json:"vehicle_plate"`
+	WorkOrderID      *uuid.UUID   `json:"work_order_id"`
+	ConvertedOrderID *uuid.UUID   `json:"converted_order_id"`
 }
 
 func (q *Queries) LockCounterQuote(ctx context.Context, arg LockCounterQuoteParams) (LockCounterQuoteRow, error) {
@@ -543,14 +531,14 @@ RETURNING id
 `
 
 type MarkQuoteConvertedParams struct {
-	WorkOrderID      pgtype.UUID `json:"work_order_id"`
-	ConvertedOrderID pgtype.UUID `json:"converted_order_id"`
-	OutcomeBy        pgtype.UUID `json:"outcome_by"`
-	ID               pgtype.UUID `json:"id"`
-	WorkshopID       pgtype.UUID `json:"workshop_id"`
+	WorkOrderID      *uuid.UUID `json:"work_order_id"`
+	ConvertedOrderID *uuid.UUID `json:"converted_order_id"`
+	OutcomeBy        *uuid.UUID `json:"outcome_by"`
+	ID               uuid.UUID  `json:"id"`
+	WorkshopID       uuid.UUID  `json:"workshop_id"`
 }
 
-func (q *Queries) MarkQuoteConverted(ctx context.Context, arg MarkQuoteConvertedParams) (pgtype.UUID, error) {
+func (q *Queries) MarkQuoteConverted(ctx context.Context, arg MarkQuoteConvertedParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, markQuoteConverted,
 		arg.WorkOrderID,
 		arg.ConvertedOrderID,
@@ -558,7 +546,7 @@ func (q *Queries) MarkQuoteConverted(ctx context.Context, arg MarkQuoteConverted
 		arg.ID,
 		arg.WorkshopID,
 	)
-	var id pgtype.UUID
+	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -567,7 +555,7 @@ const nextQuoteNumber = `-- name: NextQuoteNumber :one
 SELECT (COALESCE(MAX(number), 0) + 1)::int AS number FROM quote WHERE workshop_id = $1
 `
 
-func (q *Queries) NextQuoteNumber(ctx context.Context, workshopID pgtype.UUID) (int32, error) {
+func (q *Queries) NextQuoteNumber(ctx context.Context, workshopID uuid.UUID) (int32, error) {
 	row := q.db.QueryRow(ctx, nextQuoteNumber, workshopID)
 	var number int32
 	err := row.Scan(&number)
@@ -583,42 +571,42 @@ RETURNING id
 
 type SetCounterQuoteOutcomeParams struct {
 	Outcome    QuoteOutcome `json:"outcome"`
-	OutcomeBy  pgtype.UUID  `json:"outcome_by"`
-	ID         pgtype.UUID  `json:"id"`
-	WorkshopID pgtype.UUID  `json:"workshop_id"`
+	OutcomeBy  *uuid.UUID   `json:"outcome_by"`
+	ID         uuid.UUID    `json:"id"`
+	WorkshopID uuid.UUID    `json:"workshop_id"`
 }
 
-func (q *Queries) SetCounterQuoteOutcome(ctx context.Context, arg SetCounterQuoteOutcomeParams) (pgtype.UUID, error) {
+func (q *Queries) SetCounterQuoteOutcome(ctx context.Context, arg SetCounterQuoteOutcomeParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, setCounterQuoteOutcome,
 		arg.Outcome,
 		arg.OutcomeBy,
 		arg.ID,
 		arg.WorkshopID,
 	)
-	var id pgtype.UUID
+	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
 
 const setQuoteOutcome = `-- name: SetQuoteOutcome :one
-UPDATE quote SET outcome = $1, outcome_at = now(), outcome_by = $2 WHERE work_order_id = $3 AND workshop_id = $4 RETURNING id
+UPDATE quote SET outcome = $1, outcome_at = now(), outcome_by = $2 WHERE work_order_id = $3 AND workshop_id = $4 AND converted_order_id IS NULL RETURNING id
 `
 
 type SetQuoteOutcomeParams struct {
 	Outcome     QuoteOutcome `json:"outcome"`
-	OutcomeBy   pgtype.UUID  `json:"outcome_by"`
-	WorkOrderID pgtype.UUID  `json:"work_order_id"`
-	WorkshopID  pgtype.UUID  `json:"workshop_id"`
+	OutcomeBy   *uuid.UUID   `json:"outcome_by"`
+	WorkOrderID *uuid.UUID   `json:"work_order_id"`
+	WorkshopID  uuid.UUID    `json:"workshop_id"`
 }
 
-func (q *Queries) SetQuoteOutcome(ctx context.Context, arg SetQuoteOutcomeParams) (pgtype.UUID, error) {
+func (q *Queries) SetQuoteOutcome(ctx context.Context, arg SetQuoteOutcomeParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, setQuoteOutcome,
 		arg.Outcome,
 		arg.OutcomeBy,
 		arg.WorkOrderID,
 		arg.WorkshopID,
 	)
-	var id pgtype.UUID
+	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -631,13 +619,13 @@ RETURNING id, share_expires_at, total::text
 `
 
 type ShareCounterQuoteParams struct {
-	ShareTokenHash *string     `json:"share_token_hash"`
-	ID             pgtype.UUID `json:"id"`
-	WorkshopID     pgtype.UUID `json:"workshop_id"`
+	ShareTokenHash *string   `json:"share_token_hash"`
+	ID             uuid.UUID `json:"id"`
+	WorkshopID     uuid.UUID `json:"workshop_id"`
 }
 
 type ShareCounterQuoteRow struct {
-	ID             pgtype.UUID        `json:"id"`
+	ID             uuid.UUID          `json:"id"`
 	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
 	Total          string             `json:"total"`
 }
@@ -654,13 +642,13 @@ UPDATE quote SET share_token_hash = $1, shared_at = now(), share_expires_at = no
 `
 
 type ShareQuoteParams struct {
-	ShareTokenHash *string     `json:"share_token_hash"`
-	WorkOrderID    pgtype.UUID `json:"work_order_id"`
-	WorkshopID     pgtype.UUID `json:"workshop_id"`
+	ShareTokenHash *string    `json:"share_token_hash"`
+	WorkOrderID    *uuid.UUID `json:"work_order_id"`
+	WorkshopID     uuid.UUID  `json:"workshop_id"`
 }
 
 type ShareQuoteRow struct {
-	ID             pgtype.UUID        `json:"id"`
+	ID             uuid.UUID          `json:"id"`
 	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
 	Total          string             `json:"total"`
 }
@@ -691,10 +679,10 @@ RETURNING id
 `
 
 type UpdateCounterQuoteParams struct {
-	BranchID      pgtype.UUID    `json:"branch_id"`
+	BranchID      uuid.UUID      `json:"branch_id"`
 	CustomerName  *string        `json:"customer_name"`
 	CustomerPhone *string        `json:"customer_phone"`
-	VehicleID     pgtype.UUID    `json:"vehicle_id"`
+	VehicleID     *uuid.UUID     `json:"vehicle_id"`
 	VehicleMake   *string        `json:"vehicle_make"`
 	VehicleModel  *string        `json:"vehicle_model"`
 	VehicleYear   *int32         `json:"vehicle_year"`
@@ -702,11 +690,11 @@ type UpdateCounterQuoteParams struct {
 	Notes         *string        `json:"notes"`
 	ValidUntil    pgtype.Date    `json:"valid_until"`
 	Total         pgtype.Numeric `json:"total"`
-	ID            pgtype.UUID    `json:"id"`
-	WorkshopID    pgtype.UUID    `json:"workshop_id"`
+	ID            uuid.UUID      `json:"id"`
+	WorkshopID    uuid.UUID      `json:"workshop_id"`
 }
 
-func (q *Queries) UpdateCounterQuote(ctx context.Context, arg UpdateCounterQuoteParams) (pgtype.UUID, error) {
+func (q *Queries) UpdateCounterQuote(ctx context.Context, arg UpdateCounterQuoteParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, updateCounterQuote,
 		arg.BranchID,
 		arg.CustomerName,
@@ -722,7 +710,7 @@ func (q *Queries) UpdateCounterQuote(ctx context.Context, arg UpdateCounterQuote
 		arg.ID,
 		arg.WorkshopID,
 	)
-	var id pgtype.UUID
+	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -735,16 +723,16 @@ RETURNING id, outcome
 `
 
 type UpsertQuoteParams struct {
-	WorkOrderID pgtype.UUID    `json:"work_order_id"`
-	WorkshopID  pgtype.UUID    `json:"workshop_id"`
-	BranchID    pgtype.UUID    `json:"branch_id"`
+	WorkOrderID *uuid.UUID     `json:"work_order_id"`
+	WorkshopID  uuid.UUID      `json:"workshop_id"`
+	BranchID    uuid.UUID      `json:"branch_id"`
 	Number      int32          `json:"number"`
 	Total       pgtype.Numeric `json:"total"`
-	CreatedBy   pgtype.UUID    `json:"created_by"`
+	CreatedBy   uuid.UUID      `json:"created_by"`
 }
 
 type UpsertQuoteRow struct {
-	ID      pgtype.UUID  `json:"id"`
+	ID      uuid.UUID    `json:"id"`
 	Outcome QuoteOutcome `json:"outcome"`
 }
 

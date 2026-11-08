@@ -1,9 +1,9 @@
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Car, Plus, Search } from "lucide-react";
+import { Car, Plus } from "lucide-react";
 import { useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
+import { QueryContent } from "@/components/kilora/query-content";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
 import {
 	EmptyState,
@@ -13,7 +13,6 @@ import {
 	relative,
 	VehicleStatusBadge,
 } from "@/components/kilora/workshop-ui";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -23,7 +22,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
@@ -33,9 +32,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { useWorkshopId } from "@/features/taller/session";
+import { matchesVehicle, vehiclesQuery } from "@/features/taller/vehicles";
 import { km } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { vehiclesQuery } from "@/lib/workshop";
 
 type VStatus = components["schemas"]["VehicleStatus"];
 
@@ -61,15 +61,7 @@ function VehiclesPage() {
 	});
 	const q = query.trim().toLowerCase().replace(/[\s-]/g, "");
 	const all = data ?? [];
-	const searched = q
-		? all.filter((v) =>
-				[v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin]
-					.filter(Boolean)
-					.some((x) =>
-						String(x).toLowerCase().replace(/[\s-]/g, "").includes(q),
-					),
-			)
-		: all;
+	const searched = all.filter((vehicle) => matchesVehicle(vehicle, q));
 	const rows = filter ? searched.filter((v) => v.status === filter) : searched;
 
 	return (
@@ -95,16 +87,13 @@ function VehiclesPage() {
 
 			<Card className="gap-0 overflow-hidden py-0 shadow-none">
 				<div className="flex flex-wrap items-center gap-3 border-b p-3 sm:px-4">
-					<div className="relative min-w-[220px] flex-1 sm:max-w-sm">
-						<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3" />
-						<Input
-							aria-label="Buscar vehículos"
-							placeholder="Placa, marca, contacto o teléfono"
-							value={query}
-							onChange={(e) => setQuery(e.target.value)}
-							className="pl-9"
-						/>
-					</div>
+					<SearchInput
+						containerClassName="min-w-[220px] flex-1 sm:max-w-sm"
+						aria-label="Buscar vehículos"
+						placeholder="Placa, marca, contacto o teléfono"
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+					/>
 					<fieldset className="inline-flex rounded-md border bg-background p-0.5">
 						<legend className="sr-only">Filtrar por estado</legend>
 						{filters.map(([value, label]) => (
@@ -129,39 +118,42 @@ function VehiclesPage() {
 					</fieldset>
 				</div>
 
-				{isLoading ? (
-					<div className="space-y-2 p-4">
-						<Skeleton className="h-11" />
-						<Skeleton className="h-11" />
-						<Skeleton className="h-11" />
-					</div>
-				) : error ? (
-					<Alert variant="destructive" className="m-4">
-						<AlertDescription>{error.message}</AlertDescription>
-					</Alert>
-				) : !rows.length ? (
-					<EmptyState
-						icon={Car}
-						title={
-							q || filter
-								? "Ningún vehículo coincide"
-								: "Todavía no hay vehículos"
-						}
-						description={
-							q || filter
-								? "Probá con otra búsqueda o quitá el filtro."
-								: "Registrá un vehículo provisional; no hace falta que el cliente tenga cuenta."
-						}
-						action={
-							!q &&
-							!filter && (
-								<Button onClick={() => setOpen(true)}>
-									Registrar vehículo
-								</Button>
-							)
-						}
-					/>
-				) : (
+				<QueryContent
+					pending={isLoading}
+					error={error}
+					empty={!rows.length}
+					errorClassName="m-4"
+					loading={
+						<div className="space-y-2 p-4">
+							<Skeleton className="h-11" />
+							<Skeleton className="h-11" />
+							<Skeleton className="h-11" />
+						</div>
+					}
+					emptyState={
+						<EmptyState
+							icon={Car}
+							title={
+								q || filter
+									? "Ningún vehículo coincide"
+									: "Todavía no hay vehículos"
+							}
+							description={
+								q || filter
+									? "Probá con otra búsqueda o quitá el filtro."
+									: "Registrá un vehículo provisional; no hace falta que el cliente tenga cuenta."
+							}
+							action={
+								!q &&
+								!filter && (
+									<Button onClick={() => setOpen(true)}>
+										Registrar vehículo
+									</Button>
+								)
+							}
+						/>
+					}
+				>
 					<Table>
 						<TableHeader>
 							<TableRow className="bg-secondary/40 hover:bg-secondary/40">
@@ -222,7 +214,7 @@ function VehiclesPage() {
 							))}
 						</TableBody>
 					</Table>
-				)}
+				</QueryContent>
 			</Card>
 
 			<Dialog open={open} onOpenChange={setOpen}>

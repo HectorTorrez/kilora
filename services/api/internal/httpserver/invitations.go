@@ -4,237 +4,199 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/mail"
-	"net/url"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"kilora/api/internal/auth"
-	"kilora/api/internal/database"
 	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/values"
 )
 
-var errOwned = errors.New("owned")
-var errEmail = errors.New("email")
+const (
+	invitationTTL         = 14 * 24 * time.Hour
+	invitationUnavailable = "Invitación no disponible"
+	vehicleAlreadyOwned   = "El vehículo ya tiene propietario"
+)
 
-func (s *server) createInvitation(w http.ResponseWriter, r *http.Request) {
-	wc, _ := CurrentWorkshop(r.Context())
-	if !writeAllowed(w, wc) {
-		return
+var errVehicleOwned = conflict(vehicleAlreadyOwned)
+
+func invitationStatus(i sqlc.Invitation) string {
+	switch {
+	case i.AcceptedAt.Valid:
+		return "aceptada"
+	case i.RevokedAt.Valid:
+		return "revocada"
+	case !i.ExpiresAt.Time.After(time.Now()):
+		return "expirada"
 	}
-	id, e := uuid.Parse(chi.URLParam(r, "vehicleID"))
-	if e != nil {
-		fail(w, 404, "Vehículo no encontrado")
-		return
+	return "pendiente"
+}
+
+func (s *server) createInvitation(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
+	if err := wc.requireWriter(); err != nil {
+		return err
+	}
+	id, err := pathID(r, "vehicleID", vehicleNotFound)
+	if err != nil {
+		return err
 	}
 	var in struct {
 		Email string `json:"email"`
 	}
-	if !decode(w, r, &in) {
-		return
+	if err = decode(r, &in); err != nil {
+		return err
 	}
-	in.Email = strings.TrimSpace(in.Email)
-	addr, e := mail.ParseAddress(in.Email)
-	if e != nil || addr.Address != in.Email {
-		fail(w, 400, "Correo inválido")
-		return
+	email, ok := values.Email(in.Email)
+	if !ok {
+		return badRequest("Correo inválido")
 	}
-	token, e := auth.NewToken()
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
+	token, hash, err := auth.NewTokenPair()
+	if err != nil {
+		return err
 	}
 	ctx := r.Context()
 	var inv sqlc.Invitation
 	var v sqlc.Vehicle
 	var workshop sqlc.Workshop
-	e = database.WithTx(ctx, s.db, func(q *sqlc.Queries) error {
+	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
 		var err error
-		v, err = q.LockLinkedVehicle(ctx, sqlc.LockLinkedVehicleParams{ID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID)})
+		v, err = q.LockLinkedVehicle(ctx, sqlc.LockLinkedVehicleParams{ID: id, WorkshopID: wc.workshopID})
 		if err != nil {
-			return err
+			return auditEvent{}, notFoundIfMissing(err, vehicleNotFound)
 		}
-		if v.OwnerUserID.Valid {
-			return errOwned
+		if v.OwnerUserID != nil {
+			return auditEvent{}, errVehicleOwned
 		}
 		if err = q.RevokeVehicleInvitations(ctx, v.ID); err != nil {
-			return err
+			return auditEvent{}, err
 		}
-		inv, err = q.CreateInvitation(ctx, sqlc.CreateInvitationParams{VehicleID: v.ID, WorkshopID: dbUUID(wc.WorkshopID), Email: in.Email, TokenHash: auth.HashToken(token), ExpiresAt: pgtype.Timestamptz{Time: time.Now().Add(14 * 24 * time.Hour), Valid: true}, CreatedBy: dbUUID(wc.UserID)})
+		inv, err = q.CreateInvitation(ctx, sqlc.CreateInvitationParams{VehicleID: v.ID, WorkshopID: wc.workshopID, Email: email, TokenHash: hash, ExpiresAt: timestamptz(time.Now().Add(invitationTTL)), CreatedBy: wc.userID})
 		if err != nil {
-			return err
+			return auditEvent{}, err
 		}
-		workshop, err = q.GetWorkshop(ctx, dbUUID(wc.WorkshopID))
-		if err != nil {
-			return err
+		if workshop, err = q.GetWorkshop(ctx, wc.workshopID); err != nil {
+			return auditEvent{}, err
 		}
-		_, err = q.InsertAuditEvent(ctx, sqlc.InsertAuditEventParams{ActorUserID: dbUUID(wc.UserID), WorkshopID: dbUUID(wc.WorkshopID), Entity: "invitation", EntityID: inv.ID, Action: "invitation.create"})
-		return err
+		return wc.event("invitation", inv.ID, "invitation.create"), nil
 	})
-	if errors.Is(e, pgx.ErrNoRows) {
-		fail(w, 404, "Vehículo no encontrado")
-		return
+	if err != nil {
+		return err
 	}
-	if errors.Is(e, errOwned) {
-		fail(w, 409, "El vehículo ya tiene propietario")
-		return
-	}
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	link := strings.TrimRight(s.origin, "/") + "/invitacion/" + token
-	if e = s.mailer.Send(ctx, in.Email, "Invitación a Kilora", fmt.Sprintf("%s te invita a vincular tu vehículo: %s", workshop.Name, link)); e != nil {
-		s.logger.Error("enviar invitación", "error", e)
-		fail(w, 500, "No se pudo enviar la invitación")
-		return
+	link := s.webURL("/invitacion/" + token)
+	if err = s.mailer.Send(ctx, email, "Invitación a Kilora", fmt.Sprintf("%s te invita a vincular tu vehículo: %s", workshop.Name, link)); err != nil {
+		s.logger.Error("enviar invitación", "error", err)
+		return httpError{http.StatusInternalServerError, "No se pudo enviar la invitación"}
 	}
 	plate := "vehículo"
 	if v.Plate != nil {
 		plate = *v.Plate
 	}
-	phone := ""
-	if v.ContactPhone != nil {
-		phone = strings.TrimPrefix(*v.ContactPhone, "+")
-	}
 	text := fmt.Sprintf("%s te invita a vincular el vehículo %s: %s", workshop.Name, plate, link)
-	writeJSON(w, 201, map[string]any{"id": uuid.UUID(inv.ID.Bytes), "url": link, "whatsapp_url": "https://wa.me/" + phone + "?text=" + url.QueryEscape(text), "expires_at": inv.ExpiresAt.Time})
+	writeJSON(w, http.StatusCreated, map[string]any{"id": inv.ID, "url": link, "whatsapp_url": whatsAppURL(v.ContactPhone, text), "expires_at": inv.ExpiresAt.Time})
+	return nil
 }
-func (s *server) listInvitations(w http.ResponseWriter, r *http.Request) {
-	wc, _ := CurrentWorkshop(r.Context())
-	id, e := uuid.Parse(chi.URLParam(r, "vehicleID"))
-	if e != nil {
-		fail(w, 404, "Vehículo no encontrado")
-		return
+
+func (s *server) listInvitations(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
+	id, err := pathID(r, "vehicleID", vehicleNotFound)
+	if err != nil {
+		return err
 	}
+	ctx := r.Context()
 	q := sqlc.New(s.db)
-	_, e = q.GetVehicle(r.Context(), sqlc.GetVehicleParams{ID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID)})
-	if errors.Is(e, pgx.ErrNoRows) {
-		fail(w, 404, "Vehículo no encontrado")
-		return
+	if err = requireLinkedVehicle(ctx, q, wc, &id); err != nil {
+		return err
 	}
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	rows, e := q.ListInvitations(r.Context(), sqlc.ListInvitationsParams{VehicleID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID)})
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
+	rows, err := q.ListInvitations(ctx, sqlc.ListInvitationsParams{VehicleID: id, WorkshopID: wc.workshopID})
+	if err != nil {
+		return err
 	}
 	out := []map[string]any{}
 	for _, i := range rows {
-		state := "pendiente"
-		if i.AcceptedAt.Valid {
-			state = "aceptada"
-		} else if i.RevokedAt.Valid {
-			state = "revocada"
-		} else if !i.ExpiresAt.Time.After(time.Now()) {
-			state = "expirada"
-		}
-		out = append(out, map[string]any{"id": uuid.UUID(i.ID.Bytes), "email": i.Email, "status": state, "created_at": i.CreatedAt.Time, "expires_at": i.ExpiresAt.Time})
+		out = append(out, map[string]any{"id": i.ID, "email": i.Email, "status": invitationStatus(i), "created_at": i.CreatedAt.Time, "expires_at": i.ExpiresAt.Time})
 	}
-	writeJSON(w, 200, out)
+	writeJSON(w, http.StatusOK, out)
+	return nil
 }
-func (s *server) publicInvitation(w http.ResponseWriter, r *http.Request) {
-	if !s.limiter.allowLimit("invitation:"+clientIP(r), 60) {
-		fail(w, 429, "Demasiadas solicitudes")
-		return
-	}
-	q := sqlc.New(s.db)
-	ctx := r.Context()
-	i, e := q.GetPendingInvitation(ctx, auth.HashToken(chi.URLParam(r, "token")))
-	if errors.Is(e, pgx.ErrNoRows) {
-		fail(w, 404, "Invitación no disponible")
-		return
-	}
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	v, e := q.GetInvitationVehicle(ctx, i.VehicleID)
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	workshop, e := q.GetWorkshop(ctx, i.WorkshopID)
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	parts := strings.SplitN(i.Email, "@", 2)
-	hint := "***"
+
+func emailHint(email string) string {
+	parts := strings.SplitN(email, "@", 2)
 	if len(parts) == 2 && len([]rune(parts[0])) > 0 {
-		hint = string([]rune(parts[0])[0]) + "***@" + parts[1]
+		return string([]rune(parts[0])[0]) + "***@" + parts[1]
 	}
-	writeJSON(w, 200, map[string]any{"workshop_name": workshop.Name, "workshop_verified_at": workshop.VerifiedAt, "vehicle": map[string]any{"plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year}, "email_hint": hint, "expires_at": i.ExpiresAt.Time})
+	return "***"
 }
-func (s *server) acceptInvitation(w http.ResponseWriter, r *http.Request) {
+
+func (s *server) publicInvitation(w http.ResponseWriter, r *http.Request) error {
+	if err := s.limitPublicRead(r, "invitation"); err != nil {
+		return err
+	}
+	ctx := r.Context()
+	q := sqlc.New(s.db)
+	i, err := q.GetPendingInvitation(ctx, auth.HashToken(pathToken(r)))
+	if err != nil {
+		return notFoundIfMissing(err, invitationUnavailable)
+	}
+	v, err := q.GetInvitationVehicle(ctx, i.VehicleID)
+	if err != nil {
+		return err
+	}
+	workshop, err := q.GetWorkshop(ctx, i.WorkshopID)
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"workshop_name": workshop.Name, "workshop_verified_at": nullableTime(workshop.VerifiedAt), "vehicle": map[string]any{"plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year}, "email_hint": emailHint(i.Email), "expires_at": i.ExpiresAt.Time})
+	return nil
+}
+
+func (s *server) acceptInvitation(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
 		Consent bool `json:"consent"`
 	}
-	if !decode(w, r, &in) {
-		return
+	if err := decode(r, &in); err != nil {
+		return err
 	}
 	if !in.Consent {
-		fail(w, 400, "El consentimiento es obligatorio")
-		return
+		return badRequest("El consentimiento es obligatorio")
 	}
 	ctx := r.Context()
-	uid := currentUser(ctx).ID
+	user := currentUser(ctx).ID
+	hash := auth.HashToken(pathToken(r))
 	var v sqlc.Vehicle
-	e := database.WithTx(ctx, s.db, func(q *sqlc.Queries) error {
-		hash := auth.HashToken(chi.URLParam(r, "token"))
+	err := s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
 		i, err := q.GetPendingInvitation(ctx, hash)
 		if err != nil {
-			return err
+			return auditEvent{}, err
 		}
+		// Vehicle before invitation: createInvitation takes the same locks in this order.
 		if _, err = q.LockInvitationVehicle(ctx, i.VehicleID); err != nil {
-			return err
+			return auditEvent{}, err
 		}
-		i, err = q.LockPendingInvitation(ctx, hash)
-		if err != nil {
-			return err
+		if i, err = q.LockPendingInvitation(ctx, hash); err != nil {
+			return auditEvent{}, err
 		}
-		u, err := q.GetUserByID(ctx, dbUUID(uid))
+		u, err := q.GetUserByID(ctx, user)
 		if err != nil {
-			return err
+			return auditEvent{}, err
 		}
 		if !strings.EqualFold(u.Email, i.Email) {
-			return errEmail
+			return auditEvent{}, forbidden("Esta invitación es para otro correo")
 		}
-		v, err = q.SetUnownedVehicleOwner(ctx, sqlc.SetUnownedVehicleOwnerParams{ID: i.VehicleID, OwnerUserID: dbUUID(uid)})
+		v, err = q.SetUnownedVehicleOwner(ctx, sqlc.SetUnownedVehicleOwnerParams{ID: i.VehicleID, OwnerUserID: &user})
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errOwned
+			return auditEvent{}, errVehicleOwned
 		}
 		if err != nil {
-			return err
+			return auditEvent{}, err
 		}
-		if err = q.AcceptInvitation(ctx, sqlc.AcceptInvitationParams{ID: i.ID, AcceptedBy: dbUUID(uid)}); err != nil {
-			return err
+		if err = q.AcceptInvitation(ctx, sqlc.AcceptInvitationParams{ID: i.ID, AcceptedBy: &user}); err != nil {
+			return auditEvent{}, err
 		}
-		_, err = q.InsertAuditEvent(ctx, sqlc.InsertAuditEventParams{ActorUserID: dbUUID(uid), WorkshopID: i.WorkshopID, Entity: "invitation", EntityID: i.ID, Action: "invitation.accept"})
-		return err
+		return auditEvent{actor: user, workshop: &i.WorkshopID, entity: "invitation", id: i.ID, action: "invitation.accept"}, nil
 	})
-	if errors.Is(e, pgx.ErrNoRows) {
-		fail(w, 404, "Invitación no disponible")
-		return
+	if err != nil {
+		return notFoundIfMissing(err, invitationUnavailable)
 	}
-	if errors.Is(e, errEmail) {
-		fail(w, 403, "Esta invitación es para otro correo")
-		return
-	}
-	if errors.Is(e, errOwned) {
-		fail(w, 409, "El vehículo ya tiene propietario")
-		return
-	}
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	writeJSON(w, 200, vehicleDTO(v, nil))
+	writeJSON(w, http.StatusOK, vehicleDTO(v, nil))
+	return nil
 }

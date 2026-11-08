@@ -99,8 +99,6 @@ function Logo() {
 	);
 }
 
-/* ─── Hero ─────────────────────────────────────────────────────────────── */
-
 export function Hero({ hasDemo }: { hasDemo: boolean }) {
 	return (
 		<section
@@ -374,8 +372,6 @@ function SpecStrip() {
 		</div>
 	);
 }
-
-/* ─── Secciones ───────────────────────────────────────────────────────── */
 
 function SectionHead({
 	index,

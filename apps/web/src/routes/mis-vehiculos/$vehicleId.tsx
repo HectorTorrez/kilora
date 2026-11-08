@@ -25,6 +25,7 @@ import {
 	pastDateField,
 	requiredText,
 } from "@/components/kilora/form-schemas";
+import { HistoryItems } from "@/components/kilora/history-record";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -172,17 +173,7 @@ function Page() {
 										<span className="ml-2 text-sm text-seal">✓ Verificado</span>
 									)}
 								</p>
-								<ul className="mt-3 space-y-1">
-									{r.items.map((item) => (
-										<li
-											key={JSON.stringify(item)}
-											className="flex justify-between gap-4 text-sm"
-										>
-											<span>{item.description}</span>
-											<span>{item.price && money(item.price)}</span>
-										</li>
-									))}
-								</ul>
+								<HistoryItems items={r.items} />
 								{r.total && (
 									<p className="mt-3 font-semibold">Total: {money(r.total)}</p>
 								)}

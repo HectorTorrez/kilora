@@ -12,7 +12,6 @@ import {
 	Users,
 } from "lucide-react";
 import { useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import {
 	EmptyState,
 	PageBody,
@@ -23,7 +22,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { auditQuery } from "@/lib/workshop";
+import { useWorkshopId } from "@/features/taller/session";
+import { auditQuery } from "@/features/taller/team";
+import { TIME_ZONE } from "@/lib/format";
 
 type Event = components["schemas"]["AuditEvent"];
 
@@ -38,6 +39,15 @@ const actions: Record<string, string> = {
 	"work_order.status": "cambió el estado de una orden",
 	"work_order.update": "editó una orden",
 	"history.publish": "publicó un servicio en el historial",
+	"job.create": "agregó un trabajo a una orden",
+	"job.delete": "quitó un trabajo de una orden",
+	"part.create": "agregó una pieza a una orden",
+	"part.delete": "quitó una pieza de una orden",
+	"history.manual": "agregó un servicio manual al historial",
+	"history.correct": "corrigió un registro del historial",
+	"quote.create": "creó una cotización",
+	"quote.update": "editó una cotización",
+	"quote.convert": "convirtió una cotización en orden",
 	"quote.save": "guardó una cotización",
 	"quote.share": "compartió una cotización",
 	"quote.outcome": "marcó la respuesta de una cotización",
@@ -65,14 +75,14 @@ const dayKey = (value: string) =>
 		weekday: "long",
 		day: "numeric",
 		month: "long",
-		timeZone: "America/El_Salvador",
+		timeZone: TIME_ZONE,
 	}).format(new Date(value));
 
 const time = (value: string) =>
 	new Intl.DateTimeFormat("es-SV", {
 		hour: "numeric",
 		minute: "2-digit",
-		timeZone: "America/El_Salvador",
+		timeZone: TIME_ZONE,
 	}).format(new Date(value));
 
 function ActivityPage() {

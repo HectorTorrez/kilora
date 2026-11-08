@@ -1,9 +1,9 @@
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ClipboardList, Plus, Search } from "lucide-react";
+import { ClipboardList, Plus } from "lucide-react";
 import { useState } from "react";
-import { useWorkshopId } from "@/components/kilora/app-shell";
+import { QueryContent } from "@/components/kilora/query-content";
 import {
 	EmptyState,
 	OrderStatusBadge,
@@ -12,10 +12,9 @@ import {
 	Plate,
 	relative,
 } from "@/components/kilora/workshop-ui";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import {
 	Select,
 	SelectContent,
@@ -23,7 +22,6 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
 	TableBody,
@@ -32,10 +30,10 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
+import { ordersQuery } from "@/features/taller/orders";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import { date } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ordersQuery } from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
 
 type Status = components["schemas"]["WorkOrderStatus"];
 const statusValues: Status[] = [
@@ -73,7 +71,7 @@ function OrdersPage() {
 	const initial = Route.useLoaderData();
 	const { estado } = Route.useSearch();
 	const navigate = useNavigate({ from: "/taller/ordenes/" });
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
 	const [branch, setBranch] = useState("");
 	const [query, setQuery] = useState("");
@@ -117,16 +115,13 @@ function OrdersPage() {
 			<Card className="gap-0 overflow-hidden py-0 shadow-none">
 				<div className="flex flex-col gap-3 border-b px-3 pt-3 sm:px-4">
 					<div className="flex flex-wrap items-center gap-2">
-						<div className="relative min-w-[220px] flex-1 sm:max-w-sm">
-							<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3" />
-							<Input
-								aria-label="Buscar órdenes"
-								placeholder="Buscar por placa, motivo o número"
-								value={query}
-								onChange={(e) => setQuery(e.target.value)}
-								className="pl-9"
-							/>
-						</div>
+						<SearchInput
+							containerClassName="min-w-[220px] flex-1 sm:max-w-sm"
+							aria-label="Buscar órdenes"
+							placeholder="Buscar por placa, motivo o número"
+							value={query}
+							onChange={(e) => setQuery(e.target.value)}
+						/>
 						{branches.length > 1 && (
 							<Select
 								value={branch || "all"}
@@ -184,29 +179,27 @@ function OrdersPage() {
 						})}
 					</div>
 				</div>
-				{isLoading ? (
-					<div className="space-y-2 p-4">
-						<Skeleton className="h-10" />
-						<Skeleton className="h-10" />
-						<Skeleton className="h-10" />
-					</div>
-				) : error ? (
-					<Alert variant="destructive" className="m-4">
-						<AlertDescription>{error.message}</AlertDescription>
-					</Alert>
-				) : !rows.length ? (
-					<EmptyState
-						icon={ClipboardList}
-						title={
-							q || estado ? "Ninguna orden coincide" : "Todavía no hay órdenes"
-						}
-						description={
-							q || estado
-								? "Probá con otra búsqueda o cambiá el estado."
-								: "Registrá la primera orden para empezar el historial."
-						}
-					/>
-				) : (
+				<QueryContent
+					pending={isLoading}
+					error={error}
+					empty={!rows.length}
+					errorClassName="m-4"
+					emptyState={
+						<EmptyState
+							icon={ClipboardList}
+							title={
+								q || estado
+									? "Ninguna orden coincide"
+									: "Todavía no hay órdenes"
+							}
+							description={
+								q || estado
+									? "Probá con otra búsqueda o cambiá el estado."
+									: "Registrá la primera orden para empezar el historial."
+							}
+						/>
+					}
+				>
 					<Table>
 						<TableHeader>
 							<TableRow className="bg-secondary/40 hover:bg-secondary/40">
@@ -253,7 +246,7 @@ function OrdersPage() {
 							))}
 						</TableBody>
 					</Table>
-				)}
+				</QueryContent>
 			</Card>
 		</PageBody>
 	);

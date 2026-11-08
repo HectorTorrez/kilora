@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -17,7 +18,7 @@ INSERT INTO session (id, user_id, expires_at, user_agent, ip) VALUES ($1, $2, $3
 
 type CreateSessionParams struct {
 	ID        string             `json:"id"`
-	UserID    pgtype.UUID        `json:"user_id"`
+	UserID    uuid.UUID          `json:"user_id"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	UserAgent *string            `json:"user_agent"`
 	Ip        *string            `json:"ip"`
@@ -47,7 +48,7 @@ const deleteUserSessions = `-- name: DeleteUserSessions :exec
 DELETE FROM session WHERE user_id = $1
 `
 
-func (q *Queries) DeleteUserSessions(ctx context.Context, userID pgtype.UUID) error {
+func (q *Queries) DeleteUserSessions(ctx context.Context, userID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, deleteUserSessions, userID)
 	return err
 }

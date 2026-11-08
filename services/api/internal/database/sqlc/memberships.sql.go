@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -15,7 +16,7 @@ const countAdmins = `-- name: CountAdmins :one
 SELECT count(*) FROM membership WHERE workshop_id = $1 AND role = 'admin'
 `
 
-func (q *Queries) CountAdmins(ctx context.Context, workshopID pgtype.UUID) (int64, error) {
+func (q *Queries) CountAdmins(ctx context.Context, workshopID uuid.UUID) (int64, error) {
 	row := q.db.QueryRow(ctx, countAdmins, workshopID)
 	var count int64
 	err := row.Scan(&count)
@@ -27,9 +28,9 @@ INSERT INTO membership (user_id, workshop_id, branch_id, role) VALUES ($1, $2, $
 `
 
 type CreateMembershipParams struct {
-	UserID     pgtype.UUID    `json:"user_id"`
-	WorkshopID pgtype.UUID    `json:"workshop_id"`
-	BranchID   pgtype.UUID    `json:"branch_id"`
+	UserID     uuid.UUID      `json:"user_id"`
+	WorkshopID uuid.UUID      `json:"workshop_id"`
+	BranchID   uuid.UUID      `json:"branch_id"`
 	Role       MembershipRole `json:"role"`
 }
 
@@ -57,8 +58,8 @@ DELETE FROM membership WHERE id = $1 AND workshop_id = $2
 `
 
 type DeleteMembershipParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) DeleteMembership(ctx context.Context, arg DeleteMembershipParams) (int64, error) {
@@ -69,36 +70,13 @@ func (q *Queries) DeleteMembership(ctx context.Context, arg DeleteMembershipPara
 	return result.RowsAffected(), nil
 }
 
-const getMembership = `-- name: GetMembership :one
-SELECT id, user_id, workshop_id, branch_id, role, created_at FROM membership WHERE user_id = $1 AND branch_id = $2
-`
-
-type GetMembershipParams struct {
-	UserID   pgtype.UUID `json:"user_id"`
-	BranchID pgtype.UUID `json:"branch_id"`
-}
-
-func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (Membership, error) {
-	row := q.db.QueryRow(ctx, getMembership, arg.UserID, arg.BranchID)
-	var i Membership
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.WorkshopID,
-		&i.BranchID,
-		&i.Role,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getMembershipInWorkshop = `-- name: GetMembershipInWorkshop :one
 SELECT id, user_id, workshop_id, branch_id, role, created_at FROM membership WHERE id = $1 AND workshop_id = $2
 `
 
 type GetMembershipInWorkshopParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) GetMembershipInWorkshop(ctx context.Context, arg GetMembershipInWorkshopParams) (Membership, error) {
@@ -123,9 +101,9 @@ ORDER BY u.full_name, b.name
 `
 
 type ListMembersByWorkshopRow struct {
-	ID         pgtype.UUID        `json:"id"`
-	UserID     pgtype.UUID        `json:"user_id"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
+	ID         uuid.UUID          `json:"id"`
+	UserID     uuid.UUID          `json:"user_id"`
+	BranchID   uuid.UUID          `json:"branch_id"`
 	Role       MembershipRole     `json:"role"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	FullName   string             `json:"full_name"`
@@ -133,7 +111,7 @@ type ListMembersByWorkshopRow struct {
 	BranchName string             `json:"branch_name"`
 }
 
-func (q *Queries) ListMembersByWorkshop(ctx context.Context, workshopID pgtype.UUID) ([]ListMembersByWorkshopRow, error) {
+func (q *Queries) ListMembersByWorkshop(ctx context.Context, workshopID uuid.UUID) ([]ListMembersByWorkshopRow, error) {
 	rows, err := q.db.Query(ctx, listMembersByWorkshop, workshopID)
 	if err != nil {
 		return nil, err
@@ -167,17 +145,17 @@ SELECT m.id, m.user_id, m.workshop_id, m.branch_id, m.role, m.created_at, w.name
 `
 
 type ListMembershipsByUserRow struct {
-	ID           pgtype.UUID        `json:"id"`
-	UserID       pgtype.UUID        `json:"user_id"`
-	WorkshopID   pgtype.UUID        `json:"workshop_id"`
-	BranchID     pgtype.UUID        `json:"branch_id"`
+	ID           uuid.UUID          `json:"id"`
+	UserID       uuid.UUID          `json:"user_id"`
+	WorkshopID   uuid.UUID          `json:"workshop_id"`
+	BranchID     uuid.UUID          `json:"branch_id"`
 	Role         MembershipRole     `json:"role"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	WorkshopName string             `json:"workshop_name"`
 	BranchName   string             `json:"branch_name"`
 }
 
-func (q *Queries) ListMembershipsByUser(ctx context.Context, userID pgtype.UUID) ([]ListMembershipsByUserRow, error) {
+func (q *Queries) ListMembershipsByUser(ctx context.Context, userID uuid.UUID) ([]ListMembershipsByUserRow, error) {
 	rows, err := q.db.Query(ctx, listMembershipsByUser, userID)
 	if err != nil {
 		return nil, err

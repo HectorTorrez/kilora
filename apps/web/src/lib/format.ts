@@ -1,3 +1,10 @@
+import { statusLabels } from "./domain";
+
+export const TIME_ZONE = "America/El_Salvador";
+
+export const todayISO = () =>
+	new Intl.DateTimeFormat("en-CA", { timeZone: TIME_ZONE }).format(new Date());
+
 export const quoteCode = (number: number) =>
 	`COT-${String(number).padStart(4, "0")}`;
 
@@ -10,16 +17,10 @@ export const date = (value: string) =>
 		day: "numeric",
 		month: "long",
 		year: "numeric",
-		timeZone: "America/El_Salvador",
+		timeZone: TIME_ZONE,
 	}).format(new Date(value));
-const statusLabels: Record<string, string> = {
-	recibido: "Recibido",
-	diagnostico: "Diagnóstico",
-	en_reparacion: "En reparación",
-	listo: "Listo",
-	cancelado: "Cancelado",
-};
-export const statusLabel = (status: string) => statusLabels[status] ?? status;
+export const statusLabel = (status: keyof typeof statusLabels) =>
+	statusLabels[status];
 // Fechas sin hora (YYYY-MM-DD): se formatean en UTC para no correr el día.
 export const day = (value: string) =>
 	new Intl.DateTimeFormat("es-SV", {

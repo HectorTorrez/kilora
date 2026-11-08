@@ -8,7 +8,6 @@ import {
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { errorMessage } from "@/components/kilora/form-schemas";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -16,6 +15,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { RequiredMark } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { errorMessage, isNotFound } from "@/lib/api";
 import { meQuery } from "@/lib/auth";
 import { date } from "@/lib/format";
 import { invitationQuery, ownerActions, useOwnerMutation } from "@/lib/owner";
@@ -24,7 +24,10 @@ export const Route = createFileRoute("/invitacion/$token")({
 		const [inv, me] = await Promise.all([
 			context.queryClient
 				.ensureQueryData(invitationQuery(params.token))
-				.catch(() => null),
+				.catch((error) => {
+					if (isNotFound(error)) return null;
+					throw error;
+				}),
 			context.queryClient.ensureQueryData(meQuery()),
 		]);
 		if (!inv) throw notFound();

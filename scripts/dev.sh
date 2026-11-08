@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Levanta todo el proyecto: base de datos, API y frontend.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

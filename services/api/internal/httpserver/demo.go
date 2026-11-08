@@ -1,16 +1,11 @@
 package httpserver
 
 import (
-	"context"
-	"errors"
 	"net/http"
 
-	"github.com/google/uuid"
-	"kilora/api/internal/database"
+	"kilora/api/internal/auth"
 	"kilora/api/internal/database/sqlc"
 )
-
-var errDemoPassword = errors.New("demo password")
 
 type demoAccount struct {
 	Role        string `json:"role"`
@@ -21,32 +16,33 @@ type demoAccount struct {
 }
 
 var demoAccounts = []demoAccount{
-	{"taller", "Taller Los Volcanes", "taller@demo.kilora.app", "demo1234", "Registra órdenes, cotiza y publica servicios."},
-	{"propietario", "María Hernández", "propietario@demo.kilora.app", "demo1234", "Consulta el historial completo de tu vehículo."},
-	{"taller_competencia", "AutoServicio La Ceiba", "ceiba@demo.kilora.app", "demo1234", "Consulta la vista ciega de otro taller."},
+	{"taller", "Taller Los Volcanes", auth.DemoWorkshopEmail, auth.DemoPassword, "Registra órdenes, cotiza y publica servicios."},
+	{"propietario", "María Hernández", auth.DemoOwnerEmail, auth.DemoPassword, "Consulta el historial completo de tu vehículo."},
+	{"taller_competencia", "AutoServicio La Ceiba", auth.DemoRivalEmail, auth.DemoPassword, "Consulta la vista ciega de otro taller."},
 }
 
-func (s *server) publicDemo(w http.ResponseWriter, _ *http.Request) {
+func (s *server) publicDemo(w http.ResponseWriter, _ *http.Request) error {
 	accounts := []demoAccount{}
 	if s.demoMode {
 		accounts = demoAccounts
 	}
-	writeJSON(w, 200, map[string]any{"enabled": s.demoMode, "accounts": accounts})
+	writeJSON(w, http.StatusOK, map[string]any{"enabled": s.demoMode, "accounts": accounts})
+	return nil
 }
-func (s *server) demoLogin(w http.ResponseWriter, r *http.Request) {
+
+func (s *server) demoLogin(w http.ResponseWriter, r *http.Request) error {
 	if !s.demoMode {
 		http.NotFound(w, r)
-		return
+		return nil
 	}
 	var in struct {
 		Role string `json:"role"`
 	}
-	if !decode(w, r, &in) {
-		return
+	if err := decode(r, &in); err != nil {
+		return err
 	}
-	if !s.limiter.allow(clientIP(r) + "|demo") {
-		fail(w, 429, "Demasiados intentos. Intenta más tarde")
-		return
+	if !s.limiter.allow(clientIP(r)+"|demo", loginAttemptLimit) {
+		return httpError{http.StatusTooManyRequests, "Demasiados intentos. Intenta más tarde"}
 	}
 	var email string
 	for _, a := range demoAccounts {
@@ -56,24 +52,12 @@ func (s *server) demoLogin(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if email == "" {
-		fail(w, 400, "Rol inválido")
-		return
+		return badRequest("Rol inválido")
 	}
 	user, err := sqlc.New(s.db).GetUserByEmail(r.Context(), email)
 	if err != nil {
-		fail(w, 500, "Demo no disponible")
-		return
+		s.logger.Error("demo no disponible", "error", err)
+		return httpError{http.StatusInternalServerError, "Demo no disponible"}
 	}
-	var token string
-	err = database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
-		var e error
-		token, e = createSession(context.Background(), q, uuid.UUID(user.ID.Bytes), r)
-		return e
-	})
-	if err != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	s.setCookie(w, token)
-	w.WriteHeader(204)
+	return s.startSession(w, r, user.ID)
 }

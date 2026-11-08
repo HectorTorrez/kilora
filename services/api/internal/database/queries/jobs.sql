@@ -14,4 +14,10 @@ INSERT INTO part (job_id, name, brand, model, quantity, unit_price, internal_cos
 SELECT p.* FROM part p JOIN job j ON j.id = p.job_id JOIN work_order wo ON wo.id = j.work_order_id WHERE wo.id = sqlc.arg(work_order_id) AND wo.workshop_id = sqlc.arg(workshop_id) ORDER BY j.position, p.created_at;
 
 -- name: DeletePart :execrows
-DELETE FROM part p USING job j, work_order wo WHERE p.job_id = j.id AND j.work_order_id = wo.id AND p.id = sqlc.arg(id) AND wo.workshop_id = sqlc.arg(workshop_id);
+DELETE FROM part p USING job j, work_order wo WHERE p.job_id = j.id AND j.work_order_id = wo.id AND p.id = sqlc.arg(id) AND p.job_id = sqlc.arg(job_id) AND wo.workshop_id = sqlc.arg(workshop_id);
+
+-- name: GetJob :one
+SELECT j.* FROM job j JOIN work_order wo ON wo.id = j.work_order_id WHERE j.id = sqlc.arg(id) AND j.work_order_id = sqlc.arg(work_order_id) AND wo.workshop_id = sqlc.arg(workshop_id);
+
+-- name: NextJobPosition :one
+SELECT (COALESCE(MAX(position), -1) + 1)::int AS position FROM job WHERE work_order_id = sqlc.arg(work_order_id);

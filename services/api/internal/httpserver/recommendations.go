@@ -1,66 +1,36 @@
 package httpserver
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgtype"
-	"kilora/api/internal/database"
 	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/values"
 )
-
-var partCategories = map[string]bool{"aceite": true, "frenos": true, "amortiguadores": true, "bateria": true, "llantas": true, "otro": true}
-
-func optUUID(v pgtype.UUID) *uuid.UUID {
-	if !v.Valid {
-		return nil
-	}
-	id := uuid.UUID(v.Bytes)
-	return &id
-}
-func optDate(v pgtype.Date) *string {
-	if !v.Valid {
-		return nil
-	}
-	s := v.Time.Format("2006-01-02")
-	return &s
-}
-func optTime(v pgtype.Timestamptz) *time.Time {
-	if !v.Valid {
-		return nil
-	}
-	return &v.Time
-}
 
 func recommendationDTO(r sqlc.Recommendation) map[string]any {
 	return map[string]any{
-		"id": uuid.UUID(r.ID.Bytes), "vehicle_id": uuid.UUID(r.VehicleID.Bytes), "work_order_id": optUUID(r.WorkOrderID),
-		"description": r.Description, "category": r.Category, "due_date": optDate(r.DueDate), "due_km": r.DueKm,
-		"status": r.Status, "resolved_at": optTime(r.ResolvedAt), "created_at": r.CreatedAt.Time,
+		"id": r.ID, "vehicle_id": r.VehicleID, "work_order_id": r.WorkOrderID,
+		"description": r.Description, "category": r.Category, "due_date": nullableDate(r.DueDate), "due_km": r.DueKm,
+		"status": r.Status, "resolved_at": nullableTime(r.ResolvedAt), "created_at": r.CreatedAt.Time,
 	}
 }
 
-func (s *server) listWorkshopRecommendations(w http.ResponseWriter, r *http.Request) {
-	wc, _ := CurrentWorkshop(r.Context())
+func (s *server) listWorkshopRecommendations(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
 	var status *sqlc.RecommendationStatus
-	switch v := r.URL.Query().Get("status"); v {
-	case "":
-	case "pendiente", "hecha", "descartada":
-		st := sqlc.RecommendationStatus(v)
-		status = &st
-	default:
-		fail(w, 400, "Estado inválido")
-		return
+	if v := r.URL.Query().Get("status"); v != "" {
+		x := sqlc.RecommendationStatus(v)
+		if !x.Valid() {
+			return badRequest("Estado inválido")
+		}
+		status = &x
 	}
-	rows, err := sqlc.New(s.db).ListRecommendationsForWorkshop(r.Context(), sqlc.ListRecommendationsForWorkshopParams{WorkshopID: dbUUID(wc.WorkshopID), Status: status})
+	rows, err := sqlc.New(s.db).ListRecommendationsForWorkshop(r.Context(), sqlc.ListRecommendationsForWorkshopParams{WorkshopID: wc.workshopID, Status: status})
 	if err != nil {
-		fail(w, 500, "Error interno")
-		return
+		return err
 	}
 	out := make([]map[string]any, 0, len(rows))
 	for _, row := range rows {
@@ -68,156 +38,131 @@ func (s *server) listWorkshopRecommendations(w http.ResponseWriter, r *http.Requ
 		item["plate"], item["make"], item["model"] = row.Plate, row.Make, row.Model
 		out = append(out, item)
 	}
-	writeJSON(w, 200, out)
+	writeJSON(w, http.StatusOK, out)
+	return nil
 }
 
-func (s *server) listVehicleRecommendations(w http.ResponseWriter, r *http.Request) {
-	wc, _ := CurrentWorkshop(r.Context())
-	id, err := uuid.Parse(chi.URLParam(r, "vehicleID"))
+func (s *server) listVehicleRecommendations(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
+	id, err := pathID(r, "vehicleID", vehicleNotFound)
 	if err != nil {
-		fail(w, 404, "Vehículo no encontrado")
-		return
+		return err
 	}
+	ctx := r.Context()
 	q := sqlc.New(s.db)
-	if _, err := q.GetVehicle(r.Context(), sqlc.GetVehicleParams{ID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID)}); err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			fail(w, 404, "Vehículo no encontrado")
-			return
-		}
-		fail(w, 500, "Error interno")
-		return
+	if err = requireLinkedVehicle(ctx, q, wc, &id); err != nil {
+		return err
 	}
-	rows, err := q.ListRecommendationsByVehicle(r.Context(), sqlc.ListRecommendationsByVehicleParams{VehicleID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID)})
+	rows, err := q.ListRecommendationsByVehicle(ctx, sqlc.ListRecommendationsByVehicleParams{VehicleID: id, WorkshopID: wc.workshopID})
 	if err != nil {
-		fail(w, 500, "Error interno")
-		return
+		return err
 	}
 	out := make([]map[string]any, 0, len(rows))
 	for _, row := range rows {
 		out = append(out, recommendationDTO(row))
 	}
-	writeJSON(w, 200, out)
+	writeJSON(w, http.StatusOK, out)
+	return nil
 }
 
-func (s *server) createRecommendation(w http.ResponseWriter, r *http.Request) {
-	wc, _ := CurrentWorkshop(r.Context())
-	if !writeAllowed(w, wc) {
-		return
+func (s *server) createRecommendation(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
+	if err := wc.requireWriter(); err != nil {
+		return err
 	}
-	id, err := uuid.Parse(chi.URLParam(r, "vehicleID"))
+	id, err := pathID(r, "vehicleID", vehicleNotFound)
 	if err != nil {
-		fail(w, 404, "Vehículo no encontrado")
-		return
+		return err
 	}
 	var in struct {
-		Description string     `json:"description"`
-		Category    *string    `json:"category"`
-		DueDate     *string    `json:"due_date"`
-		DueKm       *int32     `json:"due_km"`
-		WorkOrderID *uuid.UUID `json:"work_order_id"`
+		Description string             `json:"description"`
+		Category    *sqlc.PartCategory `json:"category"`
+		DueDate     *string            `json:"due_date"`
+		DueKm       *int32             `json:"due_km"`
+		WorkOrderID *uuid.UUID         `json:"work_order_id"`
 	}
-	if !decode(w, r, &in) {
-		return
+	if err = decode(r, &in); err != nil {
+		return err
 	}
 	in.Description = strings.TrimSpace(in.Description)
 	if in.Description == "" {
-		fail(w, 400, "La descripción es obligatoria")
-		return
+		return badRequest("La descripción es obligatoria")
 	}
-	if (in.DueDate == nil || *in.DueDate == "") && in.DueKm == nil {
-		fail(w, 400, "Indicá una fecha o un kilometraje objetivo")
-		return
+	if in.DueDate != nil && *in.DueDate == "" {
+		in.DueDate = nil
+	}
+	if in.DueDate == nil && in.DueKm == nil {
+		return badRequest("Indicá una fecha o un kilometraje objetivo")
 	}
 	if in.DueKm != nil && *in.DueKm < 0 {
-		fail(w, 400, "Kilometraje inválido")
-		return
+		return badRequest("Kilometraje inválido")
 	}
-	params := sqlc.CreateRecommendationParams{VehicleID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID), Description: in.Description, DueKm: in.DueKm, CreatedBy: dbUUID(wc.UserID)}
+	params := sqlc.CreateRecommendationParams{VehicleID: id, WorkshopID: wc.workshopID, Description: in.Description, DueKm: in.DueKm, CreatedBy: wc.userID}
 	if in.Category != nil && *in.Category != "" {
-		if !partCategories[*in.Category] {
-			fail(w, 400, "Categoría inválida")
-			return
+		if !in.Category.Valid() {
+			return badRequest("Categoría inválida")
 		}
-		c := sqlc.PartCategory(*in.Category)
-		params.Category = &c
+		params.Category = in.Category
 	}
-	if in.DueDate != nil && *in.DueDate != "" {
-		d, err := time.Parse("2006-01-02", *in.DueDate)
+	if in.DueDate != nil {
+		d, err := time.Parse(values.DateLayout, *in.DueDate)
 		if err != nil {
-			fail(w, 400, "Fecha inválida")
-			return
+			return badRequest("Fecha inválida")
 		}
-		params.DueDate = pgtype.Date{Time: d, Valid: true}
+		params.DueDate = date(d)
 	}
+	ctx := r.Context()
 	var rec sqlc.Recommendation
-	err = database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
-		if _, err := q.GetVehicle(r.Context(), sqlc.GetVehicleParams{ID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID)}); err != nil {
-			return err
+	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
+		if _, err := q.GetVehicle(ctx, sqlc.GetVehicleParams{ID: id, WorkshopID: wc.workshopID}); err != nil {
+			return auditEvent{}, err
 		}
 		if in.WorkOrderID != nil {
-			o, err := q.GetWorkOrder(r.Context(), sqlc.GetWorkOrderParams{ID: dbUUID(*in.WorkOrderID), WorkshopID: dbUUID(wc.WorkshopID)})
+			o, err := q.GetWorkOrder(ctx, sqlc.GetWorkOrderParams{ID: *in.WorkOrderID, WorkshopID: wc.workshopID})
 			if err != nil {
-				return err
+				return auditEvent{}, err
 			}
-			if o.VehicleID.Bytes != id {
-				return pgx.ErrNoRows
+			if o.VehicleID != id || !wc.canReadBranch(o.BranchID) {
+				return auditEvent{}, pgx.ErrNoRows
 			}
-			params.WorkOrderID = o.ID
+			params.WorkOrderID = &o.ID
 		}
 		var err error
-		rec, err = q.CreateRecommendation(r.Context(), params)
-		if err != nil {
-			return err
-		}
-		return audit(r.Context(), q, wc, rec.ID, "recommendation", "recommendation.create")
+		rec, err = q.CreateRecommendation(ctx, params)
+		return wc.event("recommendation", rec.ID, "recommendation.create"), err
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		fail(w, 404, "Vehículo u orden no encontrados")
-		return
-	}
 	if err != nil {
-		fail(w, 500, "Error interno")
-		return
+		return notFoundIfMissing(err, "Vehículo u orden no encontrados")
 	}
-	writeJSON(w, 201, recommendationDTO(rec))
+	writeJSON(w, http.StatusCreated, recommendationDTO(rec))
+	return nil
 }
 
-func (s *server) resolveRecommendation(w http.ResponseWriter, r *http.Request) {
-	wc, _ := CurrentWorkshop(r.Context())
-	if !writeAllowed(w, wc) {
-		return
+func (s *server) resolveRecommendation(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
+	if err := wc.requireWriter(); err != nil {
+		return err
 	}
-	id, err := uuid.Parse(chi.URLParam(r, "recommendationID"))
+	id, err := pathID(r, "recommendationID", "Recomendación no encontrada")
 	if err != nil {
-		fail(w, 404, "Recomendación no encontrada")
-		return
+		return err
 	}
 	var in struct {
-		Status string `json:"status"`
+		Status sqlc.RecommendationStatus `json:"status"`
 	}
-	if !decode(w, r, &in) {
-		return
+	if err = decode(r, &in); err != nil {
+		return err
 	}
-	if in.Status != "hecha" && in.Status != "descartada" {
-		fail(w, 400, "Estado inválido")
-		return
+	if in.Status != sqlc.RecommendationStatusHecha && in.Status != sqlc.RecommendationStatusDescartada {
+		return badRequest("Estado inválido")
 	}
+	ctx := r.Context()
 	var rec sqlc.Recommendation
-	err = database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
+	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
 		var err error
-		rec, err = q.ResolveRecommendation(r.Context(), sqlc.ResolveRecommendationParams{Status: sqlc.RecommendationStatus(in.Status), ResolvedBy: dbUUID(wc.UserID), ID: dbUUID(id), WorkshopID: dbUUID(wc.WorkshopID)})
-		if err != nil {
-			return err
-		}
-		return audit(r.Context(), q, wc, rec.ID, "recommendation", "recommendation."+in.Status)
+		rec, err = q.ResolveRecommendation(ctx, sqlc.ResolveRecommendationParams{Status: in.Status, ResolvedBy: &wc.userID, ID: id, WorkshopID: wc.workshopID})
+		return wc.event("recommendation", rec.ID, "recommendation."+string(in.Status)), err
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		fail(w, 404, "Recomendación no encontrada o ya resuelta")
-		return
-	}
 	if err != nil {
-		fail(w, 500, "Error interno")
-		return
+		return notFoundIfMissing(err, "Recomendación no encontrada o ya resuelta")
 	}
-	writeJSON(w, 200, recommendationDTO(rec))
+	writeJSON(w, http.StatusOK, recommendationDTO(rec))
+	return nil
 }

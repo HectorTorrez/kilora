@@ -9,7 +9,7 @@ apps/web            TanStack Start + React + Tailwind + shadcn/ui
 services/api        Go + chi + pgx + sqlc
 packages/contracts  Contratos compartidos (OpenAPI, tipos)
 db/migrations       Migraciones (goose)
-db/seeds            Datos de demo
+services/api/cmd/seed  Datos de demo
 scripts             Utilidades de desarrollo
 ```
 

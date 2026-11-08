@@ -1,18 +1,16 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
 import { useId, useRef, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { money } from "@/lib/format";
-import { formatCents, lineCents } from "@/lib/money";
-import { vehiclesQuery } from "@/lib/workshop";
+import { SearchInput } from "@/components/ui/search-input";
+import { matchesVehicle, vehiclesQuery } from "@/features/taller/vehicles";
+import { todayISO } from "@/lib/format";
 import {
 	applyFormError,
 	FormActions,
@@ -26,45 +24,29 @@ import {
 } from "./form-fields";
 import {
 	maskSvPhone,
-	moneyField,
+	optionalPhone,
 	optionalText,
+	optionalYearField,
 	requiredText,
 	toSvPhone,
-	yearField,
 } from "./form-schemas";
+
+import {
+	blankQuoteItem,
+	QuoteItemsFields,
+	quoteItemsSchema,
+	quoteItemValues,
+} from "./quote-items-fields";
 
 type Schemas = components["schemas"];
 
-const itemSchema = z.object({
-	kind: z.enum(["repuesto", "mano_de_obra"]),
-	description: requiredText("Ingresá la descripción"),
-	quantity: z
-		.string()
-		.trim()
-		.refine(
-			(value) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0,
-			"Ingresá una cantidad mayor a 0",
-		),
-	unit_price: moneyField(true),
-});
-
 const schema = z.object({
 	customer_name: requiredText("Ingresá el nombre del cliente"),
-	customer_phone: z
-		.string()
-		.trim()
-		.superRefine((value, ctx) => {
-			if (!value) return;
-			if (!/^\d{8}$/.test(maskSvPhone(value)))
-				ctx.addIssue({
-					code: "custom",
-					message: "Ingresá un teléfono de 8 dígitos",
-				});
-		}),
+	customer_phone: optionalPhone,
 	vehicle_id: z.string(),
 	vehicle_make: optionalText,
 	vehicle_model: requiredText("Ingresá el modelo"),
-	vehicle_year: yearField(false),
+	vehicle_year: optionalYearField(),
 	vehicle_plate: optionalText,
 	branch_id: z.string().min(1, "Elegí una sucursal"),
 	notes: optionalText,
@@ -76,25 +58,13 @@ const schema = z.object({
 				/^\d+$/.test(value) && Number(value) >= 1 && Number(value) <= 365,
 			"Ingresá entre 1 y 365 días",
 		),
-	items: z.array(itemSchema).min(1, "Agregá al menos un ítem"),
+	items: quoteItemsSchema,
 });
 
 export type CounterQuoteValues = z.infer<typeof schema>;
 
-function blankItem(): CounterQuoteValues["items"][number] {
-	return {
-		kind: "repuesto",
-		description: "",
-		quantity: "1",
-		unit_price: "",
-	};
-}
-
 function daysUntil(value: string) {
-	const today = new Intl.DateTimeFormat("en-CA", {
-		timeZone: "America/El_Salvador",
-	}).format(new Date());
-	const start = Date.parse(`${today}T00:00:00Z`);
+	const start = Date.parse(`${todayISO()}T00:00:00Z`);
 	const end = Date.parse(`${value.slice(0, 10)}T00:00:00Z`);
 	const days = Math.round((end - start) / 86_400_000);
 	return String(Math.min(365, Math.max(days, 1)));
@@ -118,13 +88,8 @@ export function counterQuoteFormValues(
 		notes: quote?.notes ?? "",
 		valid_days: quote?.valid_until ? daysUntil(quote.valid_until) : "15",
 		items: quote?.items.length
-			? quote.items.map((item) => ({
-					kind: item.kind,
-					description: item.description,
-					quantity: String(item.quantity),
-					unit_price: String(item.unit_price),
-				}))
-			: [blankItem()],
+			? quote.items.map(quoteItemValues)
+			: [blankQuoteItem()],
 	};
 }
 
@@ -184,26 +149,11 @@ export function CounterQuoteForm({
 		resolver: zodResolver(schema),
 		defaultValues: initial,
 	});
-	const rows = useFieldArray({ control: form.control, name: "items" });
-	const watched = form.watch("items");
 	const linked = form.watch("vehicle_id");
 	const query = search.trim().toLowerCase();
 	const matches = query
-		? vehicles
-				.filter((vehicle) =>
-					`${vehicle.plate ?? ""} ${vehicle.make} ${vehicle.model} ${vehicle.contact_name ?? ""}`
-						.toLowerCase()
-						.includes(query),
-				)
-				.slice(0, 8)
+		? vehicles.filter((vehicle) => matchesVehicle(vehicle, query)).slice(0, 8)
 		: [];
-	let parts = 0;
-	let labor = 0;
-	for (const item of watched ?? []) {
-		const cents = lineCents(item.quantity ?? "", item.unit_price ?? "");
-		if (item.kind === "mano_de_obra") labor += cents;
-		else parts += cents;
-	}
 	const submit = form.handleSubmit(async (values) => {
 		const branch_id = values.branch_id || branches[0]?.branch_id;
 		if (!branch_id) {
@@ -257,21 +207,18 @@ export function CounterQuoteForm({
 								(opcional)
 							</span>
 						</Label>
-						<div className="relative">
-							<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3" />
-							<Input
-								id={searchId}
-								value={search}
-								autoComplete="off"
-								placeholder="Placa, marca o cliente"
-								className="pl-9"
-								onFocus={() => setOpenSearch(true)}
-								onChange={(event) => {
-									setSearch(event.target.value);
-									setOpenSearch(true);
-								}}
-							/>
-						</div>
+						<SearchInput
+							containerClassName=""
+							id={searchId}
+							value={search}
+							autoComplete="off"
+							placeholder="Placa, marca o cliente"
+							onFocus={() => setOpenSearch(true)}
+							onChange={(event) => {
+								setSearch(event.target.value);
+								setOpenSearch(true);
+							}}
+						/>
 						{linked ? (
 							<div className="flex items-center justify-between gap-3 rounded-lg border border-seal bg-seal-soft px-3 py-2 text-sm">
 								<p>Vinculado a un vehículo del taller</p>
@@ -356,90 +303,7 @@ export function CounterQuoteForm({
 					</div>
 				</Card>
 				<Card className="gap-4 rounded-lg p-5 shadow-none">
-					<div className="flex items-center justify-between gap-3">
-						<h2 className="font-semibold">Ítems</h2>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={() => rows.append(blankItem())}
-						>
-							Agregar ítem
-						</Button>
-					</div>
-					{rows.fields.map((row, index) => {
-						const current = watched?.[index];
-						const subtotal = lineCents(
-							current?.quantity ?? "",
-							current?.unit_price ?? "",
-						);
-						return (
-							<div
-								key={row.id}
-								className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
-							>
-								<SelectField
-									name={`items.${index}.kind`}
-									label="Tipo"
-									options={[
-										{ value: "repuesto", label: "Repuesto" },
-										{ value: "mano_de_obra", label: "Mano de obra" },
-									]}
-									required
-								/>
-								<TextField
-									name={`items.${index}.description`}
-									label="Descripción"
-									required
-								/>
-								<NumberField
-									name={`items.${index}.quantity`}
-									label="Cantidad"
-									min={0.01}
-									step="0.01"
-									required
-								/>
-								<NumberField
-									name={`items.${index}.unit_price`}
-									label="Precio unitario"
-									prefix="$"
-									min={0}
-									step="0.01"
-									required
-								/>
-								<div className="flex items-center justify-between gap-3 sm:col-span-2">
-									<p className="text-sm tabular-nums">
-										Subtotal {money(formatCents(subtotal))}
-									</p>
-									<Button
-										type="button"
-										variant="outline"
-										size="sm"
-										disabled={rows.fields.length === 1}
-										onClick={() => rows.remove(index)}
-									>
-										Quitar
-									</Button>
-								</div>
-							</div>
-						);
-					})}
-					<dl className="grid gap-1 border-t pt-3 text-sm">
-						<div className="flex justify-between gap-4">
-							<dt>Subtotal repuestos</dt>
-							<dd className="tabular-nums">{money(formatCents(parts))}</dd>
-						</div>
-						<div className="flex justify-between gap-4">
-							<dt>Subtotal mano de obra</dt>
-							<dd className="tabular-nums">{money(formatCents(labor))}</dd>
-						</div>
-						<div className="flex justify-between gap-4 text-base font-bold">
-							<dt>Total</dt>
-							<dd className="tabular-nums">
-								{money(formatCents(parts + labor))}
-							</dd>
-						</div>
-					</dl>
+					<QuoteItemsFields />
 				</Card>
 				<Card className="gap-4 rounded-lg p-5 shadow-none">
 					<h2 className="font-semibold">Condiciones</h2>

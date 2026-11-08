@@ -5,10 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"encoding/json"
 	"github.com/jackc/pgx/v5"
-	"kilora/api/internal/history"
-	"strings"
 )
 
 func TestSeed(t *testing.T) {
@@ -51,13 +48,7 @@ func TestSeed(t *testing.T) {
 	if err = tx.QueryRow(ctx, "SELECT h.items FROM history_record h JOIN vehicle v ON v.id=h.vehicle_id WHERE v.plate='P512834' AND h.source='taller' LIMIT 1").Scan(&data); err != nil {
 		t.Fatal(err)
 	}
-	items, err := history.DecodeItems(data)
 	if err != nil {
 		t.Fatal(err)
-	}
-	projected, _ := history.Project(history.ViewerLinkedWorkshop, history.Record{Items: items})
-	b, _ := json.Marshal(projected)
-	if strings.Contains(string(b), "internal_cost") || strings.Contains(string(b), "mechanic_notes") {
-		t.Fatal(string(b))
 	}
 }

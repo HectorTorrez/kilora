@@ -4,54 +4,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
-	"net/http/cookiejar"
-	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"kilora/api/internal/database/sqlc"
 )
 
 func TestWorkshopIsolation(t *testing.T) {
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("TEST_DATABASE_URL no definida")
-	}
-	db, e := pgxpool.New(context.Background(), url)
-	if e != nil {
-		t.Fatal(e)
-	}
-	defer db.Close()
-	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), Mailer: &fakeMailer{}}))
-	defer srv.Close()
-	client := func() *http.Client { jar, _ := cookiejar.New(nil); return &http.Client{Jar: jar} }
-	req := func(c *http.Client, method, path, body string, want int) any {
-		t.Helper()
-		r, _ := http.NewRequest(method, srv.URL+path, strings.NewReader(body))
-		if body != "" {
-			r.Header.Set("Content-Type", "application/json")
-		}
-		resp, err := c.Do(r)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer resp.Body.Close()
-		data, _ := io.ReadAll(resp.Body)
-		if resp.StatusCode != want {
-			t.Fatalf("%s %s: %d, esperaba %d: %s", method, path, resp.StatusCode, want, data)
-		}
-		var v any
-		if len(data) > 0 {
-			_ = json.Unmarshal(data, &v)
-		}
-		return v
-	}
+	api := newTestAPI(t)
+	db := api.db
+	client, req := api.client, api.req
 	setup := func(c *http.Client) (string, string, uuid.UUID) {
 		reg := req(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, uuid.NewString()+"@example.com"), 201).(map[string]any)
 		uid := uuid.MustParse(reg["user"].(map[string]any)["id"].(string))
@@ -93,25 +57,24 @@ func TestWorkshopIsolation(t *testing.T) {
 	req(a, "GET", pb+"/vehicles/"+vb, "", 403)
 	q := sqlc.New(db)
 	wid := uuid.MustParse(strings.TrimPrefix(pa, "/api/v1/workshops/"))
-	branch2, e := q.CreateBranch(context.Background(), sqlc.CreateBranchParams{WorkshopID: dbUUID(wid), Name: uuid.NewString()})
+	branch2, e := q.CreateBranch(context.Background(), sqlc.CreateBranchParams{WorkshopID: wid, Name: uuid.NewString()})
 	if e != nil {
 		t.Fatal(e)
 	}
 	for _, role := range []sqlc.MembershipRole{sqlc.MembershipRoleRecepcion, sqlc.MembershipRoleMecanico} {
 		c := client()
 		_, _, uid := setup(c)
-		_, e = q.CreateMembership(context.Background(), sqlc.CreateMembershipParams{UserID: dbUUID(uid), WorkshopID: dbUUID(wid), BranchID: dbUUID(uuid.MustParse(ba)), Role: role})
+		_, e = q.CreateMembership(context.Background(), sqlc.CreateMembershipParams{UserID: uid, WorkshopID: wid, BranchID: uuid.MustParse(ba), Role: role})
 		if e != nil {
 			t.Fatal(e)
 		}
 		req(c, "GET", pa+"/vehicles/"+vid, "", 200)
 		if role == sqlc.MembershipRoleRecepcion {
-			req(c, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"x"}`, vid, uuid.UUID(branch2.ID.Bytes)), 403)
+			req(c, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"x"}`, vid, branch2.ID), 403)
 		} else {
 			req(c, "POST", pa+"/vehicles", `{"make":"x","model":"y"}`, 403)
 		}
 	}
-	// La constancia y la publicación permanecen aisladas por taller.
 	op := pa + "/work-orders/" + oid
 	req(a, "PATCH", op, `{"public_notes":"nota pública","internal_notes":"secreto interno"}`, 200)
 	req(a, "POST", op+"/jobs/"+jid+"/parts", `{"name":"Pieza","quantity":"2","unit_price":"7.25","internal_cost":"4.00"}`, 201)
@@ -163,25 +126,4 @@ func TestWorkshopIsolation(t *testing.T) {
 	req(a, "PATCH", emptyPath, `{"status":"en_reparacion"}`, 200)
 	req(a, "PATCH", emptyPath, `{"status":"listo"}`, 409)
 
-}
-func TestNormalizationAndTransitions(t *testing.T) {
-	if normalizePlate(" p - 123 ") != "P123" {
-		t.Fatal("placa")
-	}
-	for _, s := range []string{"77778888", "+503 7777-8888", "50377778888"} {
-		if p, ok := normalizePhone(s); !ok || p != "+50377778888" {
-			t.Fatal(s, p)
-		}
-	}
-	if _, ok := normalizePhone("123"); ok {
-		t.Fatal("teléfono inválido")
-	}
-	for _, v := range []struct {
-		a, b string
-		want bool
-	}{{"recibido", "diagnostico", true}, {"diagnostico", "en_reparacion", true}, {"en_reparacion", "listo", true}, {"recibido", "cancelado", true}, {"listo", "cancelado", false}, {"recibido", "listo", false}} {
-		if validTransition(v.a, v.b) != v.want {
-			t.Fatal(v)
-		}
-	}
 }

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -16,12 +17,12 @@ INSERT INTO audit_event (actor_user_id, workshop_id, entity, entity_id, action, 
 `
 
 type InsertAuditEventParams struct {
-	ActorUserID pgtype.UUID `json:"actor_user_id"`
-	WorkshopID  pgtype.UUID `json:"workshop_id"`
-	Entity      string      `json:"entity"`
-	EntityID    pgtype.UUID `json:"entity_id"`
-	Action      string      `json:"action"`
-	Diff        []byte      `json:"diff"`
+	ActorUserID *uuid.UUID `json:"actor_user_id"`
+	WorkshopID  *uuid.UUID `json:"workshop_id"`
+	Entity      string     `json:"entity"`
+	EntityID    *uuid.UUID `json:"entity_id"`
+	Action      string     `json:"action"`
+	Diff        []byte     `json:"diff"`
 }
 
 func (q *Queries) InsertAuditEvent(ctx context.Context, arg InsertAuditEventParams) (AuditEvent, error) {
@@ -47,45 +48,6 @@ func (q *Queries) InsertAuditEvent(ctx context.Context, arg InsertAuditEventPara
 	return i, err
 }
 
-const listAuditEventsByEntity = `-- name: ListAuditEventsByEntity :many
-SELECT id, actor_user_id, workshop_id, entity, entity_id, action, diff, created_at FROM audit_event WHERE workshop_id = $1 AND entity = $2 AND entity_id = $3 ORDER BY created_at DESC
-`
-
-type ListAuditEventsByEntityParams struct {
-	WorkshopID pgtype.UUID `json:"workshop_id"`
-	Entity     string      `json:"entity"`
-	EntityID   pgtype.UUID `json:"entity_id"`
-}
-
-func (q *Queries) ListAuditEventsByEntity(ctx context.Context, arg ListAuditEventsByEntityParams) ([]AuditEvent, error) {
-	rows, err := q.db.Query(ctx, listAuditEventsByEntity, arg.WorkshopID, arg.Entity, arg.EntityID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []AuditEvent{}
-	for rows.Next() {
-		var i AuditEvent
-		if err := rows.Scan(
-			&i.ID,
-			&i.ActorUserID,
-			&i.WorkshopID,
-			&i.Entity,
-			&i.EntityID,
-			&i.Action,
-			&i.Diff,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listAuditEventsByWorkshop = `-- name: ListAuditEventsByWorkshop :many
 SELECT a.id, a.entity, a.entity_id, a.action, a.created_at, u.full_name AS actor_name
 FROM audit_event a LEFT JOIN app_user u ON u.id = a.actor_user_id
@@ -95,15 +57,15 @@ LIMIT $3
 `
 
 type ListAuditEventsByWorkshopParams struct {
-	WorkshopID pgtype.UUID `json:"workshop_id"`
-	Before     *int64      `json:"before"`
-	RowLimit   int32       `json:"row_limit"`
+	WorkshopID *uuid.UUID `json:"workshop_id"`
+	Before     *int64     `json:"before"`
+	RowLimit   int32      `json:"row_limit"`
 }
 
 type ListAuditEventsByWorkshopRow struct {
 	ID        int64              `json:"id"`
 	Entity    string             `json:"entity"`
-	EntityID  pgtype.UUID        `json:"entity_id"`
+	EntityID  *uuid.UUID         `json:"entity_id"`
 	Action    string             `json:"action"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	ActorName *string            `json:"actor_name"`

@@ -7,19 +7,16 @@ import {
 	BadgeCheck,
 	Ban,
 	Check,
-	Copy,
 	Lock,
-	MessageCircle,
 	Plus,
 	Printer,
 	Trash2,
 	Wrench,
 	X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { useWorkshopId } from "@/components/kilora/app-shell";
-import { categoryLabels } from "@/components/kilora/history-timeline";
+import { OrderQuoteCard } from "@/components/kilora/order-quote-card";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
@@ -50,24 +47,18 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useWorkshopMutation } from "@/features/taller/mutation";
+import { orderActions, orderQuery } from "@/features/taller/orders";
+import { useWorkshopId } from "@/features/taller/session";
+import { vehicleQuery } from "@/features/taller/vehicles";
+import { categoryLabels } from "@/lib/domain";
 import { date, km as formatKm, money, statusLabel } from "@/lib/format";
+import { amountCents, formatCents, lineCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
-import {
-	actions,
-	orderQuery,
-	useWorkshopMutation,
-	vehicleQuery,
-} from "@/lib/workshop";
 
 type S = components["schemas"];
 export const Route = createFileRoute("/taller/ordenes/$orderId")({
 	component: OrderPage,
-});
-const blank = (): S["QuoteItem"] => ({
-	kind: "repuesto",
-	description: "",
-	quantity: 1,
-	unit_price: 0,
 });
 const flow: S["WorkOrderStatus"][] = [
 	"recibido",
@@ -131,7 +122,7 @@ function OrderDetail({
 	order: S["WorkOrderDetail"];
 	vehicle?: S["Vehicle"];
 }) {
-	const a = actions(workshopID, order.id);
+	const a = orderActions(workshopID, order.id);
 	const status = useWorkshopMutation(workshopID, a.status);
 	const [cancelOpen, setCancelOpen] = useState(false);
 	const [cancelReason, setCancelReason] = useState("");
@@ -267,7 +258,7 @@ function OrderDetail({
 			<div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
 				<div className="min-w-0 space-y-6">
 					<JobsCard workshopID={workshopID} order={order} locked={closed} />
-					<QuoteCard workshopID={workshopID} order={order} />
+					<OrderQuoteCard workshopID={workshopID} order={order} />
 				</div>
 				<div className="space-y-6">
 					<SectionCard
@@ -379,7 +370,7 @@ function JobsCard({
 	order: S["WorkOrderDetail"];
 	locked: boolean;
 }) {
-	const a = actions(workshopID, order.id);
+	const a = orderActions(workshopID, order.id);
 	const job = useWorkshopMutation(workshopID, a.job);
 	const deleteJob = useWorkshopMutation(workshopID, a.deleteJob);
 	const part = useWorkshopMutation(workshopID, a.part);
@@ -394,11 +385,8 @@ function JobsCard({
 	const total = order.jobs.reduce(
 		(sum, j) =>
 			sum +
-			Number(j.labor_price || 0) +
-			j.parts.reduce(
-				(s, p) => s + Number(p.quantity) * Number(p.unit_price || 0),
-				0,
-			),
+			amountCents(j.labor_price) +
+			j.parts.reduce((s, p) => s + lineCents(p.quantity, p.unit_price), 0),
 		0,
 	);
 
@@ -422,7 +410,7 @@ function JobsCard({
 								<div className="min-w-0 flex-1">
 									<p className="text-[13.5px] font-semibold">
 										{j.description}
-										{j.category && categoryLabels[j.category] && (
+										{j.category && (
 											<span className="ml-2 rounded bg-secondary px-1.5 py-px align-middle text-[10.5px] font-medium text-ink-2">
 												{categoryLabels[j.category]}
 											</span>
@@ -462,7 +450,9 @@ function JobsCard({
 												{Number(p.quantity)} × {money(p.unit_price || 0)}
 											</span>
 											<span className="w-20 text-right font-mono text-[13px] tabular-nums">
-												{money(Number(p.quantity) * Number(p.unit_price || 0))}
+												{money(
+													formatCents(lineCents(p.quantity, p.unit_price)),
+												)}
 											</span>
 											{!locked && (
 												<Button
@@ -603,7 +593,6 @@ function JobsCard({
 									{label}
 								</SelectItem>
 							))}
-							<SelectItem value="otro">Otro</SelectItem>
 						</SelectContent>
 					</Select>
 					<Input
@@ -625,239 +614,8 @@ function JobsCard({
 			<div className="flex items-center justify-between border-t px-4 py-3 sm:px-5">
 				<span className="text-[13px] text-ink-3">Total a cobrar</span>
 				<span className="font-display text-xl font-bold tabular-nums">
-					{money(total)}
+					{money(formatCents(total))}
 				</span>
-			</div>
-		</SectionCard>
-	);
-}
-
-const outcomes = [
-	["acepto", "Aceptó"],
-	["rechazo", "Rechazó"],
-	["no_respondio", "No respondió"],
-] as const;
-
-function QuoteCard({
-	workshopID,
-	order,
-}: {
-	workshopID: string;
-	order: S["WorkOrderDetail"];
-}) {
-	const a = actions(workshopID, order.id);
-	const quote = useWorkshopMutation(workshopID, a.quote);
-	const share = useWorkshopMutation(workshopID, a.share);
-	const outcome = useWorkshopMutation(workshopID, a.outcome);
-	const [items, setItems] = useState<S["QuoteItem"][]>(
-		order.quote?.items || [blank()],
-	);
-	const [url, setUrl] = useState("");
-	useEffect(() => {
-		if (order.quote) setItems(order.quote.items);
-	}, [order.quote]);
-	const update = (i: number, patch: Partial<S["QuoteItem"]>) =>
-		setItems(items.map((x, n) => (n === i ? { ...x, ...patch } : x)));
-	const total = items.reduce(
-		(sum, i) => sum + Number(i.quantity) * Number(i.unit_price),
-		0,
-	);
-	const cmp = order.quote_comparison;
-
-	return (
-		<SectionCard
-			title="Cotización"
-			description="Constancia del presupuesto verbal. El cliente la ve por link durante 15 días; no firma ni aprueba."
-			actions={
-				order.quote?.shared_at && (
-					<span className="text-[11.5px] text-ink-3">
-						Compartida el {date(order.quote.shared_at)}
-					</span>
-				)
-			}
-		>
-			<div className="space-y-3">
-				<div className="hidden grid-cols-[140px_1fr_80px_110px_36px] gap-2 px-0.5 text-[11.5px] font-medium text-ink-3 sm:grid">
-					<span>Tipo</span>
-					<span>Descripción</span>
-					<span>Cant.</span>
-					<span>Precio unit.</span>
-					<span />
-				</div>
-				{items.map((item, i) => (
-					<div
-						// biome-ignore lint/suspicious/noArrayIndexKey: Items have no IDs.
-						key={`item-${i}`}
-						className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:grid-cols-[140px_1fr_80px_110px_36px]"
-					>
-						<Select
-							value={item.kind}
-							onValueChange={(value) =>
-								update(i, { kind: value as S["QuoteItem"]["kind"] })
-							}
-						>
-							<SelectTrigger aria-label="Tipo" className="w-full">
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="repuesto">Repuesto</SelectItem>
-								<SelectItem value="mano_de_obra">Mano de obra</SelectItem>
-							</SelectContent>
-						</Select>
-						<Input
-							aria-label="Descripción"
-							placeholder="Descripción"
-							className="col-span-2 sm:col-span-1"
-							value={item.description}
-							onChange={(e) => update(i, { description: e.target.value })}
-						/>
-						<Input
-							aria-label="Cantidad"
-							type="number"
-							min="0.01"
-							step="0.01"
-							value={item.quantity}
-							onChange={(e) => update(i, { quantity: e.target.value })}
-						/>
-						<Input
-							aria-label="Precio"
-							type="number"
-							min="0"
-							step="0.01"
-							value={item.unit_price}
-							onChange={(e) => update(i, { unit_price: e.target.value })}
-						/>
-						<Button
-							variant="ghost"
-							size="icon"
-							aria-label="Quitar ítem"
-							className="text-ink-3 hover:text-destructive"
-							onClick={() => setItems(items.filter((_, n) => n !== i))}
-						>
-							<Trash2 className="size-4" />
-						</Button>
-					</div>
-				))}
-				<div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-					<button
-						type="button"
-						className="inline-flex items-center gap-1 text-xs font-semibold text-seal hover:underline"
-						onClick={() => setItems([...items, blank()])}
-					>
-						<Plus className="size-3.5" />
-						Agregar ítem
-					</button>
-					<p className="text-[13px] text-ink-3">
-						Total cotizado{" "}
-						<strong className="ml-1 font-display text-lg text-foreground tabular-nums">
-							{money(total)}
-						</strong>
-					</p>
-				</div>
-				<div className="flex flex-wrap gap-2">
-					<Button
-						disabled={quote.isPending}
-						onClick={() =>
-							quote.mutate(
-								{ items },
-								{ onSuccess: () => toast.success("Cotización guardada") },
-							)
-						}
-					>
-						Guardar cotización
-					</Button>
-					<Button
-						variant="outline"
-						disabled={!order.quote || share.isPending}
-						title={!order.quote ? "Guardá la cotización primero" : undefined}
-						onClick={async () => {
-							try {
-								const result = await share.mutateAsync();
-								setUrl(result.url);
-								window.open(
-									result.whatsapp_url,
-									"_blank",
-									"noopener,noreferrer",
-								);
-							} catch {}
-						}}
-					>
-						<MessageCircle className="size-4" />
-						Compartir por WhatsApp
-					</Button>
-				</div>
-				{url && (
-					<div className="flex gap-2">
-						<Input
-							readOnly
-							value={url}
-							aria-label="Enlace de la cotización"
-							className="font-mono text-xs"
-						/>
-						<Button
-							variant="outline"
-							size="icon"
-							aria-label="Copiar enlace"
-							onClick={async () => {
-								await navigator.clipboard.writeText(url);
-								toast.success("Enlace copiado");
-							}}
-						>
-							<Copy className="size-4" />
-						</Button>
-					</div>
-				)}
-				{order.quote && (
-					<div className="flex flex-wrap items-center gap-3 rounded-md bg-secondary/50 p-3">
-						<span className="text-[13px] font-medium">
-							¿Qué respondió el cliente?
-						</span>
-						<fieldset className="inline-flex rounded-md border bg-card p-0.5">
-							<legend className="sr-only">Resultado de la cotización</legend>
-							{outcomes.map(([value, label]) => (
-								<button
-									key={value}
-									type="button"
-									aria-pressed={order.quote?.outcome === value}
-									disabled={outcome.isPending}
-									onClick={() => outcome.mutate({ outcome: value })}
-									className={cn(
-										"rounded px-2.5 py-1 text-[12.5px] font-medium text-ink-3 hover:text-foreground",
-										order.quote?.outcome === value &&
-											(value === "acepto"
-												? "bg-ok-soft text-ok"
-												: value === "rechazo"
-													? "bg-destructive/10 text-destructive"
-													: "bg-secondary text-foreground"),
-									)}
-								>
-									{label}
-								</button>
-							))}
-						</fieldset>
-						{order.quote.outcome_at && (
-							<span className="text-[11.5px] text-ink-3">
-								Marcado el {date(order.quote.outcome_at)}
-							</span>
-						)}
-					</div>
-				)}
-				{cmp && (
-					<dl className="grid grid-cols-3 gap-px overflow-hidden rounded-md border bg-line text-center">
-						{[
-							["Cotizado", cmp.quote_total],
-							["Cobrado", cmp.charged_total],
-							["Diferencia", cmp.difference],
-						].map(([label, value]) => (
-							<div key={label} className="bg-card px-2 py-2.5">
-								<dt className="text-[11.5px] text-ink-3">{label}</dt>
-								<dd className="font-mono text-[13.5px] font-semibold tabular-nums">
-									{money(value || 0)}
-								</dd>
-							</div>
-						))}
-					</dl>
-				)}
 			</div>
 		</SectionCard>
 	);
@@ -872,7 +630,7 @@ function OrderDataCard({
 }) {
 	const edit = useWorkshopMutation(
 		workshopID,
-		actions(workshopID, order.id).edit,
+		orderActions(workshopID, order.id).edit,
 	);
 	const [reason, setReason] = useState(order.reason);
 	const [km, setKm] = useState(order.odometer_km?.toString() || "");

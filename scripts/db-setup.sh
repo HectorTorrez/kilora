@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Levanta la base de datos en Docker y aplica las migraciones.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

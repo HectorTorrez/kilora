@@ -1,12 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { useWorkshopId } from "@/components/kilora/app-shell";
 import {
 	CounterQuoteForm,
 	counterQuoteFormValues,
 } from "@/components/kilora/counter-quote-form";
-import { counterQuoteActions, useWorkshopMutation } from "@/lib/workshop";
-import { Route as TallerRoute } from "@/routes/taller";
+import { useWorkshopMutation } from "@/features/taller/mutation";
+import { createCounterQuoteAction } from "@/features/taller/quotes";
+import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 
 export const Route = createFileRoute("/taller/cotizaciones/nueva")({
 	component: NewQuotePage,
@@ -14,14 +14,14 @@ export const Route = createFileRoute("/taller/cotizaciones/nueva")({
 
 function NewQuotePage() {
 	const workshopID = useWorkshopId();
-	const { me } = TallerRoute.useRouteContext();
+	const { me } = useTallerContext();
 	const branches = me.memberships.filter(
 		(item) => item.workshop_id === workshopID,
 	);
 	const navigate = useNavigate();
 	const create = useWorkshopMutation(
 		workshopID,
-		counterQuoteActions(workshopID).create,
+		createCounterQuoteAction(workshopID),
 	);
 	return (
 		<main className="mx-auto max-w-3xl space-y-5 px-5 py-7">

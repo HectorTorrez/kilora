@@ -1,10 +1,5 @@
 import { z } from "zod";
-
-export function errorMessage(error: unknown) {
-	if (typeof error === "string" && error) return error;
-	if (error instanceof Error && error.message) return error.message;
-	return "No se pudo completar la solicitud.";
-}
+import { todayISO } from "@/lib/format";
 
 export function requiredText(message: string) {
 	return z.string().trim().min(1, message);
@@ -16,18 +11,14 @@ export function yearBounds() {
 	return { min: 1950, max: new Date().getFullYear() + 1 };
 }
 
-export function yearField(required = false) {
+export function optionalYearField() {
 	const { min, max } = yearBounds();
 	const message = `Ingresá un año entre ${min} y ${max}`;
 	return z
 		.string()
 		.trim()
 		.superRefine((value, ctx) => {
-			if (!value) {
-				if (required)
-					ctx.addIssue({ code: "custom", message: "Ingresá el año" });
-				return;
-			}
+			if (!value) return;
 			if (!/^\d{4}$/.test(value)) {
 				ctx.addIssue({ code: "custom", message });
 				return;
@@ -93,10 +84,7 @@ export function pastDateField() {
 	return z
 		.string()
 		.min(1, "Ingresá la fecha")
-		.refine(
-			(value) => value <= new Date().toLocaleDateString("en-CA"),
-			"La fecha no puede ser futura",
-		);
+		.refine((value) => value <= todayISO(), "La fecha no puede ser futura");
 }
 
 export function maskSvPhone(value: string) {

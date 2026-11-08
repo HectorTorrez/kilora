@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Lightbulb, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { categoryLabels } from "@/components/kilora/history-timeline";
 import { SectionCard } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,41 +14,14 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { day, km } from "@/lib/format";
-import { cn } from "@/lib/utils";
+import { useWorkshopMutation } from "@/features/taller/mutation";
 import {
-	adminActions,
-	useWorkshopMutation,
+	recommendationActions,
 	vehicleRecommendationsQuery,
-} from "@/lib/workshop";
-
-type Rec = components["schemas"]["Recommendation"];
-export type Urgency = "vencida" | "proxima" | "programada";
-
-const todayISO = () =>
-	new Intl.DateTimeFormat("en-CA", {
-		timeZone: "America/El_Salvador",
-	}).format(new Date());
-
-/** Vencida si pasó la fecha o el kilometraje; próxima a 30 días o 1,000 km. */
-export function urgency(rec: Rec, currentKm?: number | null): Urgency {
-	const today = todayISO();
-	const soon = new Date(`${today}T00:00:00Z`);
-	soon.setUTCDate(soon.getUTCDate() + 30);
-	const soonISO = soon.toISOString().slice(0, 10);
-	const kmKnown = currentKm != null && rec.due_km != null;
-	if (
-		(rec.due_date && rec.due_date < today) ||
-		(kmKnown && (currentKm as number) >= (rec.due_km as number))
-	)
-		return "vencida";
-	if (
-		(rec.due_date && rec.due_date <= soonISO) ||
-		(kmKnown && (rec.due_km as number) - (currentKm as number) <= 1000)
-	)
-		return "proxima";
-	return "programada";
-}
+} from "@/features/taller/recommendations";
+import { categoryLabels } from "@/lib/domain";
+import { dueText, type Urgency, urgency } from "@/lib/recommendations";
+import { cn } from "@/lib/utils";
 
 const urgencyStyle: Record<Urgency, string> = {
 	vencida: "bg-destructive/10 text-destructive",
@@ -75,28 +47,21 @@ export function UrgencyBadge({ value }: { value: Urgency }) {
 	);
 }
 
-export const dueText = (rec: Rec) =>
-	[rec.due_date && day(rec.due_date), rec.due_km != null && km(rec.due_km)]
-		.filter(Boolean)
-		.join(" o ");
-
 export function RecommendationsCard({
 	workshopID,
 	vehicleID,
 	workOrderID,
 	currentKm,
-	readOnly,
 }: {
 	workshopID: string;
 	vehicleID: string;
 	workOrderID?: string;
 	currentKm?: number | null;
-	readOnly?: boolean;
 }) {
 	const { data = [], isLoading } = useQuery(
 		vehicleRecommendationsQuery(workshopID, vehicleID),
 	);
-	const a = adminActions(workshopID);
+	const a = recommendationActions(workshopID);
 	const create = useWorkshopMutation(workshopID, a.recommend);
 	const resolve = useWorkshopMutation(workshopID, a.resolve);
 	const [open, setOpen] = useState(false);
@@ -112,7 +77,6 @@ export function RecommendationsCard({
 			title="Recomendaciones"
 			description="Trabajos sugeridos con fecha o kilometraje objetivo"
 			actions={
-				!readOnly &&
 				!open && (
 					<Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
 						<Plus className="size-4" />
@@ -203,7 +167,6 @@ export function RecommendationsCard({
 									{label}
 								</SelectItem>
 							))}
-							<SelectItem value="otro">Otro</SelectItem>
 						</SelectContent>
 					</Select>
 					<div className="flex gap-2">
@@ -245,41 +208,35 @@ export function RecommendationsCard({
 								<p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
 									<UrgencyBadge value={urgency(r, currentKm)} />
 									<span className="font-mono">{dueText(r)}</span>
-									{r.category && categoryLabels[r.category] && (
-										<span>· {categoryLabels[r.category]}</span>
-									)}
+									{r.category && <span>· {categoryLabels[r.category]}</span>}
 								</p>
 							</div>
-							{!readOnly && (
-								<div className="flex shrink-0 gap-1">
-									<Button
-										variant="ghost"
-										size="icon"
-										className="size-8 text-ok hover:bg-ok-soft hover:text-ok"
-										aria-label={`Marcar como hecha: ${r.description}`}
-										title="Marcar como hecha"
-										disabled={resolve.isPending}
-										onClick={() =>
-											resolve.mutate({ id: r.id, status: "hecha" })
-										}
-									>
-										<Check className="size-4" />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="size-8 text-ink-3"
-										aria-label={`Descartar: ${r.description}`}
-										title="Descartar"
-										disabled={resolve.isPending}
-										onClick={() =>
-											resolve.mutate({ id: r.id, status: "descartada" })
-										}
-									>
-										<X className="size-4" />
-									</Button>
-								</div>
-							)}
+							<div className="flex shrink-0 gap-1">
+								<Button
+									variant="ghost"
+									size="icon"
+									className="size-8 text-ok hover:bg-ok-soft hover:text-ok"
+									aria-label={`Marcar como hecha: ${r.description}`}
+									title="Marcar como hecha"
+									disabled={resolve.isPending}
+									onClick={() => resolve.mutate({ id: r.id, status: "hecha" })}
+								>
+									<Check className="size-4" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="size-8 text-ink-3"
+									aria-label={`Descartar: ${r.description}`}
+									title="Descartar"
+									disabled={resolve.isPending}
+									onClick={() =>
+										resolve.mutate({ id: r.id, status: "descartada" })
+									}
+								>
+									<X className="size-4" />
+								</Button>
+							</div>
 						</li>
 					))}
 					{resolved.map((r) => (

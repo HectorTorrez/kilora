@@ -1,11 +1,6 @@
-import { cn } from "cn";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import {
-	type FieldPath,
-	type FieldValues,
-	useFormContext,
-} from "react-hook-form";
+import { useFormContext } from "react-hook-form";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -27,7 +22,8 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { errorMessage } from "./form-schemas";
+import { errorMessage } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 const groupedInputClass =
 	"h-full rounded-none border-0 bg-transparent shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent";
@@ -75,26 +71,31 @@ export function InputGroup({
 	);
 }
 
-function FieldLabel({
+function FieldShell({
 	label,
 	optional,
 	required,
 	className,
-}: {
-	label: string;
-	optional?: boolean;
-	required?: boolean;
-	className?: string;
-}) {
+	description,
+	children,
+}: Pick<
+	SharedField,
+	"label" | "optional" | "required" | "className" | "description"
+> & { children: ReactNode }) {
 	return (
-		<FormLabel className={className}>
-			{label}
-			{optional && !required ? (
-				<span className="ml-1 font-normal text-muted-foreground">
-					(opcional)
-				</span>
-			) : null}
-		</FormLabel>
+		<FormItem className={className} required={required}>
+			<FormLabel>
+				{label}
+				{optional && !required ? (
+					<span className="ml-1 font-normal text-muted-foreground">
+						(opcional)
+					</span>
+				) : null}
+			</FormLabel>
+			{children}
+			{description ? <FormDescription>{description}</FormDescription> : null}
+			<FormMessage />
+		</FormItem>
 	);
 }
 
@@ -108,12 +109,11 @@ export function RequiredLegend({ className }: { className?: string }) {
 
 type SharedField = {
 	name: string;
-	label: string;
-	description?: string;
+	label: ReactNode;
+	description?: ReactNode;
 	optional?: boolean;
 	required?: boolean;
 	className?: string;
-	labelClassName?: string;
 	autoFocus?: boolean;
 	placeholder?: string;
 };
@@ -139,7 +139,6 @@ export function TextField({
 	optional,
 	required,
 	className,
-	labelClassName,
 	autoFocus,
 	placeholder,
 	type = "text",
@@ -159,7 +158,7 @@ export function TextField({
 	return (
 		<FormField
 			control={form.control}
-			name={name as FieldPath<FieldValues>}
+			name={name}
 			render={({ field }) => {
 				const input = (
 					<Input
@@ -186,13 +185,9 @@ export function TextField({
 					/>
 				);
 				return (
-					<FormItem className={className} required={required}>
-						<FieldLabel
-							label={label}
-							optional={optional}
-							required={required}
-							className={labelClassName}
-						/>
+					<FieldShell
+						{...{ className, required, label, optional, description }}
+					>
 						{grouped ? (
 							<InputGroup prefix={prefix} suffix={suffix}>
 								<FormControl>{input}</FormControl>
@@ -200,11 +195,7 @@ export function TextField({
 						) : (
 							<FormControl>{input}</FormControl>
 						)}
-						{description ? (
-							<FormDescription>{description}</FormDescription>
-						) : null}
-						<FormMessage />
-					</FormItem>
+					</FieldShell>
 				);
 			}}
 		/>
@@ -229,41 +220,29 @@ export function DateField({
 	optional,
 	required,
 	className,
-	labelClassName,
 	autoFocus,
 	placeholder = "Elegí una fecha",
-	disableFuture = true,
-}: SharedField & { disableFuture?: boolean }) {
+}: SharedField) {
 	const form = useFormContext();
 	return (
 		<FormField
 			control={form.control}
-			name={name as FieldPath<FieldValues>}
+			name={name}
 			render={({ field }) => (
-				<FormItem className={className} required={required}>
-					<FieldLabel
-						label={label}
-						optional={optional}
-						required={required}
-						className={labelClassName}
-					/>
+				<FieldShell {...{ className, required, label, optional, description }}>
 					<FormControl>
 						<DatePicker
 							name={field.name}
 							ref={field.ref}
 							autoFocus={autoFocus}
 							placeholder={placeholder}
-							disableFuture={disableFuture}
+							disableFuture
 							value={field.value ?? ""}
 							onBlur={field.onBlur}
 							onChange={field.onChange}
 						/>
 					</FormControl>
-					{description ? (
-						<FormDescription>{description}</FormDescription>
-					) : null}
-					<FormMessage />
-				</FormItem>
+				</FieldShell>
 			)}
 		/>
 	);
@@ -276,7 +255,6 @@ export function TextareaField({
 	optional,
 	required,
 	className,
-	labelClassName,
 	autoFocus,
 	placeholder,
 	rows = 3,
@@ -285,15 +263,9 @@ export function TextareaField({
 	return (
 		<FormField
 			control={form.control}
-			name={name as FieldPath<FieldValues>}
+			name={name}
 			render={({ field }) => (
-				<FormItem className={className} required={required}>
-					<FieldLabel
-						label={label}
-						optional={optional}
-						required={required}
-						className={labelClassName}
-					/>
+				<FieldShell {...{ className, required, label, optional, description }}>
 					<FormControl>
 						<Textarea
 							rows={rows}
@@ -306,11 +278,7 @@ export function TextareaField({
 							onChange={field.onChange}
 						/>
 					</FormControl>
-					{description ? (
-						<FormDescription>{description}</FormDescription>
-					) : null}
-					<FormMessage />
-				</FormItem>
+				</FieldShell>
 			)}
 		/>
 	);
@@ -336,10 +304,9 @@ export function PasswordField({
 	return (
 		<FormField
 			control={form.control}
-			name={name as FieldPath<FieldValues>}
+			name={name}
 			render={({ field }) => (
-				<FormItem className={className} required={required}>
-					<FieldLabel label={label} optional={optional} required={required} />
+				<FieldShell {...{ className, required, label, optional, description }}>
 					<div className="relative">
 						<FormControl>
 							<Input
@@ -372,11 +339,7 @@ export function PasswordField({
 							)}
 						</button>
 					</div>
-					{description ? (
-						<FormDescription>{description}</FormDescription>
-					) : null}
-					<FormMessage />
-				</FormItem>
+				</FieldShell>
 			)}
 		/>
 	);
@@ -391,7 +354,6 @@ export function SelectField({
 	optional,
 	required,
 	className,
-	labelClassName,
 }: SharedField & {
 	options: { value: string; label: string }[];
 	placeholder?: string;
@@ -400,15 +362,9 @@ export function SelectField({
 	return (
 		<FormField
 			control={form.control}
-			name={name as FieldPath<FieldValues>}
+			name={name}
 			render={({ field }) => (
-				<FormItem className={className} required={required}>
-					<FieldLabel
-						label={label}
-						optional={optional}
-						required={required}
-						className={labelClassName}
-					/>
+				<FieldShell {...{ className, required, label, optional, description }}>
 					<Select
 						value={field.value ? String(field.value) : undefined}
 						onValueChange={field.onChange}
@@ -430,11 +386,7 @@ export function SelectField({
 							))}
 						</SelectContent>
 					</Select>
-					{description ? (
-						<FormDescription>{description}</FormDescription>
-					) : null}
-					<FormMessage />
-				</FormItem>
+				</FieldShell>
 			)}
 		/>
 	);

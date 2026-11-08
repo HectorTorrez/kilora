@@ -4,51 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
-	"net/http/cookiejar"
-	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"kilora/api/internal/database/sqlc"
 )
 
 func TestInvitationOwnerFlow(t *testing.T) {
-	dsn := os.Getenv("TEST_DATABASE_URL")
-	if dsn == "" {
-		t.Skip("TEST_DATABASE_URL no definida")
-	}
 	ctx := context.Background()
-	db, e := pgxpool.New(ctx, dsn)
-	if e != nil {
-		t.Fatal(e)
-	}
-	defer db.Close()
-	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: "http://localhost:3300", Mailer: &fakeMailer{}}))
-	defer srv.Close()
-	client := func() *http.Client { jar, _ := cookiejar.New(nil); return &http.Client{Jar: jar} }
-	req := func(c *http.Client, method, path, body string, want int) []byte {
-		t.Helper()
-		r, _ := http.NewRequest(method, srv.URL+path, strings.NewReader(body))
-		if body != "" {
-			r.Header.Set("Content-Type", "application/json")
-		}
-		res, err := c.Do(r)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer res.Body.Close()
-		b, _ := io.ReadAll(res.Body)
-		if res.StatusCode != want {
-			t.Fatalf("%s %s: %d != %d: %s", method, path, res.StatusCode, want, b)
-		}
-		return b
-	}
+	api := newTestAPI(t)
+	db := api.db
+	client, req := api.client, api.raw
 	decodeMap := func(b []byte) map[string]any {
 		t.Helper()
 		var m map[string]any
@@ -122,7 +90,9 @@ func TestInvitationOwnerFlow(t *testing.T) {
 			ID string `json:"id"`
 		} `json:"records"`
 	}
-	_ = json.Unmarshal([]byte(hist), &historyResult)
+	if err := json.Unmarshal([]byte(hist), &historyResult); err != nil {
+		t.Fatal(err)
+	}
 	req(owner, "POST", "/api/v1/me/vehicles/"+vid+"/corrections", fmt.Sprintf(`{"history_record_id":%q,"reason":"error","changes":{"summary":"nuevo"}}`, historyResult.Records[0].ID), 403)
 	req(owner, "POST", "/api/v1/me/vehicles/"+vid+"/odometer", `{"km":100}`, 201)
 	warning := string(req(owner, "POST", "/api/v1/me/vehicles/"+vid+"/odometer", `{"km":90}`, 201))
@@ -137,7 +107,7 @@ func TestInvitationOwnerFlow(t *testing.T) {
 	}
 	id, _ := uuid.Parse(vid)
 	wid, _ := uuid.Parse(wb)
-	if err := sqlc.New(db).LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: dbUUID(id), WorkshopID: dbUUID(wid)}); err != nil {
+	if err := sqlc.New(db).LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: id, WorkshopID: wid}); err != nil {
 		t.Fatal(err)
 	}
 	blind := string(req(b, "GET", pb+"/vehicles/"+vid+"/history", "", 200))

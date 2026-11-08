@@ -4,11 +4,14 @@ export function toCents(value: string) {
 	return Number(whole) * 100 + Number(`${fraction}00`.slice(0, 2));
 }
 
-export function lineCents(quantity: string, unitPrice: string) {
-	const units = toCents(quantity);
-	const price = toCents(unitPrice);
-	if (units == null || price == null) return 0;
-	return Math.round((units * price) / 100);
+type Amount = string | number | null | undefined;
+
+export function amountCents(value: Amount) {
+	return toCents(String(value ?? 0)) ?? 0;
+}
+
+export function lineCents(quantity: Amount, unitPrice: Amount) {
+	return Math.round((amountCents(quantity) * amountCents(unitPrice)) / 100);
 }
 
 export function formatCents(cents: number) {

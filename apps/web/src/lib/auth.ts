@@ -1,39 +1,19 @@
 import type { components } from "@kilora/contracts";
-import { createApiClient } from "@kilora/contracts";
 import {
 	queryOptions,
 	useMutation,
-	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { createServerFn } from "@tanstack/react-start";
 import { api, apiError } from "./api";
 
-const serverMe = createServerFn({ method: "GET" }).handler(async () => {
-	const { getRequest } = await import("@tanstack/react-start/server");
-	const request = getRequest();
-	const baseUrl = import.meta.env.VITE_API_URL || new URL(request.url).origin;
-	const client = createApiClient(baseUrl, (input, init) => {
-		const headers = new Headers(init?.headers);
-		const cookie = request.headers.get("cookie");
-		if (cookie) headers.set("cookie", cookie);
-		return fetch(input, { ...init, headers });
-	});
-	const { data, error, response } = await client.GET("/api/v1/auth/me");
-	if (response.status === 401) return null;
-	if (error) throw apiError(error);
-	return data ?? null;
-});
 async function getMe() {
-	if (import.meta.env.SSR) return serverMe();
 	const { data, error, response } = await api.GET("/api/v1/auth/me");
 	if (response.status === 401) return null;
-	if (error) throw apiError(error);
+	if (error) throw apiError(error, response.status);
 	return data ?? null;
 }
 export const meQuery = () =>
 	queryOptions({ queryKey: ["me"], queryFn: getMe, retry: false });
-export const useMe = () => useQuery(meQuery());
 type Schemas = components["schemas"];
 export function useLogin() {
 	const qc = useQueryClient();

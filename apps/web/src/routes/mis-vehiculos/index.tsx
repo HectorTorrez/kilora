@@ -27,9 +27,9 @@ import {
 } from "@/components/kilora/form-fields";
 import {
 	optionalText,
+	optionalYearField,
 	requiredText,
 	yearBounds,
-	yearField,
 } from "@/components/kilora/form-schemas";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +81,7 @@ function Page() {
 			z.object({
 				make: requiredText("Ingresá la marca"),
 				model: requiredText("Ingresá el modelo"),
-				year: yearField(false),
+				year: optionalYearField(),
 				plate: optionalText,
 			}),
 		),

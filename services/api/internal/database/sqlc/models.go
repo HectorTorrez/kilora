@@ -8,6 +8,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -53,6 +54,15 @@ func (ns NullAuthTokenPurpose) Value() (driver.Value, error) {
 	return string(ns.AuthTokenPurpose), nil
 }
 
+func (e AuthTokenPurpose) Valid() bool {
+	switch e {
+	case AuthTokenPurposeVerifyEmail,
+		AuthTokenPurposeResetPassword:
+		return true
+	}
+	return false
+}
+
 type HistorySource string
 
 const (
@@ -93,6 +103,15 @@ func (ns NullHistorySource) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.HistorySource), nil
+}
+
+func (e HistorySource) Valid() bool {
+	switch e {
+	case HistorySourceTaller,
+		HistorySourcePropietario:
+		return true
+	}
+	return false
 }
 
 type MembershipRole string
@@ -138,6 +157,16 @@ func (ns NullMembershipRole) Value() (driver.Value, error) {
 	return string(ns.MembershipRole), nil
 }
 
+func (e MembershipRole) Valid() bool {
+	switch e {
+	case MembershipRoleAdmin,
+		MembershipRoleRecepcion,
+		MembershipRoleMecanico:
+		return true
+	}
+	return false
+}
+
 type OdometerSource string
 
 const (
@@ -179,6 +208,16 @@ func (ns NullOdometerSource) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.OdometerSource), nil
+}
+
+func (e OdometerSource) Valid() bool {
+	switch e {
+	case OdometerSourceOrden,
+		OdometerSourcePropietario,
+		OdometerSourceTaller:
+		return true
+	}
+	return false
 }
 
 type PartCategory string
@@ -227,6 +266,19 @@ func (ns NullPartCategory) Value() (driver.Value, error) {
 	return string(ns.PartCategory), nil
 }
 
+func (e PartCategory) Valid() bool {
+	switch e {
+	case PartCategoryAceite,
+		PartCategoryFrenos,
+		PartCategoryAmortiguadores,
+		PartCategoryBateria,
+		PartCategoryLlantas,
+		PartCategoryOtro:
+		return true
+	}
+	return false
+}
+
 type QuoteItemKind string
 
 const (
@@ -267,6 +319,15 @@ func (ns NullQuoteItemKind) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.QuoteItemKind), nil
+}
+
+func (e QuoteItemKind) Valid() bool {
+	switch e {
+	case QuoteItemKindRepuesto,
+		QuoteItemKindManoDeObra:
+		return true
+	}
+	return false
 }
 
 type QuoteOutcome string
@@ -313,6 +374,17 @@ func (ns NullQuoteOutcome) Value() (driver.Value, error) {
 	return string(ns.QuoteOutcome), nil
 }
 
+func (e QuoteOutcome) Valid() bool {
+	switch e {
+	case QuoteOutcomePendiente,
+		QuoteOutcomeAcepto,
+		QuoteOutcomeRechazo,
+		QuoteOutcomeNoRespondio:
+		return true
+	}
+	return false
+}
+
 type RecommendationStatus string
 
 const (
@@ -356,6 +428,16 @@ func (ns NullRecommendationStatus) Value() (driver.Value, error) {
 	return string(ns.RecommendationStatus), nil
 }
 
+func (e RecommendationStatus) Valid() bool {
+	switch e {
+	case RecommendationStatusPendiente,
+		RecommendationStatusHecha,
+		RecommendationStatusDescartada:
+		return true
+	}
+	return false
+}
+
 type VehicleStatus string
 
 const (
@@ -397,6 +479,16 @@ func (ns NullVehicleStatus) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.VehicleStatus), nil
+}
+
+func (e VehicleStatus) Valid() bool {
+	switch e {
+	case VehicleStatusProvisional,
+		VehicleStatusVinculado,
+		VehicleStatusArchivado:
+		return true
+	}
+	return false
 }
 
 type WorkOrderStatus string
@@ -444,8 +536,20 @@ func (ns NullWorkOrderStatus) Value() (driver.Value, error) {
 	return string(ns.WorkOrderStatus), nil
 }
 
+func (e WorkOrderStatus) Valid() bool {
+	switch e {
+	case WorkOrderStatusRecibido,
+		WorkOrderStatusDiagnostico,
+		WorkOrderStatusEnReparacion,
+		WorkOrderStatusListo,
+		WorkOrderStatusCancelado:
+		return true
+	}
+	return false
+}
+
 type AppUser struct {
-	ID              pgtype.UUID        `json:"id"`
+	ID              uuid.UUID          `json:"id"`
 	Email           string             `json:"email"`
 	PasswordHash    string             `json:"password_hash"`
 	FullName        string             `json:"full_name"`
@@ -457,10 +561,10 @@ type AppUser struct {
 
 type AuditEvent struct {
 	ID          int64              `json:"id"`
-	ActorUserID pgtype.UUID        `json:"actor_user_id"`
-	WorkshopID  pgtype.UUID        `json:"workshop_id"`
+	ActorUserID *uuid.UUID         `json:"actor_user_id"`
+	WorkshopID  *uuid.UUID         `json:"workshop_id"`
 	Entity      string             `json:"entity"`
-	EntityID    pgtype.UUID        `json:"entity_id"`
+	EntityID    *uuid.UUID         `json:"entity_id"`
 	Action      string             `json:"action"`
 	Diff        []byte             `json:"diff"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
@@ -468,7 +572,7 @@ type AuditEvent struct {
 
 type AuthToken struct {
 	TokenHash string             `json:"token_hash"`
-	UserID    pgtype.UUID        `json:"user_id"`
+	UserID    uuid.UUID          `json:"user_id"`
 	Purpose   AuthTokenPurpose   `json:"purpose"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 	UsedAt    pgtype.Timestamptz `json:"used_at"`
@@ -476,8 +580,8 @@ type AuthToken struct {
 }
 
 type Branch struct {
-	ID         pgtype.UUID        `json:"id"`
-	WorkshopID pgtype.UUID        `json:"workshop_id"`
+	ID         uuid.UUID          `json:"id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
 	Name       string             `json:"name"`
 	Address    *string            `json:"address"`
 	Phone      *string            `json:"phone"`
@@ -485,19 +589,19 @@ type Branch struct {
 }
 
 type Correction struct {
-	ID              pgtype.UUID        `json:"id"`
-	HistoryRecordID pgtype.UUID        `json:"history_record_id"`
+	ID              uuid.UUID          `json:"id"`
+	HistoryRecordID uuid.UUID          `json:"history_record_id"`
 	Reason          string             `json:"reason"`
 	Changes         []byte             `json:"changes"`
-	CreatedBy       pgtype.UUID        `json:"created_by"`
+	CreatedBy       uuid.UUID          `json:"created_by"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 type HistoryRecord struct {
-	ID            pgtype.UUID        `json:"id"`
-	VehicleID     pgtype.UUID        `json:"vehicle_id"`
-	WorkshopID    pgtype.UUID        `json:"workshop_id"`
-	WorkOrderID   pgtype.UUID        `json:"work_order_id"`
+	ID            uuid.UUID          `json:"id"`
+	VehicleID     uuid.UUID          `json:"vehicle_id"`
+	WorkshopID    *uuid.UUID         `json:"workshop_id"`
+	WorkOrderID   *uuid.UUID         `json:"work_order_id"`
 	Source        HistorySource      `json:"source"`
 	PerformedOn   pgtype.Date        `json:"performed_on"`
 	OdometerKm    *int32             `json:"odometer_km"`
@@ -508,28 +612,28 @@ type HistoryRecord struct {
 	WorkshopNotes *string            `json:"workshop_notes"`
 	InternalCost  pgtype.Numeric     `json:"internal_cost"`
 	InternalNotes *string            `json:"internal_notes"`
-	CreatedBy     pgtype.UUID        `json:"created_by"`
+	CreatedBy     *uuid.UUID         `json:"created_by"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
 type Invitation struct {
-	ID         pgtype.UUID        `json:"id"`
-	VehicleID  pgtype.UUID        `json:"vehicle_id"`
-	WorkshopID pgtype.UUID        `json:"workshop_id"`
+	ID         uuid.UUID          `json:"id"`
+	VehicleID  uuid.UUID          `json:"vehicle_id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
 	Email      string             `json:"email"`
 	TokenHash  string             `json:"token_hash"`
 	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
-	CreatedBy  pgtype.UUID        `json:"created_by"`
+	CreatedBy  uuid.UUID          `json:"created_by"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	AcceptedAt pgtype.Timestamptz `json:"accepted_at"`
-	AcceptedBy pgtype.UUID        `json:"accepted_by"`
+	AcceptedBy *uuid.UUID         `json:"accepted_by"`
 	ConsentAt  pgtype.Timestamptz `json:"consent_at"`
 	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
 }
 
 type Job struct {
-	ID            pgtype.UUID        `json:"id"`
-	WorkOrderID   pgtype.UUID        `json:"work_order_id"`
+	ID            uuid.UUID          `json:"id"`
+	WorkOrderID   uuid.UUID          `json:"work_order_id"`
 	Position      int32              `json:"position"`
 	Description   string             `json:"description"`
 	Category      *PartCategory      `json:"category"`
@@ -541,28 +645,28 @@ type Job struct {
 }
 
 type Membership struct {
-	ID         pgtype.UUID        `json:"id"`
-	UserID     pgtype.UUID        `json:"user_id"`
-	WorkshopID pgtype.UUID        `json:"workshop_id"`
-	BranchID   pgtype.UUID        `json:"branch_id"`
+	ID         uuid.UUID          `json:"id"`
+	UserID     uuid.UUID          `json:"user_id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
+	BranchID   uuid.UUID          `json:"branch_id"`
 	Role       MembershipRole     `json:"role"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type OdometerReading struct {
-	ID          pgtype.UUID        `json:"id"`
-	VehicleID   pgtype.UUID        `json:"vehicle_id"`
+	ID          uuid.UUID          `json:"id"`
+	VehicleID   uuid.UUID          `json:"vehicle_id"`
 	Km          int32              `json:"km"`
 	ReadAt      pgtype.Timestamptz `json:"read_at"`
 	Source      OdometerSource     `json:"source"`
-	WorkOrderID pgtype.UUID        `json:"work_order_id"`
-	RecordedBy  pgtype.UUID        `json:"recorded_by"`
+	WorkOrderID *uuid.UUID         `json:"work_order_id"`
+	RecordedBy  *uuid.UUID         `json:"recorded_by"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 type Part struct {
-	ID           pgtype.UUID        `json:"id"`
-	JobID        pgtype.UUID        `json:"job_id"`
+	ID           uuid.UUID          `json:"id"`
+	JobID        uuid.UUID          `json:"job_id"`
 	Name         string             `json:"name"`
 	Brand        *string            `json:"brand"`
 	Model        *string            `json:"model"`
@@ -574,37 +678,37 @@ type Part struct {
 }
 
 type Quote struct {
-	ID               pgtype.UUID        `json:"id"`
-	WorkOrderID      pgtype.UUID        `json:"work_order_id"`
-	WorkshopID       pgtype.UUID        `json:"workshop_id"`
+	ID               uuid.UUID          `json:"id"`
+	WorkOrderID      *uuid.UUID         `json:"work_order_id"`
+	WorkshopID       uuid.UUID          `json:"workshop_id"`
 	Total            pgtype.Numeric     `json:"total"`
 	Currency         string             `json:"currency"`
 	Outcome          QuoteOutcome       `json:"outcome"`
 	OutcomeAt        pgtype.Timestamptz `json:"outcome_at"`
-	OutcomeBy        pgtype.UUID        `json:"outcome_by"`
+	OutcomeBy        *uuid.UUID         `json:"outcome_by"`
 	ShareTokenHash   *string            `json:"share_token_hash"`
 	SharedAt         pgtype.Timestamptz `json:"shared_at"`
 	ShareExpiresAt   pgtype.Timestamptz `json:"share_expires_at"`
-	CreatedBy        pgtype.UUID        `json:"created_by"`
+	CreatedBy        uuid.UUID          `json:"created_by"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 	Number           int32              `json:"number"`
-	BranchID         pgtype.UUID        `json:"branch_id"`
+	BranchID         uuid.UUID          `json:"branch_id"`
 	CustomerName     *string            `json:"customer_name"`
 	CustomerPhone    *string            `json:"customer_phone"`
-	VehicleID        pgtype.UUID        `json:"vehicle_id"`
+	VehicleID        *uuid.UUID         `json:"vehicle_id"`
 	VehicleMake      *string            `json:"vehicle_make"`
 	VehicleModel     *string            `json:"vehicle_model"`
 	VehicleYear      *int32             `json:"vehicle_year"`
 	VehiclePlate     *string            `json:"vehicle_plate"`
 	Notes            *string            `json:"notes"`
 	ValidUntil       pgtype.Date        `json:"valid_until"`
-	ConvertedOrderID pgtype.UUID        `json:"converted_order_id"`
+	ConvertedOrderID *uuid.UUID         `json:"converted_order_id"`
 }
 
 type QuoteItem struct {
-	ID          pgtype.UUID    `json:"id"`
-	QuoteID     pgtype.UUID    `json:"quote_id"`
+	ID          uuid.UUID      `json:"id"`
+	QuoteID     uuid.UUID      `json:"quote_id"`
 	Position    int32          `json:"position"`
 	Kind        QuoteItemKind  `json:"kind"`
 	Description string         `json:"description"`
@@ -613,24 +717,24 @@ type QuoteItem struct {
 }
 
 type Recommendation struct {
-	ID          pgtype.UUID          `json:"id"`
-	VehicleID   pgtype.UUID          `json:"vehicle_id"`
-	WorkshopID  pgtype.UUID          `json:"workshop_id"`
-	WorkOrderID pgtype.UUID          `json:"work_order_id"`
+	ID          uuid.UUID            `json:"id"`
+	VehicleID   uuid.UUID            `json:"vehicle_id"`
+	WorkshopID  uuid.UUID            `json:"workshop_id"`
+	WorkOrderID *uuid.UUID           `json:"work_order_id"`
 	Description string               `json:"description"`
 	Category    *PartCategory        `json:"category"`
 	DueDate     pgtype.Date          `json:"due_date"`
 	DueKm       *int32               `json:"due_km"`
 	Status      RecommendationStatus `json:"status"`
 	ResolvedAt  pgtype.Timestamptz   `json:"resolved_at"`
-	ResolvedBy  pgtype.UUID          `json:"resolved_by"`
-	CreatedBy   pgtype.UUID          `json:"created_by"`
+	ResolvedBy  *uuid.UUID           `json:"resolved_by"`
+	CreatedBy   uuid.UUID            `json:"created_by"`
 	CreatedAt   pgtype.Timestamptz   `json:"created_at"`
 }
 
 type Session struct {
 	ID         string             `json:"id"`
-	UserID     pgtype.UUID        `json:"user_id"`
+	UserID     uuid.UUID          `json:"user_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
 	LastSeenAt pgtype.Timestamptz `json:"last_seen_at"`
@@ -639,9 +743,9 @@ type Session struct {
 }
 
 type Vehicle struct {
-	ID                  pgtype.UUID        `json:"id"`
-	OwnerUserID         pgtype.UUID        `json:"owner_user_id"`
-	CreatedByWorkshopID pgtype.UUID        `json:"created_by_workshop_id"`
+	ID                  uuid.UUID          `json:"id"`
+	OwnerUserID         *uuid.UUID         `json:"owner_user_id"`
+	CreatedByWorkshopID *uuid.UUID         `json:"created_by_workshop_id"`
 	Status              VehicleStatus      `json:"status"`
 	Plate               *string            `json:"plate"`
 	Make                string             `json:"make"`
@@ -657,16 +761,16 @@ type Vehicle struct {
 }
 
 type VehicleLink struct {
-	VehicleID  pgtype.UUID        `json:"vehicle_id"`
-	WorkshopID pgtype.UUID        `json:"workshop_id"`
+	VehicleID  uuid.UUID          `json:"vehicle_id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type WorkOrder struct {
-	ID            pgtype.UUID        `json:"id"`
-	WorkshopID    pgtype.UUID        `json:"workshop_id"`
-	BranchID      pgtype.UUID        `json:"branch_id"`
-	VehicleID     pgtype.UUID        `json:"vehicle_id"`
+	ID            uuid.UUID          `json:"id"`
+	WorkshopID    uuid.UUID          `json:"workshop_id"`
+	BranchID      uuid.UUID          `json:"branch_id"`
+	VehicleID     uuid.UUID          `json:"vehicle_id"`
 	Number        int32              `json:"number"`
 	Status        WorkOrderStatus    `json:"status"`
 	Reason        string             `json:"reason"`
@@ -676,14 +780,14 @@ type WorkOrder struct {
 	CompletedAt   pgtype.Timestamptz `json:"completed_at"`
 	CancelledAt   pgtype.Timestamptz `json:"cancelled_at"`
 	CancelReason  *string            `json:"cancel_reason"`
-	CreatedBy     pgtype.UUID        `json:"created_by"`
+	CreatedBy     uuid.UUID          `json:"created_by"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	PublicNotes   *string            `json:"public_notes"`
 }
 
 type Workshop struct {
-	ID         pgtype.UUID        `json:"id"`
+	ID         uuid.UUID          `json:"id"`
 	Name       string             `json:"name"`
 	Nit        *string            `json:"nit"`
 	VerifiedAt pgtype.Timestamptz `json:"verified_at"`

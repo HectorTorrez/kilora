@@ -1,9 +1,6 @@
 -- name: CreateHistoryRecord :one
 INSERT INTO history_record (vehicle_id, workshop_id, work_order_id, source, performed_on, odometer_km, summary, items, total, currency, workshop_notes, internal_cost, internal_notes, created_by) VALUES (sqlc.arg(vehicle_id), sqlc.arg(workshop_id), sqlc.arg(work_order_id), sqlc.arg(source), sqlc.arg(performed_on), sqlc.arg(odometer_km), sqlc.arg(summary), sqlc.arg(items), sqlc.arg(total), sqlc.arg(currency), sqlc.arg(workshop_notes), sqlc.arg(internal_cost), sqlc.arg(internal_notes), sqlc.arg(created_by)) RETURNING *;
 
--- name: GetHistoryRecord :one
-SELECT h.* FROM history_record h JOIN vehicle_link l ON l.vehicle_id = h.vehicle_id WHERE h.id = sqlc.arg(id) AND l.workshop_id = sqlc.arg(workshop_id);
-
 -- name: ListHistoryByVehicle :many
 SELECT h.* FROM history_record h JOIN vehicle_link l ON l.vehicle_id = h.vehicle_id WHERE h.vehicle_id = sqlc.arg(vehicle_id) AND l.workshop_id = sqlc.arg(workshop_id) ORDER BY h.performed_on DESC, h.created_at DESC;
 

@@ -2,13 +2,12 @@ package history
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
-	"kilora/api/internal/database/sqlc"
 )
+
+const dateLayout = "2006-01-02"
 
 type Item struct {
 	Kind          string   `json:"kind"`
@@ -28,7 +27,6 @@ func DecodeItems(data []byte) ([]Item, error) {
 	err := json.Unmarshal(data, &items)
 	return items, err
 }
-func EncodeItems(items []Item) ([]byte, error) { return json.Marshal(items) }
 
 type ViewerKind int
 
@@ -40,7 +38,6 @@ const (
 )
 
 type Viewer struct {
-	UserID         *uuid.UUID
 	WorkshopID     *uuid.UUID
 	WorkshopLinked bool
 	IsOwner        bool
@@ -146,7 +143,7 @@ func filteredChanges(changes map[string]json.RawMessage, kind ViewerKind) map[st
 		case "items":
 			items, err := DecodeItems(v)
 			if err == nil {
-				b, err := EncodeItems(filterItems(items, kind))
+				b, err := json.Marshal(filterItems(items, kind))
 				if err == nil {
 					out[k] = b
 				}
@@ -166,7 +163,7 @@ func Project(kind ViewerKind, rec Record) (Projected, bool) {
 	if kind != ViewerOwner && kind != ViewerAuthorWorkshop && kind != ViewerLinkedWorkshop {
 		return Projected{}, false
 	}
-	p := Projected{ID: rec.ID, PerformedOn: rec.PerformedOn.Format("2006-01-02"), OdometerKm: rec.OdometerKm, Source: rec.Source, Summary: rec.Summary, Items: filterItems(rec.Items, kind)}
+	p := Projected{ID: rec.ID, PerformedOn: rec.PerformedOn.Format(dateLayout), OdometerKm: rec.OdometerKm, Source: rec.Source, Summary: rec.Summary, Items: filterItems(rec.Items, kind)}
 	if kind != ViewerLinkedWorkshop {
 		p.Total = rec.Total
 		p.Currency = &rec.Currency
@@ -204,57 +201,4 @@ func Project(kind ViewerKind, rec Record) (Projected, bool) {
 		p.Corrections = append(p.Corrections, pc)
 	}
 	return p, true
-}
-func ProjectAll(kind ViewerKind, records []Record) []Projected {
-	out := make([]Projected, 0, len(records))
-	for _, r := range records {
-		if p, ok := Project(kind, r); ok {
-			out = append(out, p)
-		}
-	}
-	return out
-}
-func uuidPtr(id pgtype.UUID) *uuid.UUID {
-	if !id.Valid {
-		return nil
-	}
-	v := uuid.UUID(id.Bytes)
-	return &v
-}
-func numeric(n pgtype.Numeric) (*string, error) {
-	if !n.Valid {
-		return nil, nil
-	}
-	v, err := n.Value()
-	if err != nil {
-		return nil, err
-	}
-	s, ok := v.(string)
-	if !ok {
-		return nil, fmt.Errorf("numeric inesperado: %T", v)
-	}
-	return &s, nil
-}
-func FromSQLC(r sqlc.HistoryRecord, workshopName *string, corrections []sqlc.Correction) (Record, error) {
-	items, err := DecodeItems(r.Items)
-	if err != nil {
-		return Record{}, err
-	}
-	total, err := numeric(r.Total)
-	if err != nil {
-		return Record{}, err
-	}
-	cost, err := numeric(r.InternalCost)
-	if err != nil {
-		return Record{}, err
-	}
-	out := Record{ID: uuid.UUID(r.ID.Bytes), WorkshopID: uuidPtr(r.WorkshopID), WorkshopName: workshopName, Source: string(r.Source), PerformedOn: r.PerformedOn.Time, OdometerKm: r.OdometerKm, Summary: r.Summary, Items: items, Total: total, Currency: r.Currency, WorkshopNotes: r.WorkshopNotes, InternalCost: cost, InternalNotes: r.InternalNotes, CreatedBy: uuidPtr(r.CreatedBy)}
-	for _, c := range corrections {
-		var changes map[string]json.RawMessage
-		if err := json.Unmarshal(c.Changes, &changes); err != nil {
-			return Record{}, err
-		}
-		out.Corrections = append(out.Corrections, Correction{ID: uuid.UUID(c.ID.Bytes), Reason: c.Reason, Changes: changes, CreatedBy: uuid.UUID(c.CreatedBy.Bytes), CreatedAt: c.CreatedAt.Time})
-	}
-	return out, nil
 }

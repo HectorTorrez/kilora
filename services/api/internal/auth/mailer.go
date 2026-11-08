@@ -22,7 +22,6 @@ func (m LogMailer) Send(_ context.Context, to, subject, body string) error {
 
 type ResendMailer struct {
 	APIKey, From string
-	Client       *http.Client
 }
 
 func (m ResendMailer) Send(ctx context.Context, to, subject, body string) error {
@@ -36,11 +35,7 @@ func (m ResendMailer) Send(ctx context.Context, to, subject, body string) error 
 	}
 	req.Header.Set("Authorization", "Bearer "+m.APIKey)
 	req.Header.Set("Content-Type", "application/json")
-	client := m.Client
-	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Second}
-	}
-	resp, err := client.Do(req)
+	resp, err := (&http.Client{Timeout: 10 * time.Second}).Do(req)
 	if err != nil {
 		return err
 	}

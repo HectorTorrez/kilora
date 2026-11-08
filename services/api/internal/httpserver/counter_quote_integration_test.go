@@ -2,59 +2,18 @@ package httpserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
-	"net/http/cookiejar"
-	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestCounterQuotes(t *testing.T) {
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("TEST_DATABASE_URL no definida")
-	}
-	db, err := pgxpool.New(context.Background(), url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: "http://localhost:3300", Mailer: &fakeMailer{}}))
-	defer srv.Close()
-	client := func() *http.Client {
-		jar, _ := cookiejar.New(nil)
-		return &http.Client{Jar: jar}
-	}
-	req := func(c *http.Client, method, path, body string, want int) any {
-		t.Helper()
-		r, _ := http.NewRequest(method, srv.URL+path, strings.NewReader(body))
-		r.Header.Set("Origin", "http://localhost:3300")
-		if body != "" {
-			r.Header.Set("Content-Type", "application/json")
-		}
-		resp, e := c.Do(r)
-		if e != nil {
-			t.Fatal(e)
-		}
-		defer resp.Body.Close()
-		data, _ := io.ReadAll(resp.Body)
-		if resp.StatusCode != want {
-			t.Fatalf("%s %s: %d, esperaba %d: %s", method, path, resp.StatusCode, want, data)
-		}
-		var v any
-		if len(bytesTrim(data)) > 0 {
-			_ = json.Unmarshal(data, &v)
-		}
-		return v
-	}
+	api := newTestAPI(t)
+	db := api.db
+	client, req := api.client, api.req
 	setup := func(c *http.Client) (string, string) {
 		t.Helper()
 		req(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Recepción"}`, uuid.NewString()+"@example.com"), 201)

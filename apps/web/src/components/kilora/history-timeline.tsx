@@ -1,42 +1,15 @@
 import type { components } from "@kilora/contracts";
 import { BadgeCheck, EyeOff, History as HistoryIcon, Lock } from "lucide-react";
+import { HistoryItems } from "@/components/kilora/history-record";
 import { EmptyState } from "@/components/kilora/workshop-ui";
 import { day, km, money } from "@/lib/format";
 
 type S = components["schemas"];
 
-export const categoryLabels: Record<string, string> = {
-	aceite: "Aceite",
-	frenos: "Frenos",
-	amortiguadores: "Amortiguadores",
-	bateria: "Batería",
-	llantas: "Llantas",
-};
-
-/** Último registro por categoría de pieza, a partir del historial proyectado. */
-export function lastByCategory(records: S["HistoryRecord"][]) {
-	const sorted = [...records].sort((a, b) =>
-		b.performed_on.localeCompare(a.performed_on),
-	);
-	return Object.keys(categoryLabels).map((category) => {
-		const record = sorted.find((r) =>
-			r.items.some((i) => i.category === category),
-		);
-		return {
-			category,
-			label: categoryLabels[category],
-			record,
-			item: record?.items.find((i) => i.category === category),
-		};
-	});
-}
-
 export function HistoryTimeline({
 	records,
-	showPrivate = true,
 }: {
 	records: S["HistoryRecord"][];
-	showPrivate?: boolean;
 }) {
 	if (!records.length)
 		return (
@@ -87,32 +60,8 @@ export function HistoryTimeline({
 								</>
 							)}
 						</p>
-						{r.items.length > 0 && (
-							<ul className="mt-2.5 divide-y rounded-md border bg-background/50 text-[13px]">
-								{r.items.map((item, i) => (
-									<li
-										// biome-ignore lint/suspicious/noArrayIndexKey: items have no IDs.
-										key={i}
-										className="flex items-center justify-between gap-3 px-3 py-1.5"
-									>
-										<span className="min-w-0">
-											{item.description || item.name}
-											{item.category && categoryLabels[item.category] && (
-												<span className="ml-2 rounded bg-secondary px-1.5 py-px text-[10.5px] font-medium text-ink-2">
-													{categoryLabels[item.category]}
-												</span>
-											)}
-										</span>
-										{item.price && (
-											<span className="font-mono text-xs tabular-nums">
-												{money(item.price)}
-											</span>
-										)}
-									</li>
-								))}
-							</ul>
-						)}
-						{(r.total || (showPrivate && r.internal_cost)) && (
+						<HistoryItems items={r.items} appearance="categorized" />
+						{(r.total || r.internal_cost) && (
 							<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs">
 								{r.total && (
 									<span>
@@ -122,7 +71,7 @@ export function HistoryTimeline({
 										</strong>
 									</span>
 								)}
-								{showPrivate && r.internal_cost && (
+								{r.internal_cost && (
 									<span className="inline-flex items-center gap-1 text-ink-3">
 										<Lock className="size-3" />
 										Costo interno {money(r.internal_cost)}
@@ -135,7 +84,7 @@ export function HistoryTimeline({
 								<span className="font-medium">Notas:</span> {r.workshop_notes}
 							</p>
 						)}
-						{showPrivate && r.internal_notes && (
+						{r.internal_notes && (
 							<p className="mt-1 inline-flex items-start gap-1 text-xs text-ink-3">
 								<Lock className="mt-0.5 size-3 shrink-0" />
 								{r.internal_notes}
