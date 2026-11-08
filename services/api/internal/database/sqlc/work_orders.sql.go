@@ -156,11 +156,12 @@ func (q *Queries) GetWorkOrder(ctx context.Context, arg GetWorkOrderParams) (Wor
 }
 
 const listWorkOrdersByWorkshop = `-- name: ListWorkOrdersByWorkshop :many
-SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status, wo.reason, wo.odometer_km, wo.internal_notes, wo.received_at, wo.completed_at, wo.cancelled_at, wo.cancel_reason, wo.created_by, wo.created_at, wo.updated_at, wo.public_notes, v.plate, v.make, v.model FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id WHERE wo.workshop_id = $1 AND ($2::work_order_status IS NULL OR wo.status = $2) AND ($3::uuid IS NULL OR wo.branch_id = $3) ORDER BY wo.received_at DESC
+SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status, wo.reason, wo.odometer_km, wo.internal_notes, wo.received_at, wo.completed_at, wo.cancelled_at, wo.cancel_reason, wo.created_by, wo.created_at, wo.updated_at, wo.public_notes, v.plate, v.make, v.model FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id WHERE wo.workshop_id = $1 AND wo.branch_id = ANY($2::uuid[]) AND ($3::work_order_status IS NULL OR wo.status = $3) AND ($4::uuid IS NULL OR wo.branch_id = $4) ORDER BY wo.received_at DESC
 `
 
 type ListWorkOrdersByWorkshopParams struct {
 	WorkshopID uuid.UUID        `json:"workshop_id"`
+	BranchIds  []uuid.UUID      `json:"branch_ids"`
 	Status     *WorkOrderStatus `json:"status"`
 	BranchID   *uuid.UUID       `json:"branch_id"`
 }
@@ -189,7 +190,12 @@ type ListWorkOrdersByWorkshopRow struct {
 }
 
 func (q *Queries) ListWorkOrdersByWorkshop(ctx context.Context, arg ListWorkOrdersByWorkshopParams) ([]ListWorkOrdersByWorkshopRow, error) {
-	rows, err := q.db.Query(ctx, listWorkOrdersByWorkshop, arg.WorkshopID, arg.Status, arg.BranchID)
+	rows, err := q.db.Query(ctx, listWorkOrdersByWorkshop,
+		arg.WorkshopID,
+		arg.BranchIds,
+		arg.Status,
+		arg.BranchID,
+	)
 	if err != nil {
 		return nil, err
 	}

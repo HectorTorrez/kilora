@@ -120,7 +120,13 @@ func (s *server) findOrder(ctx context.Context, r *http.Request, wc workshopAcce
 		return sqlc.WorkOrder{}, err
 	}
 	o, err := sqlc.New(s.db).GetWorkOrder(ctx, sqlc.GetWorkOrderParams{ID: id, WorkshopID: wc.workshopID})
-	return o, notFoundIfMissing(err, orderNotFound)
+	if err != nil {
+		return o, notFoundIfMissing(err, orderNotFound)
+	}
+	if !wc.canReadBranch(o.BranchID) {
+		return o, notFound(orderNotFound)
+	}
+	return o, nil
 }
 
 func (s *server) getOrder(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
@@ -196,7 +202,7 @@ func (s *server) listOrders(w http.ResponseWriter, r *http.Request, wc workshopA
 		}
 		branch = &id
 	}
-	rows, err := sqlc.New(s.db).ListWorkOrdersByWorkshop(r.Context(), sqlc.ListWorkOrdersByWorkshopParams{WorkshopID: wc.workshopID, Status: status, BranchID: branch})
+	rows, err := sqlc.New(s.db).ListWorkOrdersByWorkshop(r.Context(), sqlc.ListWorkOrdersByWorkshopParams{WorkshopID: wc.workshopID, Status: status, BranchID: branch, BranchIds: wc.branchIDs})
 	if err != nil {
 		return err
 	}
@@ -278,6 +284,9 @@ func (s *server) withOpenOrder(r *http.Request, wc workshopAccess, fn func(q *sq
 		o, err := q.LockWorkOrder(ctx, sqlc.LockWorkOrderParams{ID: id, WorkshopID: wc.workshopID})
 		if err != nil {
 			return auditEvent{}, notFoundIfMissing(err, orderNotFound)
+		}
+		if !wc.canReadBranch(o.BranchID) {
+			return auditEvent{}, notFound(orderNotFound)
 		}
 		if err = wc.requireBranchWriter(o.BranchID); err != nil {
 			return auditEvent{}, err

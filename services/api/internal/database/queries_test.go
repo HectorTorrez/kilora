@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"kilora/api/internal/database/sqlc"
@@ -66,7 +67,7 @@ func TestQueriesIntegration(t *testing.T) {
 	if len(memberships) != 1 {
 		t.Fatal("memberships")
 	}
-	orders, err := q.ListWorkOrdersByWorkshop(ctx, sqlc.ListWorkOrdersByWorkshopParams{WorkshopID: w.ID})
+	orders, err := q.ListWorkOrdersByWorkshop(ctx, sqlc.ListWorkOrdersByWorkshopParams{WorkshopID: w.ID, BranchIds: []uuid.UUID{b.ID}})
 	check(err)
 	if len(orders) != 1 {
 		t.Fatal("orders")

@@ -99,6 +99,7 @@ SELECT
 FROM quote q
 LEFT JOIN work_order o ON o.id = q.converted_order_id
 WHERE q.workshop_id = sqlc.arg(workshop_id)
+  AND q.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
   AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
   AND (sqlc.narg(outcome)::quote_outcome IS NULL OR q.outcome = sqlc.narg(outcome))
   AND (

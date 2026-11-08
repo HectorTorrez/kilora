@@ -36,6 +36,9 @@ func (s *server) addMember(w http.ResponseWriter, r *http.Request, wc workshopAc
 	if !in.Role.Valid() {
 		return badRequest("Rol inválido")
 	}
+	if err := wc.requireBranchAdmin(in.BranchID); err != nil {
+		return err
+	}
 	ctx := r.Context()
 	user, err := sqlc.New(s.db).GetUserByEmail(ctx, normalizedEmail(in.Email))
 	if err != nil {
@@ -74,6 +77,9 @@ func (s *server) removeMember(w http.ResponseWriter, r *http.Request, wc worksho
 		m, err := q.GetMembershipInWorkshop(ctx, sqlc.GetMembershipInWorkshopParams{ID: id, WorkshopID: wc.workshopID})
 		if err != nil {
 			return auditEvent{}, notFoundIfMissing(err, "Miembro no encontrado")
+		}
+		if err = wc.requireBranchAdmin(m.BranchID); err != nil {
+			return auditEvent{}, err
 		}
 		if m.Role == sqlc.MembershipRoleAdmin {
 			n, err := q.CountAdmins(ctx, wc.workshopID)

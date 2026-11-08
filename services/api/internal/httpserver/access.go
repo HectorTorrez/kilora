@@ -21,6 +21,7 @@ type workshopAccess struct {
 	role               sqlc.MembershipRole
 	branchIDs          []uuid.UUID
 	writeBranchIDs     []uuid.UUID
+	adminBranchIDs     []uuid.UUID
 }
 
 type workshopHandler func(w http.ResponseWriter, r *http.Request, wc workshopAccess) error
@@ -39,31 +40,36 @@ func canWrite(role sqlc.MembershipRole) bool {
 	return role == sqlc.MembershipRoleRecepcion || role == sqlc.MembershipRoleAdmin
 }
 
-func (a workshopAccess) canWriteBranch(id uuid.UUID) bool {
-	if a.role == sqlc.MembershipRoleAdmin {
-		return true
-	}
-	for _, b := range a.writeBranchIDs {
-		if b == id {
+func contains(ids []uuid.UUID, id uuid.UUID) bool {
+	for _, v := range ids {
+		if v == id {
 			return true
 		}
 	}
 	return false
 }
 
+func (a workshopAccess) canReadBranch(id uuid.UUID) bool  { return contains(a.branchIDs, id) }
+func (a workshopAccess) canWriteBranch(id uuid.UUID) bool { return contains(a.writeBranchIDs, id) }
+
+// requireWriter covers workshop-wide records such as vehicles, which do not belong to a branch.
 func (a workshopAccess) requireWriter() error {
-	if a.role == sqlc.MembershipRoleMecanico {
+	if len(a.writeBranchIDs) == 0 {
 		return errAccessDenied
 	}
 	return nil
 }
 
 func (a workshopAccess) requireBranchWriter(id uuid.UUID) error {
-	if err := a.requireWriter(); err != nil {
-		return err
-	}
 	if !a.canWriteBranch(id) {
 		return errAccessDenied
+	}
+	return nil
+}
+
+func (a workshopAccess) requireBranchAdmin(id uuid.UUID) error {
+	if !contains(a.adminBranchIDs, id) {
+		return forbidden("Solo un administrador puede hacer esto")
 	}
 	return nil
 }

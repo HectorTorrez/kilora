@@ -118,7 +118,7 @@ func (s *server) createRecommendation(w http.ResponseWriter, r *http.Request, wc
 			if err != nil {
 				return auditEvent{}, err
 			}
-			if o.VehicleID != id {
+			if o.VehicleID != id || !wc.canReadBranch(o.BranchID) {
 				return auditEvent{}, pgx.ErrNoRows
 			}
 			params.WorkOrderID = &o.ID

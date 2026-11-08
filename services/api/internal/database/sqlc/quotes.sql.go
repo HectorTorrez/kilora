@@ -344,22 +344,24 @@ SELECT
 FROM quote q
 LEFT JOIN work_order o ON o.id = q.converted_order_id
 WHERE q.workshop_id = $1
+  AND q.branch_id = ANY($2::uuid[])
   AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
-  AND ($2::quote_outcome IS NULL OR q.outcome = $2)
+  AND ($3::quote_outcome IS NULL OR q.outcome = $3)
   AND (
-    $3::text IS NULL
-    OR q.customer_name ILIKE $3 ESCAPE '\'
-    OR COALESCE(q.customer_phone, '') ILIKE $3 ESCAPE '\'
-    OR COALESCE(q.vehicle_plate, '') ILIKE $3 ESCAPE '\'
-    OR q.number::text ILIKE $3 ESCAPE '\'
-    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $3 ESCAPE '\'
+    $4::text IS NULL
+    OR q.customer_name ILIKE $4 ESCAPE '\'
+    OR COALESCE(q.customer_phone, '') ILIKE $4 ESCAPE '\'
+    OR COALESCE(q.vehicle_plate, '') ILIKE $4 ESCAPE '\'
+    OR q.number::text ILIKE $4 ESCAPE '\'
+    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $4 ESCAPE '\'
   )
 ORDER BY q.created_at DESC, q.number DESC
-LIMIT $5 OFFSET $4
+LIMIT $6 OFFSET $5
 `
 
 type ListCounterQuotesParams struct {
 	WorkshopID uuid.UUID     `json:"workshop_id"`
+	BranchIds  []uuid.UUID   `json:"branch_ids"`
 	Outcome    *QuoteOutcome `json:"outcome"`
 	Search     *string       `json:"search"`
 	RowOffset  int32         `json:"row_offset"`
@@ -388,6 +390,7 @@ type ListCounterQuotesRow struct {
 func (q *Queries) ListCounterQuotes(ctx context.Context, arg ListCounterQuotesParams) ([]ListCounterQuotesRow, error) {
 	rows, err := q.db.Query(ctx, listCounterQuotes,
 		arg.WorkshopID,
+		arg.BranchIds,
 		arg.Outcome,
 		arg.Search,
 		arg.RowOffset,

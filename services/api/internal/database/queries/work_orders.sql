@@ -13,7 +13,7 @@ RETURNING *;
 SELECT * FROM work_order WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id);
 
 -- name: ListWorkOrdersByWorkshop :many
-SELECT wo.*, v.plate, v.make, v.model FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id WHERE wo.workshop_id = sqlc.arg(workshop_id) AND (sqlc.narg(status)::work_order_status IS NULL OR wo.status = sqlc.narg(status)) AND (sqlc.narg(branch_id)::uuid IS NULL OR wo.branch_id = sqlc.narg(branch_id)) ORDER BY wo.received_at DESC;
+SELECT wo.*, v.plate, v.make, v.model FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id WHERE wo.workshop_id = sqlc.arg(workshop_id) AND wo.branch_id = ANY(sqlc.arg(branch_ids)::uuid[]) AND (sqlc.narg(status)::work_order_status IS NULL OR wo.status = sqlc.narg(status)) AND (sqlc.narg(branch_id)::uuid IS NULL OR wo.branch_id = sqlc.narg(branch_id)) ORDER BY wo.received_at DESC;
 
 -- name: TransitionWorkOrderStatus :execrows
 UPDATE work_order SET status = sqlc.arg(status), completed_at = sqlc.narg(completed_at), cancelled_at = sqlc.narg(cancelled_at), cancel_reason = sqlc.narg(cancel_reason) WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id) AND status = sqlc.arg(previous_status);

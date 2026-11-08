@@ -393,7 +393,13 @@ func (s *server) findCounterQuote(r *http.Request, wc workshopAccess) (sqlc.GetC
 		return sqlc.GetCounterQuoteRow{}, err
 	}
 	row, err := sqlc.New(s.db).GetCounterQuote(r.Context(), sqlc.GetCounterQuoteParams{ID: id, WorkshopID: wc.workshopID})
-	return row, notFoundIfMissing(err, quoteNotFound)
+	if err != nil {
+		return row, notFoundIfMissing(err, quoteNotFound)
+	}
+	if !wc.canReadBranch(row.BranchID) {
+		return row, notFound(quoteNotFound)
+	}
+	return row, nil
 }
 
 func (s *server) writableCounterQuote(r *http.Request, wc workshopAccess) (sqlc.GetCounterQuoteRow, error) {
@@ -488,7 +494,7 @@ func (s *server) listCounterQuotes(w http.ResponseWriter, r *http.Request, wc wo
 		}
 		outcome = &x
 	}
-	rows, err := sqlc.New(s.db).ListCounterQuotes(r.Context(), sqlc.ListCounterQuotesParams{WorkshopID: wc.workshopID, Outcome: outcome, Search: searchPattern(r.URL.Query().Get("q")), RowLimit: limit, RowOffset: offset})
+	rows, err := sqlc.New(s.db).ListCounterQuotes(r.Context(), sqlc.ListCounterQuotesParams{WorkshopID: wc.workshopID, BranchIds: wc.branchIDs, Outcome: outcome, Search: searchPattern(r.URL.Query().Get("q")), RowLimit: limit, RowOffset: offset})
 	if err != nil {
 		return err
 	}

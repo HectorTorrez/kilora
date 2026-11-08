@@ -177,6 +177,9 @@ func (s *server) requireWorkshop(next http.Handler) http.Handler {
 			if canWrite(row.Role) {
 				wc.writeBranchIDs = append(wc.writeBranchIDs, row.BranchID)
 			}
+			if row.Role == sqlc.MembershipRoleAdmin {
+				wc.adminBranchIDs = append(wc.adminBranchIDs, row.BranchID)
+			}
 			if rank[row.Role] > rank[wc.role] {
 				wc.role = row.Role
 			}
