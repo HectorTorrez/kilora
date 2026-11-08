@@ -21,10 +21,11 @@ import (
 const testOrigin = "http://localhost:3300"
 
 type testAPI struct {
-	t   *testing.T
-	db  *pgxpool.Pool
-	q   *sqlc.Queries
-	srv *httptest.Server
+	t    *testing.T
+	db   *pgxpool.Pool
+	q    *sqlc.Queries
+	srv  *httptest.Server
+	mail *fakeMailer
 }
 
 func newTestAPI(t *testing.T) *testAPI {
@@ -38,9 +39,10 @@ func newTestAPI(t *testing.T) *testAPI {
 		t.Fatal(err)
 	}
 	t.Cleanup(db.Close)
-	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: testOrigin, Mailer: &fakeMailer{}}))
+	mail := &fakeMailer{}
+	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: testOrigin, Mailer: mail}))
 	t.Cleanup(srv.Close)
-	return &testAPI{t: t, db: db, q: sqlc.New(db), srv: srv}
+	return &testAPI{t: t, db: db, q: sqlc.New(db), srv: srv, mail: mail}
 }
 
 func (a *testAPI) client() *http.Client {
@@ -71,9 +73,19 @@ func (a *testAPI) req(c *http.Client, method, path, body string, want int) any {
 	return v
 }
 
+func (a *testAPI) raw(c *http.Client, method, path, body string, want int) []byte {
+	a.t.Helper()
+	data, err := json.Marshal(a.req(c, method, path, body, want))
+	if err != nil {
+		a.t.Fatal(err)
+	}
+	return data
+}
+
 func (a *testAPI) obj(c *http.Client, method, path, body string, want int) map[string]any {
 	a.t.Helper()
-	return a.req(c, method, path, body, want).(map[string]any)
+	v, _ := a.req(c, method, path, body, want).(map[string]any)
+	return v
 }
 
 func (a *testAPI) register(c *http.Client) (uuid.UUID, string) {

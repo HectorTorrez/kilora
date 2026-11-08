@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Ejecuta goose cargando las variables del .env de la raíz.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

@@ -20,7 +20,6 @@ type Config struct {
 	DemoMode     bool
 }
 
-// Load lee el .env de la raíz del repo si existe y valida lo indispensable.
 func Load() (Config, error) {
 	// El proceso puede arrancar desde la raíz del repo o desde services/api.
 	for _, file := range []string{"../../.env", ".env"} {

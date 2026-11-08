@@ -1,5 +1,3 @@
-// Datos públicos del sitio. Se usan en la landing, en las etiquetas <head>
-// y en los datos estructurados (JSON-LD) para buscadores y motores de IA.
 
 export const SITE_URL = (
 	import.meta.env.VITE_SITE_URL || "https://kilora.app"

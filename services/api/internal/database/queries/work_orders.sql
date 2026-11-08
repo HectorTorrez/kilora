@@ -2,7 +2,6 @@
 -- name: NextWorkOrderNumber :one
 SELECT (COALESCE(MAX(number), 0) + 1)::int AS number FROM work_order WHERE workshop_id = sqlc.arg(workshop_id);
 
--- CreateWorkOrder solo inserta si el vehículo está vinculado al taller; sin vínculo no devuelve filas.
 -- name: CreateWorkOrder :one
 INSERT INTO work_order (workshop_id, branch_id, vehicle_id, number, reason, odometer_km, internal_notes, created_by)
 SELECT sqlc.arg(workshop_id), sqlc.arg(branch_id), sqlc.arg(vehicle_id), sqlc.arg(number), sqlc.arg(reason), sqlc.narg(odometer_km), sqlc.narg(internal_notes), sqlc.arg(created_by)

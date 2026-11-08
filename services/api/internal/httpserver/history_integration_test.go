@@ -4,52 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
-	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"kilora/api/internal/database/sqlc"
 )
 
 func TestHistoryHTTP(t *testing.T) {
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("TEST_DATABASE_URL no definida")
-	}
 	ctx := context.Background()
-	db, err := pgxpool.New(ctx, url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: "http://localhost:3300", Mailer: &fakeMailer{}}))
-	defer srv.Close()
-	request := func(c *http.Client, method, path, body string, want int) []byte {
-		t.Helper()
-		req, _ := http.NewRequest(method, srv.URL+path, strings.NewReader(body))
-		if body != "" {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		resp, e := c.Do(req)
-		if e != nil {
-			t.Fatal(e)
-		}
-		defer resp.Body.Close()
-		b, _ := io.ReadAll(resp.Body)
-		if resp.StatusCode != want {
-			t.Fatalf("%s: %d != %d: %s", path, resp.StatusCode, want, b)
-		}
-		return b
-	}
+	api := newTestAPI(t)
+	db := api.db
+	request := api.raw
 	register := func() (*http.Client, uuid.UUID) {
 		t.Helper()
 		jar, _ := cookiejar.New(nil)

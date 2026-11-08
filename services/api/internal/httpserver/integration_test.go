@@ -1,18 +1,10 @@
 package httpserver
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"io"
-	"log/slog"
 	"net/http"
-	"net/http/cookiejar"
-	"net/http/httptest"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -30,42 +22,10 @@ func (m *fakeMailer) Send(_ context.Context, _, _, body string) error {
 	return nil
 }
 func TestAuthAndWorkshops(t *testing.T) {
-	url := os.Getenv("TEST_DATABASE_URL")
-	if url == "" {
-		t.Skip("TEST_DATABASE_URL no definida")
-	}
-	db, err := pgxpool.New(context.Background(), url)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer db.Close()
-	mailer := &fakeMailer{}
-	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: "http://localhost:3300", Mailer: mailer}))
-	defer srv.Close()
-	client := func() *http.Client { jar, _ := cookiejar.New(nil); return &http.Client{Jar: jar} }
+	api := newTestAPI(t)
+	mailer := api.mail
+	client, request := api.client, api.obj
 	a, b := client(), client()
-	request := func(c *http.Client, method, path, body string, want int) map[string]any {
-		t.Helper()
-		req, _ := http.NewRequest(method, srv.URL+path, strings.NewReader(body))
-		req.Header.Set("Origin", "http://localhost:3300")
-		if body != "" {
-			req.Header.Set("Content-Type", "application/json")
-		}
-		resp, e := c.Do(req)
-		if e != nil {
-			t.Fatal(e)
-		}
-		defer resp.Body.Close()
-		data, _ := io.ReadAll(resp.Body)
-		if resp.StatusCode != want {
-			t.Fatalf("%s %s: %d, esperaba %d: %s", method, path, resp.StatusCode, want, data)
-		}
-		var result map[string]any
-		if len(bytes.TrimSpace(data)) > 0 {
-			_ = json.Unmarshal(data, &result)
-		}
-		return result
-	}
 	email := uuid.NewString() + "@example.com"
 	register := func(c *http.Client, email string) {
 		request(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, email), 201)

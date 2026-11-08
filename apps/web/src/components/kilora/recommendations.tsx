@@ -26,7 +26,6 @@ import { cn } from "@/lib/utils";
 type Rec = components["schemas"]["Recommendation"];
 export type Urgency = "vencida" | "proxima" | "programada";
 
-/** Vencida si pasó la fecha o el kilometraje; próxima a 30 días o 1,000 km. */
 export function urgency(rec: Rec, currentKm?: number | null): Urgency {
 	const today = todayISO();
 	const soon = new Date(`${today}T00:00:00Z`);

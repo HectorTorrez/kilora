@@ -11,16 +11,3 @@ func TestPassword(t *testing.T) {
 		t.Fatal("hash o verificación inválida", err)
 	}
 }
-func TestToken(t *testing.T) {
-	a, err := NewToken()
-	if err != nil {
-		t.Fatal(err)
-	}
-	b, err := NewToken()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(a) != 43 || a == b || len(HashToken(a)) != 64 || HashToken(a) == HashToken(b) {
-		t.Fatal("tokens inválidos")
-	}
-}

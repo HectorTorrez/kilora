@@ -6,7 +6,6 @@ import { day, km, money } from "@/lib/format";
 
 type S = components["schemas"];
 
-/** Último registro por categoría de pieza, a partir del historial proyectado. */
 export function lastByCategory(records: S["HistoryRecord"][]) {
 	const sorted = [...records].sort((a, b) =>
 		b.performed_on.localeCompare(a.performed_on),
