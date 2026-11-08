@@ -1,8 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Demo } from "@/components/kilora/demo";
 import { buttonVariants } from "@/components/ui/button";
-export const Route = createFileRoute("/")({ component: Landing });
+import { demoQuery } from "@/lib/demo-accounts";
+export const Route = createFileRoute("/")({
+	loader: ({ context }) => context.queryClient.ensureQueryData(demoQuery()),
+	component: Landing,
+});
 function Landing() {
+	const demo = Route.useLoaderData();
 	return (
 		<main className="min-h-dvh bg-background">
 			<header className="mx-auto flex max-w-6xl items-center justify-between border-b px-6 py-6">
@@ -58,7 +63,7 @@ function Landing() {
 					</p>
 				</div>
 			</section>
-			<Demo />
+			<Demo demo={demo} />
 		</main>
 	);
 }

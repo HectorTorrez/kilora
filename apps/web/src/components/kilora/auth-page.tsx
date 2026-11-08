@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { components } from "@kilora/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Demo } from "@/components/kilora/demo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,11 +70,18 @@ export function AuthPage({
 	mode,
 	token = "",
 	redirectTo,
+	demo,
 }: {
 	mode: Mode;
 	token?: string;
 	redirectTo?: string;
+	demo?: components["schemas"]["DemoInfo"];
 }) {
+	const accounts = mode === "login" && demo?.enabled ? demo.accounts : [];
+	const initialAccount = accounts.find((account) => account.role === "taller");
+	const [selectedRole, setSelectedRole] = useState<string | null>(
+		initialAccount?.role ?? null,
+	);
 	const navigate = useNavigate();
 	const qc = useQueryClient();
 	const login = useLogin();
@@ -122,8 +130,8 @@ export function AuthPage({
 		),
 		defaultValues: {
 			full_name: "",
-			email: "",
-			password: "",
+			email: initialAccount?.email ?? "",
+			password: initialAccount?.password ?? "",
 			name: "",
 			nit: "",
 			branch_name: "",
@@ -188,12 +196,22 @@ export function AuthPage({
 			<Input
 				id={key}
 				type={type}
+				defaultValue={
+					key === "email"
+						? initialAccount?.email
+						: key === "password"
+							? initialAccount?.password
+							: undefined
+				}
 				autoComplete={autoComplete}
 				aria-invalid={!!form.formState.errors[key]}
 				aria-describedby={
 					form.formState.errors[key] ? `${key}-error` : undefined
 				}
-				{...form.register(key)}
+				{...form.register(
+					key,
+					key === "email" ? { onChange: () => setSelectedRole(null) } : {},
+				)}
 			/>
 			{form.formState.errors[key] && (
 				<p id={`${key}-error`} className="text-sm text-destructive">
@@ -257,6 +275,47 @@ export function AuthPage({
 						</output>
 					) : (
 						<form onSubmit={submit} className="mt-8 space-y-5" noValidate>
+							{accounts.length > 0 && (
+								<div className="space-y-2">
+									<div
+										className="grid grid-cols-3 rounded-lg border p-1"
+										role="radiogroup"
+										aria-label="Perfil demo"
+									>
+										{accounts.map((account) => (
+											<label
+												key={account.role}
+												className={`cursor-pointer rounded-md px-2 py-2 text-center text-sm font-semibold focus-within:ring-2 focus-within:ring-ring ${selectedRole === account.role ? "bg-foreground text-background" : "text-ink-3"}`}
+											>
+												<input
+													className="sr-only"
+													type="radio"
+													name="demo-profile"
+													value={account.role}
+													checked={selectedRole === account.role}
+													onChange={() => {
+														setSelectedRole(account.role);
+														form.setValue("email", account.email, {
+															shouldValidate: true,
+														});
+														form.setValue("password", account.password, {
+															shouldValidate: true,
+														});
+													}}
+												/>
+												{account.role === "taller"
+													? "Taller"
+													: account.role === "propietario"
+														? "Propietario"
+														: "Otro taller"}
+											</label>
+										))}
+									</div>
+									<p className="text-sm text-ink-3">
+										Cuenta demo lista. Pulsa Entrar o cambia el perfil.
+									</p>
+								</div>
+							)}
 							{mode === "registro" &&
 								field("full_name", "Nombre completo", "text", "name")}
 							{["login", "registro", "olvide"].includes(mode) &&
@@ -306,7 +365,7 @@ export function AuthPage({
 								{mutation.isPending
 									? "Un momento…"
 									: {
-											login: "Ingresar",
+											login: "Entrar",
 											registro: "Crear cuenta",
 											onboarding: "Crear taller",
 											olvide: "Enviar enlace",
@@ -316,7 +375,6 @@ export function AuthPage({
 							</Button>
 						</form>
 					)}
-					{!done && mode === "login" && <Demo compact />}
 					{!done && (
 						<p className="mt-7 text-center text-sm text-ink-3">
 							{mode === "login" ? (

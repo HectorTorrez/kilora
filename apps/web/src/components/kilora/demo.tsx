@@ -1,25 +1,11 @@
-import { useEffect, useState } from "react";
+import type { components } from "@kilora/contracts";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-type Account = {
-	role: string;
-	label: string;
-	email: string;
-	password: string;
-	description: string;
-};
-export function Demo({ compact = false }: { compact?: boolean }) {
-	const [accounts, setAccounts] = useState<Account[]>([]);
+export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
 	const [busy, setBusy] = useState("");
 	const [error, setError] = useState("");
-	useEffect(() => {
-		fetch("/api/v1/public/demo")
-			.then((r) => r.json())
-			.then((data) => {
-				if (data.enabled) setAccounts(data.accounts);
-			})
-			.catch(() => {});
-	}, []);
+	const accounts = demo.enabled ? demo.accounts : [];
 	if (!accounts.length) return null;
 	async function enter(role: string) {
 		setBusy(role);
@@ -39,57 +25,77 @@ export function Demo({ compact = false }: { compact?: boolean }) {
 			setBusy("");
 		}
 	}
+	const meta: Record<string, { title: string; tag: string }> = {
+		taller: { title: "Entrar como taller", tag: "Recepción" },
+		propietario: {
+			title: "Entrar como propietario",
+			tag: "Historial completo",
+		},
+		taller_competencia: { title: "Ver como otro taller", tag: "Vista ciega" },
+	};
 	return (
 		<section
-			className={
-				compact ? "mt-8 border-t pt-6" : "mx-auto max-w-6xl px-6 pb-24"
-			}
+			id="demo"
+			aria-labelledby="demo-title"
+			className="scroll-mt-14 border-b bg-surface/60"
 		>
-			<h2 className="font-display text-2xl font-bold">Prueba la demo</h2>
-			{!compact && (
-				<p className="mt-3 max-w-2xl text-ink-3">
-					El propietario ve el historial completo; otros talleres ven trabajos y
-					kilometraje sin precios ni notas privadas.
-				</p>
-			)}
-			<div
-				className={
-					compact ? "mt-4 grid gap-3" : "mt-6 grid gap-4 md:grid-cols-3"
-				}
-			>
-				{accounts.map((a) => (
-					<div key={a.role} className="rounded-xl border bg-card p-5">
-						<h3 className="font-display font-bold">
-							{a.role === "taller"
-								? "Entrar como taller"
-								: a.role === "propietario"
-									? "Entrar como propietario"
-									: "Ver como otro taller"}
-						</h3>
-						<p className="mt-2 text-sm text-ink-3">
-							{a.label}: {a.description}
+			<div className="frame px-5 py-20 md:px-8 md:py-28">
+				<div className="reveal grid gap-6 lg:grid-cols-[14rem_1fr] lg:gap-10">
+					<p className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
+						<span className="text-seal">[06]</span> Demo en vivo
+					</p>
+					<div>
+						<h2
+							id="demo-title"
+							className="max-w-3xl font-display text-3xl leading-[1.08] font-bold tracking-[-0.02em] text-balance md:text-5xl"
+						>
+							Probá Kilora con datos reales, en un clic.
+						</h2>
+						<p className="mt-5 max-w-2xl text-lg leading-relaxed text-pretty text-ink-2">
+							Entrá con el mismo vehículo desde tres miradas distintas. El
+							propietario ve el historial completo; otro taller ve trabajos y
+							kilometraje sin precios ni notas privadas.
 						</p>
-						{!compact && (
-							<p className="mt-3 break-all font-mono text-xs text-ink-3">
+					</div>
+				</div>
+				<ul className="mt-14 grid gap-px overflow-hidden rounded-lg border bg-line md:grid-cols-3">
+					{accounts.map((a, i) => (
+						<li
+							key={a.role}
+							className="reveal flex flex-col bg-card p-6 md:p-7"
+						>
+							<div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-widest text-ink-3">
+								<span>{meta[a.role]?.tag ?? a.role}</span>
+								<span>0{i + 1}</span>
+							</div>
+							<h3 className="mt-6 font-display text-xl font-bold">
+								{meta[a.role]?.title ?? a.label}
+							</h3>
+							<p className="mt-2 flex-1 text-sm leading-relaxed text-ink-2">
+								{a.label}: {a.description}
+							</p>
+							<p className="mt-5 break-all rounded-md border bg-surface px-3 py-2 font-mono text-xs text-ink-3">
 								{a.email} / {a.password}
 							</p>
-						)}
-						<Button
-							className="mt-4"
-							variant={a.role === "taller_competencia" ? "outline" : "default"}
-							disabled={!!busy}
-							onClick={() => enter(a.role)}
-						>
-							{busy === a.role ? "Ingresando…" : "Entrar"}
-						</Button>
-					</div>
-				))}
+							<Button
+								className="mt-5 w-full"
+								variant={
+									a.role === "taller_competencia" ? "outline" : "default"
+								}
+								disabled={!!busy}
+								onClick={() => enter(a.role)}
+							>
+								{busy === a.role ? "Ingresando…" : "Entrar a la demo"}
+							</Button>
+						</li>
+					))}
+				</ul>
+				{error && (
+					<p role="alert" className="mt-4 text-sm text-destructive">
+						{error}
+					</p>
+				)}
 			</div>
-			{error && (
-				<p role="alert" className="mt-3 text-sm text-destructive">
-					{error}
-				</p>
-			)}
 		</section>
 	);
 }
