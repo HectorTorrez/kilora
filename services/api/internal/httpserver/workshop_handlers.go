@@ -71,5 +71,5 @@ func (s *server) getWorkshop(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, 200, map[string]any{"workshop": map[string]any{"id": wc.WorkshopID, "name": workshop.Name, "nit": workshop.Nit}, "branches": branches})
+	writeJSON(w, 200, map[string]any{"workshop": map[string]any{"id": wc.WorkshopID, "name": workshop.Name, "nit": workshop.Nit, "verified_at": optTime(workshop.VerifiedAt), "verified_by": workshop.VerifiedBy}, "role": wc.Role, "branches": branches})
 }

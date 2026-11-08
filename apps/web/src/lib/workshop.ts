@@ -26,6 +26,17 @@ export const vehiclesQuery = (workshopID: string, plate = "") =>
 				}),
 			),
 	});
+export const workshopQuery = (workshopID: string) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "detail"],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/", {
+					params: { path: { workshopID } },
+				}),
+			),
+		enabled: !!workshopID,
+	});
 export const vehicleQuery = (workshopID: string, vehicleID: string) =>
 	queryOptions({
 		queryKey: ["workshop", workshopID, "vehicle", vehicleID],
@@ -282,3 +293,100 @@ export const counterQuoteActions = (workshopID: string, quoteID = "") => {
 			),
 	};
 };
+
+export const vehicleRecommendationsQuery = (
+	workshopID: string,
+	vehicleID: string,
+) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "recommendations", "vehicle", vehicleID],
+		queryFn: async () =>
+			unwrap(
+				await api.GET(
+					"/api/v1/workshops/{workshopID}/vehicles/{vehicleID}/recommendations",
+					{ params: { path: { workshopID, vehicleID } } },
+				),
+			),
+		enabled: !!workshopID && !!vehicleID,
+	});
+export const recommendationsQuery = (
+	workshopID: string,
+	status?: S["RecommendationStatus"],
+) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "recommendations", "all", status],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/recommendations", {
+					params: { path: { workshopID }, query: { status } },
+				}),
+			),
+		enabled: !!workshopID,
+	});
+export const membersQuery = (workshopID: string) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "members"],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/members", {
+					params: { path: { workshopID } },
+				}),
+			),
+		enabled: !!workshopID,
+	});
+export const auditQuery = (workshopID: string, before?: number) =>
+	queryOptions({
+		queryKey: ["workshop", workshopID, "audit", before],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/workshops/{workshopID}/audit", {
+					params: { path: { workshopID }, query: { before, limit: 50 } },
+				}),
+			),
+		enabled: !!workshopID,
+	});
+export const adminActions = (workshopID: string) => ({
+	recommend: async ({
+		vehicleID,
+		body,
+	}: {
+		vehicleID: string;
+		body: S["RecommendationInput"];
+	}) =>
+		unwrap(
+			await api.POST(
+				"/api/v1/workshops/{workshopID}/vehicles/{vehicleID}/recommendations",
+				{ params: { path: { workshopID, vehicleID } }, body },
+			),
+		),
+	resolve: async ({
+		id,
+		status,
+	}: {
+		id: string;
+		status: S["RecommendationResolve"]["status"];
+	}) =>
+		unwrap(
+			await api.PATCH(
+				"/api/v1/workshops/{workshopID}/recommendations/{recommendationID}",
+				{
+					params: { path: { workshopID, recommendationID: id } },
+					body: { status },
+				},
+			),
+		),
+	addMember: async (body: S["MemberInput"]) =>
+		unwrap(
+			await api.POST("/api/v1/workshops/{workshopID}/members", {
+				params: { path: { workshopID } },
+				body,
+			}),
+		),
+	removeMember: async (membershipID: string) => {
+		const result = await api.DELETE(
+			"/api/v1/workshops/{workshopID}/members/{membershipID}",
+			{ params: { path: { workshopID, membershipID } } },
+		);
+		if (result.error) throw apiError(result.error);
+	},
+});

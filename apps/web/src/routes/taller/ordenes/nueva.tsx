@@ -1,298 +1,388 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Search } from "lucide-react";
-import { useId, useState } from "react";
-import { useForm } from "react-hook-form";
-import { toast } from "sonner";
-import { z } from "zod";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Check, Lock, Plus, Search, X } from "lucide-react";
+import { useState } from "react";
 import { useWorkshopId } from "@/components/kilora/app-shell";
-import {
-	applyFormError,
-	FormActions,
-	NumberField,
-	RequiredLegend,
-	RootError,
-	SelectField,
-	SubmitButton,
-	TextareaField,
-	TextField,
-} from "@/components/kilora/form-fields";
-import {
-	kmField,
-	optionalText,
-	requiredText,
-} from "@/components/kilora/form-schemas";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
+import {
+	PageBody,
+	PageHeader,
+	Plate,
+	SectionCard,
+} from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { km as formatKm } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { actions, useWorkshopMutation, vehiclesQuery } from "@/lib/workshop";
 import { Route as TallerRoute } from "@/routes/taller";
 
 export const Route = createFileRoute("/taller/ordenes/nueva")({
+	validateSearch: (search: Record<string, unknown>): { vehiculo?: string } => ({
+		vehiculo: typeof search.vehiculo === "string" ? search.vehiculo : undefined,
+	}),
 	component: NewOrderPage,
 });
 
-const schema = z.object({
-	branch_id: z.string().min(1, "Elegí una sucursal"),
-	reason: requiredText("Ingresá el motivo"),
-	km: kmField(false),
-	notes: optionalText,
-});
-
-type Picked = {
-	id: string;
-	plate: string | null;
-	make: string;
-	model: string;
-	year: number | null;
-};
+const reasons = [
+	"Cambio de aceite y filtro",
+	"Revisión de frenos",
+	"Mantenimiento preventivo",
+	"Ruido en suspensión",
+	"Revisión de batería",
+	"Diagnóstico general",
+];
 
 function NewOrderPage() {
 	const workshopID = useWorkshopId();
+	const { vehiculo } = Route.useSearch();
 	const { me } = TallerRoute.useRouteContext();
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
 	const navigate = useNavigate();
-	const searchId = useId();
-	const hintId = useId();
+	const [branch, setBranch] = useState("");
 	const [search, setSearch] = useState("");
-	const [picked, setPicked] = useState<Picked | null>(null);
+	const [vehicle, setVehicle] = useState(vehiculo ?? "");
 	const [creating, setCreating] = useState(false);
-	const { data, isLoading } = useQuery(vehiclesQuery(workshopID, search));
+	const [reason, setReason] = useState("");
+	const [km, setKm] = useState("");
+	const [notes, setNotes] = useState("");
+	const { data, isLoading } = useQuery({
+		...vehiclesQuery(workshopID),
+		enabled: !!workshopID,
+	});
 	const create = useWorkshopMutation(
 		workshopID,
 		actions(workshopID).createOrder,
 	);
-	const form = useForm({
-		resolver: zodResolver(schema),
-		defaultValues: {
-			branch_id: branches[0]?.branch_id ?? "",
-			reason: "",
-			km: "",
-			notes: "",
-		},
-	});
-	const submit = form.handleSubmit(async (values) => {
-		if (!picked) return;
-		const branch_id = values.branch_id || branches[0]?.branch_id;
-		if (!branch_id) {
-			form.setError("root", {
-				message: "No hay una sucursal disponible para registrar la orden.",
-			});
-			return;
-		}
-		form.clearErrors("root");
-		try {
-			const order = await create.mutateAsync({
-				vehicle_id: picked.id,
-				branch_id,
-				reason: values.reason,
-				odometer_km: values.km ? Number(values.km) : null,
-				internal_notes: values.notes || null,
-			});
-			toast.success("Orden registrada");
-			await navigate({
-				to: "/taller/ordenes/$orderId",
-				params: { orderId: order.id },
-			});
-		} catch (error) {
-			applyFormError(form, error);
-		}
-	});
+	const q = search.trim().toLowerCase().replace(/[\s-]/g, "");
+	const all = data ?? [];
+	const matches = (
+		q
+			? all.filter((v) =>
+					[v.plate, v.make, v.model, v.contact_name]
+						.filter(Boolean)
+						.some((x) =>
+							String(x).toLowerCase().replace(/[\s-]/g, "").includes(q),
+						),
+				)
+			: all
+	).slice(0, 6);
+	const chosen = all.find((v) => v.id === vehicle);
+	const lastKm = chosen?.last_odometer_km;
+	const kmBelow = km !== "" && lastKm != null && Number(km) < lastKm;
+	const branchID = branch || branches[0]?.branch_id || "";
+
 	return (
-		<main className="mx-auto max-w-4xl space-y-5 px-5 py-7">
-			<h1 className="font-display text-3xl font-bold">Registrar orden</h1>
-			<Card className="gap-0 space-y-4 rounded-lg p-5 shadow-none">
-				<StepTitle n="1">Vehículo</StepTitle>
-				{picked ? (
-					<div className="flex flex-col gap-3 rounded-lg border border-seal bg-seal-soft px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-						<div>
-							<p className="font-mono text-sm font-medium text-seal">
-								{picked.plate || "Sin placa"}
-							</p>
-							<p className="mt-1 font-display text-lg font-bold">
-								{picked.make} {picked.model}
-								{picked.year ? ` ${picked.year}` : ""}
-							</p>
-						</div>
-						<Button
-							type="button"
-							variant="outline"
-							className="w-full sm:w-auto"
-							onClick={() => setPicked(null)}
-						>
-							Cambiar
-						</Button>
-					</div>
-				) : (
-					<div className="grid gap-4">
-						<div className="grid gap-2">
-							<Label htmlFor={searchId}>Buscar por placa</Label>
-							<div className="relative">
-								<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3" />
-								<Input
-									id={searchId}
-									value={search}
-									autoFocus
-									autoComplete="off"
-									placeholder="Ej. P123456"
-									className="pl-9"
-									onChange={(event) => setSearch(event.target.value)}
-								/>
+		<PageBody className="max-w-5xl">
+			<div>
+				<Link
+					to="/taller/ordenes"
+					className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-foreground"
+				>
+					<ArrowLeft className="size-3.5" />
+					Órdenes
+				</Link>
+				<PageHeader
+					className="mt-3"
+					title="Nueva orden"
+					description="Elegí el vehículo, escribí el motivo y listo. Trabajos, piezas y cotización se agregan después."
+				/>
+			</div>
+
+			<form
+				className="grid items-start gap-6 lg:grid-cols-[1fr_300px]"
+				onSubmit={async (e) => {
+					e.preventDefault();
+					try {
+						const order = await create.mutateAsync({
+							vehicle_id: vehicle,
+							branch_id: branchID,
+							reason,
+							odometer_km: km ? Number(km) : null,
+							internal_notes: notes || null,
+						});
+						await navigate({
+							to: "/taller/ordenes/$orderId",
+							params: { orderId: order.id },
+						});
+					} catch {}
+				}}
+			>
+				<div className="space-y-6">
+					<SectionCard
+						title={
+							<span className="flex items-center gap-2">
+								<Step n={1} done={!!chosen} />
+								Vehículo
+							</span>
+						}
+						actions={
+							!chosen && (
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={() => setCreating(!creating)}
+								>
+									{creating ? (
+										<>
+											<X className="size-4" /> Cancelar
+										</>
+									) : (
+										<>
+											<Plus className="size-4" /> Vehículo nuevo
+										</>
+									)}
+								</Button>
+							)
+						}
+					>
+						{chosen ? (
+							<div className="flex items-center gap-3 rounded-md border border-seal/30 bg-seal-soft/50 p-3">
+								<Plate value={chosen.plate} />
+								<div className="min-w-0 flex-1">
+									<p className="truncate text-[13.5px] font-semibold">
+										{chosen.make} {chosen.model} {chosen.year ?? ""}
+									</p>
+									<p className="truncate text-xs text-ink-3">
+										{chosen.contact_name || "Sin contacto"} · último km{" "}
+										{formatKm(chosen.last_odometer_km)}
+									</p>
+								</div>
+								<Button
+									type="button"
+									variant="ghost"
+									size="sm"
+									onClick={() => setVehicle("")}
+								>
+									Cambiar
+								</Button>
 							</div>
-						</div>
-						{isLoading ? (
-							<p className="text-sm text-ink-3">Buscando vehículos…</p>
-						) : data && data.length > 0 ? (
-							<ul
-								aria-label="Vehículos"
-								className="grid max-h-80 gap-2 overflow-y-auto"
-							>
-								{data.map((vehicle) => (
-									<li key={vehicle.id}>
+						) : creating ? (
+							<VehicleForm
+								workshopID={workshopID}
+								onCreated={(created) => {
+									setVehicle(created.id);
+									setCreating(false);
+									setSearch("");
+								}}
+							/>
+						) : (
+							<div className="space-y-3">
+								<div className="relative">
+									<Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-3" />
+									<Input
+										autoFocus
+										aria-label="Buscar vehículo"
+										placeholder="Buscar por placa, marca o contacto"
+										value={search}
+										onChange={(e) => setSearch(e.target.value)}
+										className="pl-9"
+									/>
+								</div>
+								{isLoading ? (
+									<Skeleton className="h-24" />
+								) : matches.length ? (
+									<ul className="grid gap-2 sm:grid-cols-2">
+										{matches.map((v) => (
+											<li key={v.id}>
+												<button
+													type="button"
+													onClick={() => setVehicle(v.id)}
+													className="pressable flex w-full items-center gap-3 rounded-md border bg-background/50 p-2.5 text-left hover:border-seal/40 hover:bg-seal-soft/40"
+												>
+													<Plate value={v.plate} />
+													<span className="min-w-0 flex-1">
+														<span className="block truncate text-[13px] font-medium">
+															{v.make} {v.model}
+														</span>
+														<span className="block truncate text-xs text-ink-3">
+															{v.contact_name || "Sin contacto"}
+														</span>
+													</span>
+												</button>
+											</li>
+										))}
+									</ul>
+								) : (
+									<div className="rounded-md border border-dashed p-5 text-center text-sm text-ink-3">
+										No encontramos ese vehículo.{" "}
 										<button
 											type="button"
-											className="w-full rounded-lg border bg-background px-4 py-3 text-left transition-colors hover:border-seal hover:bg-seal-soft focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-											onClick={() => {
-												setPicked(vehicle);
-												setCreating(false);
-											}}
+											className="font-semibold text-seal hover:underline"
+											onClick={() => setCreating(true)}
 										>
-											<span className="font-mono text-sm font-medium">
-												{vehicle.plate || "Sin placa"}
-											</span>
-											<span className="text-ink-3">
-												{" "}
-												· {vehicle.make} {vehicle.model}
-												{vehicle.year ? ` ${vehicle.year}` : ""}
-											</span>
+											Registrarlo ahora
 										</button>
-									</li>
-								))}
-							</ul>
-						) : (
-							<div className="rounded-lg border border-dashed px-4 py-8 text-center">
-								<p className="font-medium">
-									{search.trim()
-										? "Ningún vehículo coincide con esa placa"
-										: "Todavía no hay vehículos en el taller"}
-								</p>
-								<p className="mt-1 text-sm text-ink-3">
-									Registrá uno provisional para abrir la orden.
-								</p>
+									</div>
+								)}
 							</div>
 						)}
-						{creating ? (
-							<div className="rounded-lg border bg-muted/40 p-4">
-								<p className="mb-4 text-sm text-ink-3">
-									El vehículo queda provisional. El propietario puede vincularlo
-									después.
-								</p>
-								<VehicleForm
-									workshopID={workshopID}
-									onCancel={() => setCreating(false)}
-									onCreated={(vehicle) => {
-										setPicked(vehicle);
-										setCreating(false);
-										setSearch("");
-									}}
+					</SectionCard>
+
+					<SectionCard
+						title={
+							<span className="flex items-center gap-2">
+								<Step n={2} done={!!reason} />
+								Recepción
+							</span>
+						}
+					>
+						<div className="grid gap-4">
+							<div className="grid gap-2">
+								<Label htmlFor="reason">Motivo de ingreso</Label>
+								<Input
+									id="reason"
+									required
+									placeholder="¿Qué reporta el cliente?"
+									value={reason}
+									onChange={(e) => setReason(e.target.value)}
+								/>
+								<div className="flex flex-wrap gap-1.5">
+									{reasons.map((r) => (
+										<button
+											key={r}
+											type="button"
+											onClick={() => setReason(r)}
+											className={cn(
+												"rounded-full border px-2.5 py-1 text-xs text-ink-2 hover:border-seal/40 hover:text-seal",
+												reason === r && "border-seal bg-seal-soft text-seal",
+											)}
+										>
+											{r}
+										</button>
+									))}
+								</div>
+							</div>
+							<div className="grid gap-4 sm:grid-cols-2">
+								<div className="grid gap-2">
+									<Label htmlFor="km">Kilometraje actual</Label>
+									<Input
+										id="km"
+										type="number"
+										inputMode="numeric"
+										min="0"
+										placeholder={lastKm != null ? String(lastKm) : "Ej. 85000"}
+										value={km}
+										onChange={(e) => setKm(e.target.value)}
+										aria-describedby="km-hint"
+									/>
+									<p
+										id="km-hint"
+										className={cn(
+											"text-xs text-ink-3",
+											kmBelow && "font-medium text-warn",
+										)}
+									>
+										{kmBelow
+											? `Es menor que la última lectura (${formatKm(lastKm)}).`
+											: lastKm != null
+												? `Última lectura: ${formatKm(lastKm)}`
+												: "Opcional"}
+									</p>
+								</div>
+								<div className="grid content-start gap-2">
+									<Label htmlFor="branch">Sucursal</Label>
+									<Select value={branchID} onValueChange={setBranch} required>
+										<SelectTrigger id="branch" className="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{branches.map((b) => (
+												<SelectItem key={b.branch_id} value={b.branch_id}>
+													{b.branch_name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+							</div>
+							<div className="grid gap-2">
+								<Label htmlFor="notes" className="flex items-center gap-1.5">
+									<Lock className="size-3.5 text-ink-3" />
+									Notas internas
+									<span className="font-normal text-ink-3">
+										· privadas del taller
+									</span>
+								</Label>
+								<Textarea
+									id="notes"
+									placeholder="Nunca se muestran al propietario ni a otros talleres"
+									value={notes}
+									onChange={(e) => setNotes(e.target.value)}
 								/>
 							</div>
-						) : (
-							<Button
-								type="button"
-								variant="outline"
-								className="w-full sm:w-auto"
-								onClick={() => setCreating(true)}
-							>
-								Registrar vehículo provisional
-							</Button>
-						)}
-					</div>
-				)}
-			</Card>
-			<Card className="gap-0 rounded-lg p-5 shadow-none">
-				<Form {...form}>
-					<form onSubmit={submit} className="grid gap-5" noValidate>
-						<StepTitle n="2">Detalles de la orden</StepTitle>
-						<RequiredLegend />
-						{branches.length > 1 ? (
-							<SelectField
-								name="branch_id"
-								label="Sucursal"
-								placeholder="Elegí una sucursal"
-								options={branches.map((branch) => ({
-									value: branch.branch_id,
-									label: branch.branch_name,
-								}))}
-								required
-							/>
-						) : branches.length === 1 ? (
-							<p className="text-sm text-ink-3">
-								Sucursal:{" "}
-								<span className="font-medium text-foreground">
-									{branches[0]?.branch_name}
-								</span>
-							</p>
-						) : (
-							<p className="text-sm text-destructive">
-								No hay una sucursal disponible para registrar la orden.
-							</p>
-						)}
-						<TextField
-							name="reason"
-							label="Motivo"
-							placeholder="Ej. Cambio de aceite"
-							required
-						/>
-						<NumberField
-							name="km"
-							label="Kilometraje"
-							optional
-							suffix="km"
-							min={0}
-							step={1}
-							className="sm:max-w-xs"
-						/>
-						<TextareaField
-							name="notes"
-							label="Notas internas"
-							optional
-							description="Privadas del taller"
-							placeholder="Ej. El cliente pidió revisar una fuga"
-						/>
-						<RootError />
-						{!picked && (
-							<p id={hintId} className="text-sm text-ink-3">
-								Elegí un vehículo para registrar la orden.
-							</p>
-						)}
-						<FormActions>
-							<SubmitButton
-								pending={create.isPending}
-								disabled={!picked || branches.length === 0}
-								aria-describedby={!picked ? hintId : undefined}
-							>
-								Registrar orden
-							</SubmitButton>
-						</FormActions>
-					</form>
-				</Form>
-			</Card>
-		</main>
+						</div>
+					</SectionCard>
+				</div>
+
+				<aside className="space-y-3 lg:sticky lg:top-6">
+					<SectionCard title="Resumen">
+						<dl className="space-y-2.5 text-[13px]">
+							<div className="flex justify-between gap-3">
+								<dt className="text-ink-3">Vehículo</dt>
+								<dd className="text-right font-medium">
+									{chosen ? (
+										<Plate value={chosen.plate} />
+									) : (
+										<span className="text-ink-3">Sin elegir</span>
+									)}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-3">
+								<dt className="text-ink-3">Motivo</dt>
+								<dd className="truncate text-right font-medium">
+									{reason || <span className="text-ink-3">—</span>}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-3">
+								<dt className="text-ink-3">Kilometraje</dt>
+								<dd className="text-right font-mono">
+									{km ? formatKm(km) : "—"}
+								</dd>
+							</div>
+							<div className="flex justify-between gap-3">
+								<dt className="text-ink-3">Sucursal</dt>
+								<dd className="truncate text-right">
+									{branches.find((b) => b.branch_id === branchID)?.branch_name}
+								</dd>
+							</div>
+						</dl>
+						<Button
+							className="mt-5 w-full"
+							disabled={!vehicle || !reason || create.isPending}
+						>
+							{create.isPending ? "Registrando…" : "Registrar orden"}
+						</Button>
+						<p className="mt-2 text-center text-[11.5px] text-ink-3">
+							La orden queda en estado Recibido.
+						</p>
+					</SectionCard>
+				</aside>
+			</form>
+		</PageBody>
 	);
 }
 
-function StepTitle({ n, children }: { n: string; children: string }) {
+function Step({ n, done }: { n: number; done: boolean }) {
 	return (
-		<h2 className="flex items-center gap-3 font-display text-lg font-bold">
-			<span className="flex size-7 items-center justify-center rounded-full bg-foreground font-mono text-xs text-background">
-				{n}
-			</span>
-			{children}
-		</h2>
+		<span
+			className={cn(
+				"grid size-5 place-items-center rounded-full font-mono text-[11px] font-semibold",
+				done ? "bg-seal text-white" : "bg-secondary text-ink-2",
+			)}
+		>
+			{done ? <Check className="size-3" /> : n}
+		</span>
 	);
 }

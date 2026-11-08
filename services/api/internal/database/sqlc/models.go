@@ -313,6 +313,49 @@ func (ns NullQuoteOutcome) Value() (driver.Value, error) {
 	return string(ns.QuoteOutcome), nil
 }
 
+type RecommendationStatus string
+
+const (
+	RecommendationStatusPendiente  RecommendationStatus = "pendiente"
+	RecommendationStatusHecha      RecommendationStatus = "hecha"
+	RecommendationStatusDescartada RecommendationStatus = "descartada"
+)
+
+func (e *RecommendationStatus) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = RecommendationStatus(s)
+	case string:
+		*e = RecommendationStatus(s)
+	default:
+		return fmt.Errorf("unsupported scan type for RecommendationStatus: %T", src)
+	}
+	return nil
+}
+
+type NullRecommendationStatus struct {
+	RecommendationStatus RecommendationStatus `json:"recommendation_status"`
+	Valid                bool                 `json:"valid"` // Valid is true if RecommendationStatus is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullRecommendationStatus) Scan(value interface{}) error {
+	if value == nil {
+		ns.RecommendationStatus, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.RecommendationStatus.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullRecommendationStatus) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.RecommendationStatus), nil
+}
+
 type VehicleStatus string
 
 const (
@@ -567,6 +610,22 @@ type QuoteItem struct {
 	Description string         `json:"description"`
 	Quantity    pgtype.Numeric `json:"quantity"`
 	UnitPrice   pgtype.Numeric `json:"unit_price"`
+}
+
+type Recommendation struct {
+	ID          pgtype.UUID          `json:"id"`
+	VehicleID   pgtype.UUID          `json:"vehicle_id"`
+	WorkshopID  pgtype.UUID          `json:"workshop_id"`
+	WorkOrderID pgtype.UUID          `json:"work_order_id"`
+	Description string               `json:"description"`
+	Category    *PartCategory        `json:"category"`
+	DueDate     pgtype.Date          `json:"due_date"`
+	DueKm       *int32               `json:"due_km"`
+	Status      RecommendationStatus `json:"status"`
+	ResolvedAt  pgtype.Timestamptz   `json:"resolved_at"`
+	ResolvedBy  pgtype.UUID          `json:"resolved_by"`
+	CreatedBy   pgtype.UUID          `json:"created_by"`
+	CreatedAt   pgtype.Timestamptz   `json:"created_at"`
 }
 
 type Session struct {

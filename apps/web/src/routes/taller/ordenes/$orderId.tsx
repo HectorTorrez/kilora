@@ -1,41 +1,57 @@
-import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+	ArrowLeft,
+	ArrowRight,
+	BadgeCheck,
+	Ban,
+	Check,
+	Copy,
+	Lock,
+	MessageCircle,
+	Plus,
+	Printer,
+	Trash2,
+	Wrench,
+	X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
-import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { useWorkshopId } from "@/components/kilora/app-shell";
-import {
-	applyFormError,
-	FormActions,
-	FormError,
-	NumberField,
-	RootError,
-	SelectField,
-	SubmitButton,
-	TextareaField,
-	TextField,
-} from "@/components/kilora/form-fields";
-import {
-	kmField,
-	moneyField,
-	optionalText,
-	requiredText,
-} from "@/components/kilora/form-schemas";
+import { categoryLabels } from "@/components/kilora/history-timeline";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
+import { RecommendationsCard } from "@/components/kilora/recommendations";
+import {
+	EmptyState,
+	OrderStatusBadge,
+	PageBody,
+	Plate,
+	SectionCard,
+} from "@/components/kilora/workshop-ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Form } from "@/components/ui/form";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { money, statusLabel } from "@/lib/format";
+import { Textarea } from "@/components/ui/textarea";
+import { date, km as formatKm, money, statusLabel } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
 	actions,
 	orderQuery,
@@ -47,82 +63,54 @@ type S = components["schemas"];
 export const Route = createFileRoute("/taller/ordenes/$orderId")({
 	component: OrderPage,
 });
-
-const editSchema = z.object({
-	reason: requiredText("Ingresá el motivo"),
-	km: kmField(false),
-	public_notes: optionalText,
-	internal_notes: optionalText,
+const blank = (): S["QuoteItem"] => ({
+	kind: "repuesto",
+	description: "",
+	quantity: 1,
+	unit_price: 0,
 });
-const cancelSchema = z.object({
-	reason: requiredText("Ingresá el motivo de la cancelación"),
-});
-const jobSchema = z.object({
-	description: requiredText("Ingresá el trabajo realizado"),
-	labor: moneyField(false),
-});
-const partSchema = z.object({
-	name: requiredText("Ingresá el nombre de la pieza"),
-	price: moneyField(false),
-});
-const quoteSchema = z.object({
-	items: z.array(
-		z.object({
-			kind: z.enum(["repuesto", "mano_de_obra"]),
-			description: requiredText("Ingresá la descripción"),
-			quantity: z
-				.string()
-				.trim()
-				.refine((value) => Number(value) > 0, "Ingresá una cantidad"),
-			unit_price: moneyField(false),
-		}),
-	),
-});
-
-function blankQuoteItem() {
-	return {
-		kind: "repuesto" as const,
-		description: "",
-		quantity: "1",
-		unit_price: "0",
-	};
-}
-
-function quoteValues(items?: S["QuoteItem"][]) {
-	const source = items?.length ? items : [blankQuoteItem()];
-	return {
-		items: source.map((item) => ({
-			kind: item.kind,
-			description: item.description,
-			quantity: String(item.quantity),
-			unit_price: String(item.unit_price ?? 0),
-		})),
-	};
-}
+const flow: S["WorkOrderStatus"][] = [
+	"recibido",
+	"diagnostico",
+	"en_reparacion",
+	"listo",
+];
+const next: Partial<Record<S["WorkOrderStatus"], S["WorkOrderStatus"]>> = {
+	recibido: "diagnostico",
+	diagnostico: "en_reparacion",
+	en_reparacion: "listo",
+};
 
 function OrderPage() {
 	const { orderId } = Route.useParams();
 	const workshopID = useWorkshopId();
-	const order = useQuery(orderQuery(workshopID, orderId));
+	const order = useQuery({
+		...orderQuery(workshopID, orderId),
+		enabled: !!workshopID,
+	});
 	const vehicle = useQuery({
 		...vehicleQuery(workshopID, order.data?.vehicle_id || ""),
 		enabled: !!order.data,
 	});
-	if (order.isLoading)
+	if (order.isLoading || !workshopID)
 		return (
-			<main className="p-8">
-				<Skeleton className="h-32" aria-label="Cargando orden…" />
-			</main>
+			<PageBody>
+				<Skeleton className="h-28" aria-label="Cargando orden…" />
+				<div className="grid gap-6 lg:grid-cols-[1fr_340px]">
+					<Skeleton className="h-96" />
+					<Skeleton className="h-96" />
+				</div>
+			</PageBody>
 		);
 	if (order.error || !order.data)
 		return (
-			<main className="p-8">
+			<PageBody>
 				<Alert variant="destructive">
 					<AlertDescription>
 						{order.error?.message || "Orden no disponible"}
 					</AlertDescription>
 				</Alert>
-			</main>
+			</PageBody>
 		);
 	return (
 		<OrderDetail
@@ -144,557 +132,828 @@ function OrderDetail({
 	vehicle?: S["Vehicle"];
 }) {
 	const a = actions(workshopID, order.id);
-	const edit = useWorkshopMutation(workshopID, a.edit);
 	const status = useWorkshopMutation(workshopID, a.status);
+	const [cancelOpen, setCancelOpen] = useState(false);
+	const [cancelReason, setCancelReason] = useState("");
+	const nextStatus = next[order.status];
+	const closed = order.status === "listo" || order.status === "cancelado";
+	const step = flow.indexOf(order.status);
+
+	return (
+		<PageBody>
+			<div>
+				<Link
+					to="/taller/ordenes"
+					className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-foreground print:hidden"
+				>
+					<ArrowLeft className="size-3.5" />
+					Órdenes
+				</Link>
+				<div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+					<div className="min-w-0">
+						<div className="flex flex-wrap items-center gap-2">
+							<span className="font-mono text-[13px] font-semibold text-ink-3">
+								Orden #{order.number}
+							</span>
+							<OrderStatusBadge status={order.status} />
+							{order.history_record_id && (
+								<span className="inline-flex items-center gap-1 rounded-full bg-seal-soft px-2 py-0.5 text-[11.5px] font-semibold text-seal">
+									<BadgeCheck className="size-3.5" />
+									Publicada en el historial
+								</span>
+							)}
+						</div>
+						<h1 className="mt-2 flex flex-wrap items-center gap-3 font-display text-[26px] leading-tight font-bold">
+							<Plate value={vehicle?.plate} className="text-base" />
+							{vehicle ? (
+								`${vehicle.make} ${vehicle.model}`
+							) : (
+								<Skeleton className="h-7 w-48" />
+							)}
+						</h1>
+						<p className="mt-1 text-sm text-ink-3">
+							{order.reason} · recibida el {date(order.received_at)}
+						</p>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						<Button asChild variant="outline">
+							<Link
+								to="/taller/ordenes/$orderId/hoja"
+								params={{ orderId: order.id }}
+							>
+								<Printer className="size-4" />
+								Hoja del mecánico
+							</Link>
+						</Button>
+						{!closed && (
+							<Button variant="outline" onClick={() => setCancelOpen(true)}>
+								<Ban className="size-4" />
+								Cancelar
+							</Button>
+						)}
+						{nextStatus && (
+							<Button
+								disabled={status.isPending}
+								onClick={() =>
+									status.mutate(
+										{ status: nextStatus },
+										{
+											onSuccess: () =>
+												toast.success(
+													nextStatus === "listo"
+														? "Orden lista y publicada en el historial"
+														: `Orden en ${statusLabel(nextStatus).toLowerCase()}`,
+												),
+										},
+									)
+								}
+							>
+								{nextStatus === "listo" ? (
+									<Check className="size-4" />
+								) : (
+									<ArrowRight className="size-4" />
+								)}
+								{nextStatus === "listo"
+									? "Marcar como lista"
+									: `Pasar a ${statusLabel(nextStatus).toLowerCase()}`}
+							</Button>
+						)}
+					</div>
+				</div>
+			</div>
+
+			{order.status === "cancelado" ? (
+				<Alert variant="destructive">
+					<AlertDescription>
+						Orden cancelada
+						{order.cancelled_at ? ` el ${date(order.cancelled_at)}` : ""}
+						{order.cancel_reason ? ` · ${order.cancel_reason}` : ""}
+					</AlertDescription>
+				</Alert>
+			) : (
+				<ol
+					className="grid grid-cols-4 gap-2"
+					aria-label="Progreso de la orden"
+				>
+					{flow.map((s, i) => (
+						<li key={s} aria-current={i === step ? "step" : undefined}>
+							<div
+								className={cn(
+									"h-1.5 rounded-full bg-secondary",
+									i <= step && "bg-seal",
+									i === step && s !== "listo" && "bg-seal/60",
+								)}
+							/>
+							<p
+								className={cn(
+									"mt-1.5 text-[11.5px] text-ink-3",
+									i === step && "font-semibold text-foreground",
+								)}
+							>
+								{statusLabel(s)}
+							</p>
+						</li>
+					))}
+				</ol>
+			)}
+			{nextStatus === "listo" && (
+				<p className="-mt-3 text-xs text-ink-3">
+					Al marcarla como lista se publica un registro inmutable en el
+					historial del vehículo. Las correcciones posteriores se agregan, no se
+					reescriben.
+				</p>
+			)}
+
+			<div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+				<div className="min-w-0 space-y-6">
+					<JobsCard workshopID={workshopID} order={order} locked={closed} />
+					<QuoteCard workshopID={workshopID} order={order} />
+				</div>
+				<div className="space-y-6">
+					<SectionCard
+						title="Vehículo"
+						actions={
+							<Button asChild variant="ghost" size="sm">
+								<Link
+									to="/taller/vehiculos/$vehicleId"
+									params={{ vehicleId: order.vehicle_id }}
+								>
+									Ver ficha
+									<ArrowRight className="size-3.5" />
+								</Link>
+							</Button>
+						}
+					>
+						<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13px]">
+							<dt className="text-ink-3">Contacto</dt>
+							<dd className="truncate text-right font-medium">
+								{vehicle?.contact_name || "—"}
+							</dd>
+							<dt className="text-ink-3">Teléfono</dt>
+							<dd className="text-right font-mono">
+								{vehicle?.contact_phone || "—"}
+							</dd>
+							<dt className="text-ink-3">Km de ingreso</dt>
+							<dd className="text-right font-mono">
+								{formatKm(order.odometer_km)}
+							</dd>
+						</dl>
+					</SectionCard>
+					<OrderDataCard workshopID={workshopID} order={order} />
+					<RecommendationsCard
+						workshopID={workshopID}
+						vehicleID={order.vehicle_id}
+						workOrderID={order.id}
+						currentKm={order.odometer_km ?? vehicle?.last_odometer_km}
+					/>
+					<OwnerInvitation
+						workshopID={workshopID}
+						vehicleID={order.vehicle_id}
+						linked={vehicle?.owner_linked ?? vehicle?.status === "vinculado"}
+						name={vehicle?.owner_name}
+					/>
+				</div>
+			</div>
+
+			<Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>Cancelar orden #{order.number}</DialogTitle>
+						<DialogDescription>
+							La orden no se publica en el historial. Dejá constancia del
+							motivo.
+						</DialogDescription>
+					</DialogHeader>
+					<form
+						id="cancel-form"
+						onSubmit={(e) => {
+							e.preventDefault();
+							status.mutate(
+								{ status: "cancelado", cancel_reason: cancelReason },
+								{
+									onSuccess: () => {
+										setCancelOpen(false);
+										toast.success("Orden cancelada");
+									},
+								},
+							);
+						}}
+					>
+						<Label htmlFor="cancel-reason" className="grid gap-2">
+							Motivo de cancelación
+							<Textarea
+								id="cancel-reason"
+								required
+								autoFocus
+								placeholder="Ej. El cliente decidió no hacer la reparación"
+								value={cancelReason}
+								onChange={(e) => setCancelReason(e.target.value)}
+							/>
+						</Label>
+					</form>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setCancelOpen(false)}>
+							Volver
+						</Button>
+						<Button
+							type="submit"
+							form="cancel-form"
+							variant="destructive"
+							disabled={!cancelReason.trim() || status.isPending}
+						>
+							Cancelar orden
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</PageBody>
+	);
+}
+
+function JobsCard({
+	workshopID,
+	order,
+	locked,
+}: {
+	workshopID: string;
+	order: S["WorkOrderDetail"];
+	locked: boolean;
+}) {
+	const a = actions(workshopID, order.id);
 	const job = useWorkshopMutation(workshopID, a.job);
 	const deleteJob = useWorkshopMutation(workshopID, a.deleteJob);
 	const part = useWorkshopMutation(workshopID, a.part);
 	const deletePart = useWorkshopMutation(workshopID, a.deletePart);
+	const [jobName, setJobName] = useState("");
+	const [labor, setLabor] = useState("");
+	const [category, setCategory] = useState<string>("none");
+	const [partName, setPartName] = useState("");
+	const [partQty, setPartQty] = useState("1");
+	const [partPrice, setPartPrice] = useState("");
+	const [partJob, setPartJob] = useState("");
+	const total = order.jobs.reduce(
+		(sum, j) =>
+			sum +
+			Number(j.labor_price || 0) +
+			j.parts.reduce(
+				(s, p) => s + Number(p.quantity) * Number(p.unit_price || 0),
+				0,
+			),
+		0,
+	);
+
+	return (
+		<SectionCard
+			title="Trabajos y piezas"
+			description="Lo que se cobra. La categoría alimenta el «último cambio por pieza»."
+			bodyClassName="p-0 sm:p-0"
+		>
+			{!order.jobs.length ? (
+				<EmptyState
+					icon={Wrench}
+					title="Sin trabajos todavía"
+					description="Agregá el primer trabajo realizado con su mano de obra."
+				/>
+			) : (
+				<ul className="divide-y">
+					{order.jobs.map((j) => (
+						<li key={j.id} className="px-4 py-3.5 sm:px-5">
+							<div className="flex items-start gap-3">
+								<div className="min-w-0 flex-1">
+									<p className="text-[13.5px] font-semibold">
+										{j.description}
+										{j.category && categoryLabels[j.category] && (
+											<span className="ml-2 rounded bg-secondary px-1.5 py-px align-middle text-[10.5px] font-medium text-ink-2">
+												{categoryLabels[j.category]}
+											</span>
+										)}
+									</p>
+									<p className="text-xs text-ink-3">Mano de obra</p>
+								</div>
+								<span className="font-mono text-[13px] tabular-nums">
+									{money(j.labor_price || 0)}
+								</span>
+								{!locked && (
+									<Button
+										variant="ghost"
+										size="icon"
+										className="-my-1 size-8 text-ink-3 hover:text-destructive"
+										aria-label={`Eliminar trabajo ${j.description}`}
+										onClick={() => deleteJob.mutate(j.id)}
+									>
+										<Trash2 className="size-4" />
+									</Button>
+								)}
+							</div>
+							{j.parts.length > 0 && (
+								<ul className="mt-2 space-y-1 border-l-2 pl-3">
+									{j.parts.map((p) => (
+										<li
+											key={p.id}
+											className="flex items-center gap-3 text-[13px]"
+										>
+											<span className="min-w-0 flex-1 truncate">
+												{p.name}
+												{p.brand && (
+													<span className="text-ink-3"> · {p.brand}</span>
+												)}
+											</span>
+											<span className="font-mono text-xs text-ink-3 tabular-nums">
+												{Number(p.quantity)} × {money(p.unit_price || 0)}
+											</span>
+											<span className="w-20 text-right font-mono text-[13px] tabular-nums">
+												{money(Number(p.quantity) * Number(p.unit_price || 0))}
+											</span>
+											{!locked && (
+												<Button
+													variant="ghost"
+													size="icon"
+													className="size-7 text-ink-3 hover:text-destructive"
+													aria-label={`Eliminar pieza ${p.name}`}
+													onClick={() =>
+														deletePart.mutate({ jobID: j.id, partID: p.id })
+													}
+												>
+													<X className="size-3.5" />
+												</Button>
+											)}
+										</li>
+									))}
+								</ul>
+							)}
+							{!locked &&
+								(partJob === j.id ? (
+									<form
+										className="mt-3 flex flex-wrap gap-2 rounded-md bg-secondary/50 p-2"
+										onSubmit={(e) => {
+											e.preventDefault();
+											part.mutate(
+												{
+													jobID: j.id,
+													body: {
+														name: partName,
+														quantity: partQty || 1,
+														unit_price: partPrice || "0",
+													},
+												},
+												{
+													onSuccess: () => {
+														setPartName("");
+														setPartPrice("");
+														setPartQty("1");
+														setPartJob("");
+													},
+												},
+											);
+										}}
+									>
+										<Input
+											autoFocus
+											className="min-w-40 flex-1 bg-card"
+											required
+											aria-label="Pieza"
+											placeholder="Pieza"
+											value={partName}
+											onChange={(e) => setPartName(e.target.value)}
+										/>
+										<Input
+											className="w-20 bg-card"
+											type="number"
+											min="0.01"
+											step="0.01"
+											aria-label="Cantidad"
+											value={partQty}
+											onChange={(e) => setPartQty(e.target.value)}
+										/>
+										<Input
+											className="w-28 bg-card"
+											type="number"
+											min="0"
+											step="0.01"
+											aria-label="Precio unitario"
+											placeholder="Precio"
+											value={partPrice}
+											onChange={(e) => setPartPrice(e.target.value)}
+										/>
+										<Button size="sm" className="h-9" disabled={part.isPending}>
+											Agregar
+										</Button>
+										<Button
+											type="button"
+											size="sm"
+											variant="ghost"
+											className="h-9"
+											onClick={() => setPartJob("")}
+										>
+											Cancelar
+										</Button>
+									</form>
+								) : (
+									<button
+										type="button"
+										className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-seal hover:underline"
+										onClick={() => setPartJob(j.id)}
+									>
+										<Plus className="size-3.5" />
+										Agregar pieza
+									</button>
+								))}
+						</li>
+					))}
+				</ul>
+			)}
+			{!locked && (
+				<form
+					className="flex flex-wrap gap-2 border-t bg-secondary/30 px-4 py-3 sm:px-5"
+					onSubmit={(e) => {
+						e.preventDefault();
+						job.mutate(
+							{
+								description: jobName,
+								labor_price: labor || "0",
+								category:
+									category === "none" ? null : (category as S["PartCategory"]),
+							},
+							{
+								onSuccess: () => {
+									setJobName("");
+									setLabor("");
+									setCategory("none");
+								},
+							},
+						);
+					}}
+				>
+					<Input
+						required
+						className="min-w-48 flex-1 bg-card"
+						aria-label="Trabajo realizado"
+						placeholder="Trabajo realizado"
+						value={jobName}
+						onChange={(e) => setJobName(e.target.value)}
+					/>
+					<Select value={category} onValueChange={setCategory}>
+						<SelectTrigger aria-label="Categoría" className="w-40 bg-card">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="none">Sin categoría</SelectItem>
+							{Object.entries(categoryLabels).map(([value, label]) => (
+								<SelectItem key={value} value={value}>
+									{label}
+								</SelectItem>
+							))}
+							<SelectItem value="otro">Otro</SelectItem>
+						</SelectContent>
+					</Select>
+					<Input
+						className="w-32 bg-card"
+						type="number"
+						min="0"
+						step="0.01"
+						aria-label="Mano de obra"
+						placeholder="Mano de obra"
+						value={labor}
+						onChange={(e) => setLabor(e.target.value)}
+					/>
+					<Button disabled={job.isPending}>
+						<Plus className="size-4" />
+						Agregar trabajo
+					</Button>
+				</form>
+			)}
+			<div className="flex items-center justify-between border-t px-4 py-3 sm:px-5">
+				<span className="text-[13px] text-ink-3">Total a cobrar</span>
+				<span className="font-display text-xl font-bold tabular-nums">
+					{money(total)}
+				</span>
+			</div>
+		</SectionCard>
+	);
+}
+
+const outcomes = [
+	["acepto", "Aceptó"],
+	["rechazo", "Rechazó"],
+	["no_respondio", "No respondió"],
+] as const;
+
+function QuoteCard({
+	workshopID,
+	order,
+}: {
+	workshopID: string;
+	order: S["WorkOrderDetail"];
+}) {
+	const a = actions(workshopID, order.id);
 	const quote = useWorkshopMutation(workshopID, a.quote);
 	const share = useWorkshopMutation(workshopID, a.share);
 	const outcome = useWorkshopMutation(workshopID, a.outcome);
-	const [partJob, setPartJob] = useState("");
-	const next: Partial<Record<S["WorkOrderStatus"], S["WorkOrderStatus"]>> = {
-		recibido: "diagnostico",
-		diagnostico: "en_reparacion",
-		en_reparacion: "listo",
-	};
-	const advancing =
-		status.isPending && status.variables?.status !== "cancelado";
-	return (
-		<main className="mx-auto max-w-5xl space-y-5 px-5 py-7">
-			<header>
-				<p className="text-sm text-ink-3">
-					Orden #{order.number} · {statusLabel(order.status)}
-				</p>
-				<h1 className="font-display text-3xl font-bold">
-					{vehicle?.plate || "Sin placa"} · {vehicle?.make} {vehicle?.model}
-				</h1>
-				{order.history_record_id && (
-					<p className="mt-2 font-semibold text-seal">
-						Publicada en el historial
-					</p>
-				)}
-			</header>
-			<Card className="gap-0 space-y-4 rounded-lg p-5 shadow-none">
-				<h2 className="font-semibold">Estado de la orden</h2>
-				{next[order.status] && (
-					<div className="grid gap-4">
-						<Button
-							className="w-full sm:w-auto"
-							disabled={status.isPending}
-							onClick={() =>
-								status.mutate({
-									status: next[order.status] as S["WorkOrderStatus"],
-								})
-							}
-						>
-							{advancing ? (
-								<>
-									<Loader2 className="animate-spin" />
-									Avanzando…
-								</>
-							) : (
-								<>
-									Avanzar a{" "}
-									{statusLabel(next[order.status] ?? "").toLowerCase()}
-								</>
-							)}
-						</Button>
-						<CancelOrderForm
-							pending={
-								status.isPending && status.variables?.status === "cancelado"
-							}
-							onCancel={(reason) =>
-								status.mutate({ status: "cancelado", cancel_reason: reason })
-							}
-						/>
-					</div>
-				)}
-				<FormError error={status.error} />
-			</Card>
-			<Card className="gap-0 rounded-lg p-5 shadow-none">
-				<OrderEditForm
-					initial={{
-						reason: order.reason,
-						km: order.odometer_km?.toString() || "",
-						public_notes: order.public_notes || "",
-						internal_notes: order.internal_notes || "",
-					}}
-					pending={edit.isPending}
-					onSave={(body) => edit.mutateAsync(body)}
-				/>
-			</Card>
-			<OwnerInvitation
-				workshopID={workshopID}
-				vehicleID={order.vehicle_id}
-				linked={vehicle?.owner_linked}
-				name={vehicle?.owner_name}
-			/>
-			<Card className="gap-0 space-y-4 rounded-lg p-5 shadow-none">
-				<h2 className="font-semibold">Trabajos y piezas</h2>
-				{order.jobs.map((j) => (
-					<div key={j.id} className="space-y-3 pb-3">
-						<Table>
-							<TableBody>
-								<TableRow>
-									<TableCell className="whitespace-normal">
-										{j.description} · mano de obra {money(j.labor_price || 0)}
-									</TableCell>
-									<TableCell className="text-right">
-										<Button
-											variant="outline"
-											size="sm"
-											disabled={deleteJob.isPending}
-											onClick={() => deleteJob.mutate(j.id)}
-										>
-											Eliminar trabajo
-										</Button>
-									</TableCell>
-								</TableRow>
-								{j.parts.map((p) => (
-									<TableRow key={p.id}>
-										<TableCell className="whitespace-normal pl-4 text-sm">
-											{p.name} · {p.quantity} × {money(p.unit_price || 0)}
-										</TableCell>
-										<TableCell className="text-right">
-											<Button
-												variant="ghost"
-												size="sm"
-												type="button"
-												disabled={deletePart.isPending}
-												onClick={() =>
-													deletePart.mutate({ jobID: j.id, partID: p.id })
-												}
-											>
-												Eliminar pieza
-											</Button>
-										</TableCell>
-									</TableRow>
-								))}
-							</TableBody>
-						</Table>
-						<Button
-							type="button"
-							variant="outline"
-							size="sm"
-							onClick={() => setPartJob(partJob === j.id ? "" : j.id)}
-						>
-							{partJob === j.id ? "Cerrar" : "Agregar pieza"}
-						</Button>
-						{partJob === j.id && (
-							<AddPartForm
-								pending={part.isPending}
-								onCancel={() => setPartJob("")}
-								onSave={async (body) => {
-									await part.mutateAsync({ jobID: j.id, body });
-									setPartJob("");
-								}}
-							/>
-						)}
-						<Separator />
-					</div>
-				))}
-				<AddJobForm
-					pending={job.isPending}
-					onSave={(body) => job.mutateAsync(body)}
-				/>
-				<FormError error={deleteJob.error || deletePart.error} />
-			</Card>
-			<Card className="gap-0 space-y-4 rounded-lg p-5 shadow-none">
-				<h2 className="font-semibold">Cotización</h2>
-				<QuoteForm
-					items={order.quote?.items}
-					pending={quote.isPending}
-					sharing={share.isPending}
-					onSave={(items) => quote.mutateAsync({ items })}
-					onShare={() => share.mutateAsync()}
-				/>
-				{order.quote && (
-					<div className="flex flex-wrap items-center gap-2">
-						<span>Resultado: {order.quote.outcome.replaceAll("_", " ")}</span>
-						{(
-							[
-								["acepto", "Aceptó"],
-								["rechazo", "Rechazó"],
-								["no_respondio", "No respondió"],
-							] as const
-						).map(([value, label]) => (
-							<Button
-								key={value}
-								variant="outline"
-								size="sm"
-								disabled={outcome.isPending}
-								onClick={() => outcome.mutate({ outcome: value })}
-							>
-								{label}
-							</Button>
-						))}
-					</div>
-				)}
-				<FormError error={outcome.error} />
-				{order.quote_comparison && (
-					<p>
-						Cotizado: {money(order.quote_comparison.quote_total || 0)} ·
-						Cobrado: {money(order.quote_comparison.charged_total || 0)} ·
-						Diferencia: {money(order.quote_comparison.difference || 0)}
-					</p>
-				)}
-			</Card>
-		</main>
+	const [items, setItems] = useState<S["QuoteItem"][]>(
+		order.quote?.items || [blank()],
 	);
-}
-
-function OrderEditForm({
-	initial,
-	pending,
-	onSave,
-}: {
-	initial: z.infer<typeof editSchema>;
-	pending: boolean;
-	onSave: (body: S["EditWorkOrder"]) => Promise<unknown>;
-}) {
-	const form = useForm({
-		resolver: zodResolver(editSchema),
-		defaultValues: initial,
-	});
-	const submit = form.handleSubmit(async (values) => {
-		form.clearErrors("root");
-		try {
-			await onSave({
-				reason: values.reason,
-				odometer_km: values.km ? Number(values.km) : null,
-				public_notes: values.public_notes || null,
-				internal_notes: values.internal_notes || null,
-			});
-			toast.success("Cambios guardados");
-		} catch (error) {
-			applyFormError(form, error);
-		}
-	});
-	return (
-		<Form {...form}>
-			<form onSubmit={submit} className="grid gap-5" noValidate>
-				<h2 className="font-semibold">Datos de la orden</h2>
-				<TextField name="reason" label="Motivo" required />
-				<NumberField
-					name="km"
-					label="Kilometraje"
-					optional
-					suffix="km"
-					min={0}
-					step={1}
-					className="sm:max-w-xs"
-				/>
-				<TextareaField
-					name="public_notes"
-					label="Notas públicas"
-					optional
-					description="Las ve el propietario"
-				/>
-				<TextareaField
-					name="internal_notes"
-					label="Notas internas"
-					optional
-					description="Privadas del taller"
-				/>
-				<RootError />
-				<FormActions>
-					<SubmitButton pending={pending}>Guardar cambios</SubmitButton>
-				</FormActions>
-			</form>
-		</Form>
-	);
-}
-
-function CancelOrderForm({
-	pending,
-	onCancel,
-}: {
-	pending: boolean;
-	onCancel: (reason: string) => void;
-}) {
-	const form = useForm({
-		resolver: zodResolver(cancelSchema),
-		defaultValues: { reason: "" },
-	});
-	return (
-		<Form {...form}>
-			<form
-				onSubmit={form.handleSubmit((values) => onCancel(values.reason))}
-				className="grid gap-5 sm:grid-cols-[minmax(0,20rem)_auto] sm:items-end"
-				noValidate
-			>
-				<TextField name="reason" label="Motivo de cancelación" required />
-				<SubmitButton
-					pending={pending}
-					pendingLabel="Cancelando…"
-					variant="outline"
-				>
-					Cancelar orden
-				</SubmitButton>
-			</form>
-		</Form>
-	);
-}
-
-function AddJobForm({
-	pending,
-	onSave,
-}: {
-	pending: boolean;
-	onSave: (body: S["CreateJob"]) => Promise<unknown>;
-}) {
-	const form = useForm({
-		resolver: zodResolver(jobSchema),
-		defaultValues: { description: "", labor: "" },
-	});
-	const submit = form.handleSubmit(async (values) => {
-		form.clearErrors("root");
-		try {
-			await onSave({
-				description: values.description,
-				labor_price: values.labor || "0",
-			});
-			form.reset();
-			toast.success("Trabajo agregado");
-		} catch (error) {
-			applyFormError(form, error);
-		}
-	});
-	return (
-		<Form {...form}>
-			<form
-				onSubmit={submit}
-				className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-end"
-				noValidate
-			>
-				<TextField name="description" label="Trabajo realizado" required />
-				<NumberField
-					name="labor"
-					label="Mano de obra"
-					optional
-					min={0}
-					step="0.01"
-				/>
-				<SubmitButton pending={pending} pendingLabel="Agregando…">
-					Agregar trabajo
-				</SubmitButton>
-				<RootError className="sm:col-span-3" />
-			</form>
-		</Form>
-	);
-}
-
-function AddPartForm({
-	pending,
-	onCancel,
-	onSave,
-}: {
-	pending: boolean;
-	onCancel: () => void;
-	onSave: (body: S["CreatePart"]) => Promise<unknown>;
-}) {
-	const form = useForm({
-		resolver: zodResolver(partSchema),
-		defaultValues: { name: "", price: "" },
-	});
-	const submit = form.handleSubmit(async (values) => {
-		form.clearErrors("root");
-		try {
-			await onSave({
-				name: values.name,
-				quantity: 1,
-				unit_price: values.price || "0",
-			});
-			toast.success("Pieza agregada");
-		} catch (error) {
-			applyFormError(form, error);
-		}
-	});
-	return (
-		<Form {...form}>
-			<form onSubmit={submit} className="grid gap-5 sm:grid-cols-2" noValidate>
-				<TextField name="name" label="Pieza" autoFocus required />
-				<NumberField name="price" label="Precio" optional min={0} step="0.01" />
-				<RootError />
-				<FormActions>
-					<Button
-						type="button"
-						variant="outline"
-						className="w-full sm:w-auto"
-						onClick={onCancel}
-					>
-						Cancelar
-					</Button>
-					<SubmitButton pending={pending}>Guardar pieza</SubmitButton>
-				</FormActions>
-			</form>
-		</Form>
-	);
-}
-
-function QuoteForm({
-	items,
-	pending,
-	sharing,
-	onSave,
-	onShare,
-}: {
-	items?: S["QuoteItem"][];
-	pending: boolean;
-	sharing: boolean;
-	onSave: (items: S["QuoteItem"][]) => Promise<unknown>;
-	onShare: () => Promise<{ url: string; whatsapp_url: string }>;
-}) {
-	const form = useForm({
-		resolver: zodResolver(quoteSchema),
-		defaultValues: quoteValues(items),
-	});
-	const rows = useFieldArray({ control: form.control, name: "items" });
-	const watched = form.watch("items");
-	useEffect(() => {
-		form.reset(quoteValues(items));
-	}, [form.reset, items]);
 	const [url, setUrl] = useState("");
-	const [shareError, setShareError] = useState<string | null>(null);
-	const submit = form.handleSubmit(async (values) => {
-		form.clearErrors("root");
-		try {
-			await onSave(
-				values.items.map((item) => ({
-					kind: item.kind,
-					description: item.description,
-					quantity: item.quantity,
-					unit_price: item.unit_price || "0",
-				})),
-			);
-			toast.success("Cotización guardada");
-		} catch (error) {
-			applyFormError(form, error);
-		}
-	});
+	useEffect(() => {
+		if (order.quote) setItems(order.quote.items);
+	}, [order.quote]);
+	const update = (i: number, patch: Partial<S["QuoteItem"]>) =>
+		setItems(items.map((x, n) => (n === i ? { ...x, ...patch } : x)));
+	const total = items.reduce(
+		(sum, i) => sum + Number(i.quantity) * Number(i.unit_price),
+		0,
+	);
+	const cmp = order.quote_comparison;
+
 	return (
-		<Form {...form}>
-			<form onSubmit={submit} className="grid gap-4" noValidate>
-				{rows.fields.map((row, index) => (
+		<SectionCard
+			title="Cotización"
+			description="Constancia del presupuesto verbal. El cliente la ve por link durante 15 días; no firma ni aprueba."
+			actions={
+				order.quote?.shared_at && (
+					<span className="text-[11.5px] text-ink-3">
+						Compartida el {date(order.quote.shared_at)}
+					</span>
+				)
+			}
+		>
+			<div className="space-y-3">
+				<div className="hidden grid-cols-[140px_1fr_80px_110px_36px] gap-2 px-0.5 text-[11.5px] font-medium text-ink-3 sm:grid">
+					<span>Tipo</span>
+					<span>Descripción</span>
+					<span>Cant.</span>
+					<span>Precio unit.</span>
+					<span />
+				</div>
+				{items.map((item, i) => (
 					<div
-						key={row.id}
-						className="grid gap-4 rounded-lg border p-4 sm:grid-cols-[minmax(0,10rem)_minmax(0,1fr)_6.5rem_7rem_auto] sm:items-end"
+						// biome-ignore lint/suspicious/noArrayIndexKey: Items have no IDs.
+						key={`item-${i}`}
+						className="grid grid-cols-[1fr_1fr_auto] gap-2 sm:grid-cols-[140px_1fr_80px_110px_36px]"
 					>
-						<SelectField
-							name={`items.${index}.kind`}
-							label="Tipo"
-							options={[
-								{ value: "repuesto", label: "Repuesto" },
-								{ value: "mano_de_obra", label: "Mano de obra" },
-							]}
-							required
+						<Select
+							value={item.kind}
+							onValueChange={(value) =>
+								update(i, { kind: value as S["QuoteItem"]["kind"] })
+							}
+						>
+							<SelectTrigger aria-label="Tipo" className="w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="repuesto">Repuesto</SelectItem>
+								<SelectItem value="mano_de_obra">Mano de obra</SelectItem>
+							</SelectContent>
+						</Select>
+						<Input
+							aria-label="Descripción"
+							placeholder="Descripción"
+							className="col-span-2 sm:col-span-1"
+							value={item.description}
+							onChange={(e) => update(i, { description: e.target.value })}
 						/>
-						<TextField
-							name={`items.${index}.description`}
-							label="Descripción"
-							required
-						/>
-						<NumberField
-							name={`items.${index}.quantity`}
-							label="Cantidad"
-							min={0.01}
+						<Input
+							aria-label="Cantidad"
+							type="number"
+							min="0.01"
 							step="0.01"
-							required
+							value={item.quantity}
+							onChange={(e) => update(i, { quantity: e.target.value })}
 						/>
-						<NumberField
-							name={`items.${index}.unit_price`}
-							label="Precio"
-							min={0}
+						<Input
+							aria-label="Precio"
+							type="number"
+							min="0"
 							step="0.01"
+							value={item.unit_price}
+							onChange={(e) => update(i, { unit_price: e.target.value })}
 						/>
 						<Button
-							type="button"
-							variant="outline"
-							className="w-full sm:w-auto"
-							onClick={() => rows.remove(index)}
+							variant="ghost"
+							size="icon"
+							aria-label="Quitar ítem"
+							className="text-ink-3 hover:text-destructive"
+							onClick={() => setItems(items.filter((_, n) => n !== i))}
 						>
-							Quitar
+							<Trash2 className="size-4" />
 						</Button>
 					</div>
 				))}
-				<p className="text-right font-semibold">
-					Total:{" "}
-					{money(
-						(watched ?? []).reduce(
-							(sum, item) =>
-								sum + Number(item.quantity) * Number(item.unit_price || 0),
-							0,
-						),
-					)}
-				</p>
-				<RootError />
-				<FormError error={shareError} />
-				<div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-					<Button
+				<div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+					<button
 						type="button"
-						variant="outline"
-						className="w-full sm:w-auto"
-						onClick={() => rows.append(blankQuoteItem())}
+						className="inline-flex items-center gap-1 text-xs font-semibold text-seal hover:underline"
+						onClick={() => setItems([...items, blank()])}
 					>
+						<Plus className="size-3.5" />
 						Agregar ítem
+					</button>
+					<p className="text-[13px] text-ink-3">
+						Total cotizado{" "}
+						<strong className="ml-1 font-display text-lg text-foreground tabular-nums">
+							{money(total)}
+						</strong>
+					</p>
+				</div>
+				<div className="flex flex-wrap gap-2">
+					<Button
+						disabled={quote.isPending}
+						onClick={() =>
+							quote.mutate(
+								{ items },
+								{ onSuccess: () => toast.success("Cotización guardada") },
+							)
+						}
+					>
+						Guardar cotización
 					</Button>
 					<Button
-						type="button"
 						variant="outline"
-						className="w-full sm:w-auto"
-						disabled={sharing}
+						disabled={!order.quote || share.isPending}
+						title={!order.quote ? "Guardá la cotización primero" : undefined}
 						onClick={async () => {
-							setShareError(null);
 							try {
-								const result = await onShare();
+								const result = await share.mutateAsync();
 								setUrl(result.url);
 								window.open(
 									result.whatsapp_url,
 									"_blank",
 									"noopener,noreferrer",
 								);
-							} catch (error) {
-								setShareError(
-									error instanceof Error
-										? error.message
-										: "No se pudo compartir la cotización.",
-								);
-							}
+							} catch {}
 						}}
 					>
-						{sharing ? (
-							<>
-								<Loader2 className="animate-spin" />
-								Compartiendo…
-							</>
-						) : (
-							"Compartir por WhatsApp"
-						)}
+						<MessageCircle className="size-4" />
+						Compartir por WhatsApp
 					</Button>
-					<SubmitButton pending={pending}>Guardar cotización</SubmitButton>
 				</div>
 				{url && (
-					<div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-						<div className="grid gap-2">
-							<Label htmlFor="quote-share-url">Enlace de la cotización</Label>
-							<Input id="quote-share-url" readOnly value={url} />
-						</div>
+					<div className="flex gap-2">
+						<Input
+							readOnly
+							value={url}
+							aria-label="Enlace de la cotización"
+							className="font-mono text-xs"
+						/>
 						<Button
-							type="button"
 							variant="outline"
-							className="w-full sm:w-auto"
+							size="icon"
+							aria-label="Copiar enlace"
 							onClick={async () => {
 								await navigator.clipboard.writeText(url);
 								toast.success("Enlace copiado");
 							}}
 						>
-							Copiar
+							<Copy className="size-4" />
 						</Button>
 					</div>
 				)}
+				{order.quote && (
+					<div className="flex flex-wrap items-center gap-3 rounded-md bg-secondary/50 p-3">
+						<span className="text-[13px] font-medium">
+							¿Qué respondió el cliente?
+						</span>
+						<fieldset className="inline-flex rounded-md border bg-card p-0.5">
+							<legend className="sr-only">Resultado de la cotización</legend>
+							{outcomes.map(([value, label]) => (
+								<button
+									key={value}
+									type="button"
+									aria-pressed={order.quote?.outcome === value}
+									disabled={outcome.isPending}
+									onClick={() => outcome.mutate({ outcome: value })}
+									className={cn(
+										"rounded px-2.5 py-1 text-[12.5px] font-medium text-ink-3 hover:text-foreground",
+										order.quote?.outcome === value &&
+											(value === "acepto"
+												? "bg-ok-soft text-ok"
+												: value === "rechazo"
+													? "bg-destructive/10 text-destructive"
+													: "bg-secondary text-foreground"),
+									)}
+								>
+									{label}
+								</button>
+							))}
+						</fieldset>
+						{order.quote.outcome_at && (
+							<span className="text-[11.5px] text-ink-3">
+								Marcado el {date(order.quote.outcome_at)}
+							</span>
+						)}
+					</div>
+				)}
+				{cmp && (
+					<dl className="grid grid-cols-3 gap-px overflow-hidden rounded-md border bg-line text-center">
+						{[
+							["Cotizado", cmp.quote_total],
+							["Cobrado", cmp.charged_total],
+							["Diferencia", cmp.difference],
+						].map(([label, value]) => (
+							<div key={label} className="bg-card px-2 py-2.5">
+								<dt className="text-[11.5px] text-ink-3">{label}</dt>
+								<dd className="font-mono text-[13.5px] font-semibold tabular-nums">
+									{money(value || 0)}
+								</dd>
+							</div>
+						))}
+					</dl>
+				)}
+			</div>
+		</SectionCard>
+	);
+}
+
+function OrderDataCard({
+	workshopID,
+	order,
+}: {
+	workshopID: string;
+	order: S["WorkOrderDetail"];
+}) {
+	const edit = useWorkshopMutation(
+		workshopID,
+		actions(workshopID, order.id).edit,
+	);
+	const [reason, setReason] = useState(order.reason);
+	const [km, setKm] = useState(order.odometer_km?.toString() || "");
+	const [publicNotes, setPublicNotes] = useState(order.public_notes || "");
+	const [internalNotes, setInternalNotes] = useState(
+		order.internal_notes || "",
+	);
+	const dirty =
+		reason !== order.reason ||
+		km !== (order.odometer_km?.toString() || "") ||
+		publicNotes !== (order.public_notes || "") ||
+		internalNotes !== (order.internal_notes || "");
+
+	return (
+		<SectionCard title="Datos de la orden">
+			<form
+				className="grid gap-3.5"
+				onSubmit={(e) => {
+					e.preventDefault();
+					edit.mutate(
+						{
+							reason,
+							odometer_km: km ? Number(km) : null,
+							public_notes: publicNotes || null,
+							internal_notes: internalNotes || null,
+						},
+						{ onSuccess: () => toast.success("Cambios guardados") },
+					);
+				}}
+			>
+				<Label className="grid gap-1.5" htmlFor="order-reason">
+					Motivo
+					<Input
+						id="order-reason"
+						required
+						value={reason}
+						onChange={(e) => setReason(e.target.value)}
+					/>
+				</Label>
+				<Label className="grid gap-1.5" htmlFor="order-km">
+					Kilometraje
+					<Input
+						id="order-km"
+						type="number"
+						min="0"
+						value={km}
+						onChange={(e) => setKm(e.target.value)}
+					/>
+				</Label>
+				<Label className="grid gap-1.5" htmlFor="order-public">
+					<span>
+						Notas públicas{" "}
+						<span className="font-normal text-ink-3">
+							· las ve el propietario
+						</span>
+					</span>
+					<Textarea
+						id="order-public"
+						value={publicNotes}
+						onChange={(e) => setPublicNotes(e.target.value)}
+					/>
+				</Label>
+				<Label className="grid gap-1.5" htmlFor="order-internal">
+					<span className="flex items-center gap-1">
+						<Lock className="size-3 text-ink-3" />
+						Notas internas{" "}
+						<span className="font-normal text-ink-3">· solo el taller</span>
+					</span>
+					<Textarea
+						id="order-internal"
+						value={internalNotes}
+						onChange={(e) => setInternalNotes(e.target.value)}
+					/>
+				</Label>
+				<Button
+					variant={dirty ? "default" : "outline"}
+					disabled={!dirty || edit.isPending}
+				>
+					{edit.isPending ? "Guardando…" : "Guardar cambios"}
+				</Button>
 			</form>
-		</Form>
+		</SectionCard>
 	);
 }
