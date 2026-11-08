@@ -24,6 +24,7 @@
     "db:migrate": "./scripts/migrate.sh up",
     "db:status": "./scripts/migrate.sh status",
     "start": "./scripts/dev.sh",
-    "api:test:db": "cd services/api && TEST_DATABASE_URL=postgres://kilora:kilora@localhost:5432/kilora?sslmode=disable go test ./..."
+    "api:test:db": "cd services/api && TEST_DATABASE_URL=postgres://kilora:kilora@localhost:5432/kilora?sslmode=disable go test ./...",
+    "contracts:gen": "pnpm --filter @kilora/contracts generate"
   }
 }

@@ -42,6 +42,8 @@ Comprobar el API:
 curl http://localhost:8080/healthz
 ```
 
+El frontend usa `VITE_API_URL` vacío para llamar a `/api` en el mismo origen; en desarrollo el proxy de Vite lo envía a `localhost:8080`. En producción, configura el host para redirigir `/api/*` a Go. Si ya tienes un `.env` anterior con `VITE_API_URL=http://localhost:8080`, déjalo vacío para usar el proxy.
+
 ## Comandos
 
 | Comando | Qué hace |

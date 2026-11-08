@@ -10,7 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as OlvideRouteImport } from './routes/olvide'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as RestablecerRouteImport } from './routes/restablecer'
 import { Route as TallerRouteImport } from './routes/taller'
+import { Route as VerificarRouteImport } from './routes/verificar'
 import { Route as HPlacaRouteImport } from './routes/h.$placa'
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
 import { Route as TallerOrdenesIndexRouteImport } from './routes/taller/ordenes/index'
@@ -21,9 +27,39 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OlvideRoute = OlvideRouteImport.update({
+  id: '/olvide',
+  path: '/olvide',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RestablecerRoute = RestablecerRouteImport.update({
+  id: '/restablecer',
+  path: '/restablecer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TallerRoute = TallerRouteImport.update({
   id: '/taller',
   path: '/taller',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerificarRoute = VerificarRouteImport.update({
+  id: '/verificar',
+  path: '/verificar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HPlacaRoute = HPlacaRouteImport.update({
@@ -49,7 +85,13 @@ const TallerOrdenesNuevaRoute = TallerOrdenesNuevaRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/olvide': typeof OlvideRoute
+  '/onboarding': typeof OnboardingRoute
+  '/registro': typeof RegistroRoute
+  '/restablecer': typeof RestablecerRoute
   '/taller': typeof TallerRouteWithChildren
+  '/verificar': typeof VerificarRoute
   '/h/$placa': typeof HPlacaRoute
   '/taller/': typeof TallerIndexRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
@@ -57,6 +99,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/olvide': typeof OlvideRoute
+  '/onboarding': typeof OnboardingRoute
+  '/registro': typeof RegistroRoute
+  '/restablecer': typeof RestablecerRoute
+  '/verificar': typeof VerificarRoute
   '/h/$placa': typeof HPlacaRoute
   '/taller': typeof TallerIndexRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
@@ -65,7 +113,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/olvide': typeof OlvideRoute
+  '/onboarding': typeof OnboardingRoute
+  '/registro': typeof RegistroRoute
+  '/restablecer': typeof RestablecerRoute
   '/taller': typeof TallerRouteWithChildren
+  '/verificar': typeof VerificarRoute
   '/h/$placa': typeof HPlacaRoute
   '/taller/': typeof TallerIndexRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
@@ -75,18 +129,40 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
+    | '/olvide'
+    | '/onboarding'
+    | '/registro'
+    | '/restablecer'
     | '/taller'
+    | '/verificar'
     | '/h/$placa'
     | '/taller/'
     | '/taller/ordenes/nueva'
     | '/taller/ordenes/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/h/$placa' | '/taller' | '/taller/ordenes/nueva' | '/taller/ordenes'
+    | '/'
+    | '/login'
+    | '/olvide'
+    | '/onboarding'
+    | '/registro'
+    | '/restablecer'
+    | '/verificar'
+    | '/h/$placa'
+    | '/taller'
+    | '/taller/ordenes/nueva'
+    | '/taller/ordenes'
   id:
     | '__root__'
     | '/'
+    | '/login'
+    | '/olvide'
+    | '/onboarding'
+    | '/registro'
+    | '/restablecer'
     | '/taller'
+    | '/verificar'
     | '/h/$placa'
     | '/taller/'
     | '/taller/ordenes/nueva'
@@ -95,7 +171,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
+  OlvideRoute: typeof OlvideRoute
+  OnboardingRoute: typeof OnboardingRoute
+  RegistroRoute: typeof RegistroRoute
+  RestablecerRoute: typeof RestablecerRoute
   TallerRoute: typeof TallerRouteWithChildren
+  VerificarRoute: typeof VerificarRoute
   HPlacaRoute: typeof HPlacaRoute
 }
 
@@ -108,11 +190,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/olvide': {
+      id: '/olvide'
+      path: '/olvide'
+      fullPath: '/olvide'
+      preLoaderRoute: typeof OlvideRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/restablecer': {
+      id: '/restablecer'
+      path: '/restablecer'
+      fullPath: '/restablecer'
+      preLoaderRoute: typeof RestablecerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/taller': {
       id: '/taller'
       path: '/taller'
       fullPath: '/taller'
       preLoaderRoute: typeof TallerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verificar': {
+      id: '/verificar'
+      path: '/verificar'
+      fullPath: '/verificar'
+      preLoaderRoute: typeof VerificarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/h/$placa': {
@@ -163,7 +287,13 @@ const TallerRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
+  OlvideRoute: OlvideRoute,
+  OnboardingRoute: OnboardingRoute,
+  RegistroRoute: RegistroRoute,
+  RestablecerRoute: RestablecerRoute,
   TallerRoute: TallerRouteWithChildren,
+  VerificarRoute: VerificarRoute,
   HPlacaRoute: HPlacaRoute,
 }
 export const routeTree = rootRouteImport
