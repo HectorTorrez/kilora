@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { Demo } from "@/components/kilora/demo";
 import { buttonVariants } from "@/components/ui/button";
 export const Route = createFileRoute("/")({ component: Landing });
 function Landing() {
@@ -57,6 +58,7 @@ function Landing() {
 					</p>
 				</div>
 			</section>
+			<Demo />
 		</main>
 	);
 }

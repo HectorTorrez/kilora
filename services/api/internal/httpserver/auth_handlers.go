@@ -180,6 +180,10 @@ func (s *server) forgot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	email := normalizedEmail(in.Email)
+	if strings.HasSuffix(email, "@demo.kilora.app") {
+		w.WriteHeader(204)
+		return
+	}
 	if user, err := sqlc.New(s.db).GetUserByEmail(r.Context(), email); err == nil {
 		var token string
 		e := database.WithTx(r.Context(), s.db, func(q *sqlc.Queries) error {
@@ -211,6 +215,13 @@ func (s *server) reset(w http.ResponseWriter, r *http.Request) {
 		if e != nil {
 			return e
 		}
+		user, e := q.GetUserByID(r.Context(), id)
+		if e != nil {
+			return e
+		}
+		if strings.HasSuffix(strings.ToLower(user.Email), "@demo.kilora.app") {
+			return errDemoPassword
+		}
 		_, e = q.UpdateUserPassword(r.Context(), sqlc.UpdateUserPasswordParams{ID: id, PasswordHash: hash})
 		if e != nil {
 			return e
@@ -221,6 +232,10 @@ func (s *server) reset(w http.ResponseWriter, r *http.Request) {
 		_, e = q.InsertAuditEvent(r.Context(), sqlc.InsertAuditEventParams{ActorUserID: id, EntityID: id, Entity: "user", Action: "user.password_reset"})
 		return e
 	})
+	if errors.Is(err, errDemoPassword) {
+		fail(w, 403, "Las cuentas demo no pueden cambiar su contraseña")
+		return
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		fail(w, 400, "Token inválido o vencido")
 		return

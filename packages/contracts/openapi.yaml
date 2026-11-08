@@ -408,7 +408,7 @@
             }
           },
           "403": {
-            "description": "Origen o contenido inválido",
+            "description": "Las cuentas demo no pueden cambiar su contraseña",
             "content": {
               "application/json": {
                 "schema": {
@@ -2701,6 +2701,50 @@
           }
         ]
       }
+    },
+    "/api/v1/public/demo": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Disponibilidad y cuentas demo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/demo": {
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DemoLogin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Sesión creada"
+          },
+          "400": {
+            "description": "Rol inválido"
+          },
+          "404": {
+            "description": "Demo deshabilitada"
+          },
+          "429": {
+            "description": "Demasiados intentos"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4545,6 +4589,69 @@
           "read_at",
           "source"
         ]
+      },
+      "DemoLogin": {
+        "type": "object",
+        "required": [
+          "role"
+        ],
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "taller",
+              "propietario",
+              "taller_competencia"
+            ]
+          }
+        }
+      },
+      "DemoInfo": {
+        "type": "object",
+        "required": [
+          "enabled",
+          "accounts"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "role",
+                "label",
+                "email",
+                "password",
+                "description"
+              ],
+              "properties": {
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "taller",
+                    "propietario",
+                    "taller_competencia"
+                  ]
+                },
+                "label": {
+                  "type": "string"
+                },
+                "email": {
+                  "type": "string"
+                },
+                "password": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
       }
     }
   }

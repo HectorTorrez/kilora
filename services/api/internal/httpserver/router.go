@@ -18,15 +18,17 @@ type Deps struct {
 	WebOrigin     string
 	Mailer        auth.Mailer
 	SecureCookies bool
+	DemoMode      bool
 }
 
 type server struct {
-	db      *pgxpool.Pool
-	logger  *slog.Logger
-	origin  string
-	secure  bool
-	mailer  auth.Mailer
-	limiter limiter
+	db       *pgxpool.Pool
+	logger   *slog.Logger
+	origin   string
+	secure   bool
+	mailer   auth.Mailer
+	limiter  limiter
+	demoMode bool
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -36,7 +38,7 @@ func NewRouter(d Deps) http.Handler {
 	if d.Mailer == nil {
 		d.Mailer = auth.LogMailer{Logger: d.Logger}
 	}
-	s := &server{db: d.DB, logger: d.Logger, origin: d.WebOrigin, secure: d.SecureCookies, mailer: d.Mailer, limiter: limiter{attempts: make(map[string][]time.Time)}}
+	s := &server{db: d.DB, logger: d.Logger, origin: d.WebOrigin, secure: d.SecureCookies, mailer: d.Mailer, demoMode: d.DemoMode, limiter: limiter{attempts: make(map[string][]time.Time)}}
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -51,6 +53,8 @@ func NewRouter(d Deps) http.Handler {
 	r.Get("/healthz", health(d.DB))
 
 	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/public/demo", s.publicDemo)
+		r.Post("/auth/demo", s.demoLogin)
 		r.Get("/public/quotes/{token}", s.publicQuote)
 		r.Get("/public/invitations/{token}", s.publicInvitation)
 		r.Post("/auth/register", s.register)

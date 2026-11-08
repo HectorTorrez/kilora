@@ -7,6 +7,7 @@ import {
 	useEffect,
 	useState,
 } from "react";
+import { DemoBanner } from "@/components/kilora/demo";
 import { useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Route as TallerRoute } from "@/routes/taller";
@@ -193,6 +194,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 					</p>
 				)}
 				<WorkshopContext.Provider value={active?.workshop_id ?? ""}>
+					<DemoBanner email={me.user.email} />
 					{children}
 				</WorkshopContext.Provider>
 			</div>

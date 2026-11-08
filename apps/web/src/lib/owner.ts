@@ -27,7 +27,7 @@ const serverGet = createServerFn({ method: "GET" })
 		if (!response.ok) throw new Error("No se pudo cargar la información.");
 		return response.json();
 	});
-async function get<T>(path: string): Promise<T> {
+export async function get<T>(path: string): Promise<T> {
 	if (import.meta.env.SSR) return serverGet({ data: path });
 	const response = await fetch(path);
 	if (!response.ok) throw new Error("No se pudo cargar la información.");

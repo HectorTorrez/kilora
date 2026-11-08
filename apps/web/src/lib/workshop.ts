@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api, apiError } from "./api";
+import { get } from "./owner";
 
 type S = components["schemas"];
 const unwrap = <T>(result: { data?: T; error?: { error: string } }) => {
@@ -53,12 +54,21 @@ export const ordersQuery = (
 ) =>
 	queryOptions({
 		queryKey: ["workshop", workshopID, "orders", status, branch_id],
-		queryFn: async () =>
-			unwrap(
+		queryFn: async () => {
+			if (import.meta.env.SSR) {
+				const params = new URLSearchParams();
+				if (status) params.set("status", status);
+				if (branch_id) params.set("branch_id", branch_id);
+				return get<S["WorkOrderSummary"][]>(
+					`/api/v1/workshops/${encodeURIComponent(workshopID)}/work-orders?${params}`,
+				);
+			}
+			return unwrap(
 				await api.GET("/api/v1/workshops/{workshopID}/work-orders", {
 					params: { path: { workshopID }, query: { status, branch_id } },
 				}),
-			),
+			);
+		},
 	});
 export const orderQuery = (workshopID: string, orderID: string) =>
 	queryOptions({

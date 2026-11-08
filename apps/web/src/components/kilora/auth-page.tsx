@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Demo } from "@/components/kilora/demo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -315,6 +316,7 @@ export function AuthPage({
 							</Button>
 						</form>
 					)}
+					{!done && mode === "login" && <Demo compact />}
 					{!done && (
 						<p className="mt-7 text-center text-sm text-ink-3">
 							{mode === "login" ? (

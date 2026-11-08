@@ -5,6 +5,7 @@ import {
 	redirect,
 	useNavigate,
 } from "@tanstack/react-router";
+import { DemoBanner } from "@/components/kilora/demo";
 import { Button } from "@/components/ui/button";
 import { meQuery, useLogout } from "@/lib/auth";
 export const Route = createFileRoute("/mis-vehiculos")({
@@ -22,6 +23,7 @@ function Layout() {
 	const navigate = useNavigate();
 	return (
 		<div className="min-h-dvh bg-background">
+			<DemoBanner email={me.user.email} />
 			<header className="border-b bg-card">
 				<div className="mx-auto flex max-w-5xl flex-wrap items-center gap-4 px-5 py-4">
 					<Link

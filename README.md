@@ -100,3 +100,16 @@ Las rutas siguientes requieren sesión y membresía en el taller. Los mecánicos
 El taller (admin o recepción) crea y consulta invitaciones en `POST/GET /api/v1/workshops/{workshopID}/vehicles/{vehicleID}/invitations`. El enlace público se consulta en `GET /api/v1/public/invitations/{token}` y el usuario destinatario lo acepta con consentimiento explícito en `POST /api/v1/invitations/{token}/accept`.
 
 El propietario usa `GET/POST /api/v1/me/vehicles`, `GET /api/v1/me/vehicles/{vehicleID}`, `GET/POST /api/v1/me/vehicles/{vehicleID}/history`, `POST /api/v1/me/vehicles/{vehicleID}/corrections` y `POST /api/v1/me/vehicles/{vehicleID}/odometer`. Los importes se envían como cadenas decimales en USD. El nombre libre del taller en un servicio manual se guarda en las notas públicas como `Realizado en: …`; no crea un vínculo con ese taller. Las correcciones y lecturas son adiciones, no modifican registros anteriores.
+
+## Demo
+
+Activa `DEMO_MODE=true` en `.env`, aplica las migraciones y ejecuta `pnpm db:seed`. El seed es idempotente. `pnpm db:seed -- --reset` elimina y recrea los datos de las cuentas y talleres demo en una transacción. Solo el seed deshabilita temporalmente los triggers append-only durante ese reinicio y los vuelve a habilitar antes de confirmar la transacción. No hay reinicio automático: prográmalo si la demo es pública.
+
+Todas las cuentas usan la contraseña `demo1234`:
+
+- `taller@demo.kilora.app`: administración de Taller Los Volcanes.
+- `recepcion@demo.kilora.app`: recepción en Santa Tecla.
+- `propietario@demo.kilora.app`: María Hernández.
+- `ceiba@demo.kilora.app`: AutoServicio La Ceiba y la vista ciega.
+
+La portada ofrece acceso en un clic cuando el modo demo está habilitado. El propietario ve el historial completo; otro taller vinculado solo ve trabajos, fechas y kilometraje.

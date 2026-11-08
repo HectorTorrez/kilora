@@ -52,6 +52,7 @@ func run(logger *slog.Logger) error {
 			WebOrigin:     cfg.WebOrigin,
 			Mailer:        mailer,
 			SecureCookies: cfg.IsProduction(),
+			DemoMode:      cfg.DemoMode,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,

@@ -17,6 +17,7 @@ type Config struct {
 	ResendAPIKey string
 	EmailFrom    string
 	Env          string
+	DemoMode     bool
 }
 
 // Load lee el .env de la raíz del repo si existe y valida lo indispensable.
@@ -36,6 +37,7 @@ func Load() (Config, error) {
 		ResendAPIKey: os.Getenv("RESEND_API_KEY"),
 		EmailFrom:    env("EMAIL_FROM", "no-reply@kilora.com"),
 		Env:          env("APP_ENV", "development"),
+		DemoMode:     strings.EqualFold(os.Getenv("DEMO_MODE"), "true"),
 	}
 
 	if cfg.DatabaseURL == "" {

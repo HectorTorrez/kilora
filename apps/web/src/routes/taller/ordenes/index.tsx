@@ -8,6 +8,10 @@ import { date } from "@/lib/format";
 import { ordersQuery } from "@/lib/workshop";
 import { Route as TallerRoute } from "@/routes/taller";
 export const Route = createFileRoute("/taller/ordenes/")({
+	loader: async ({ context }) => {
+		const workshopID = context.me.memberships[0].workshop_id;
+		return context.queryClient.ensureQueryData(ordersQuery(workshopID));
+	},
 	component: OrdersPage,
 });
 const statuses = [
