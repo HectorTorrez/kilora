@@ -134,6 +134,17 @@ func (q *Queries) GetHistoryRecord(ctx context.Context, arg GetHistoryRecordPara
 	return i, err
 }
 
+const getHistoryTotalByWorkOrder = `-- name: GetHistoryTotalByWorkOrder :one
+SELECT total::text FROM history_record WHERE work_order_id = $1
+`
+
+func (q *Queries) GetHistoryTotalByWorkOrder(ctx context.Context, workOrderID pgtype.UUID) (string, error) {
+	row := q.db.QueryRow(ctx, getHistoryTotalByWorkOrder, workOrderID)
+	var total string
+	err := row.Scan(&total)
+	return total, err
+}
+
 const listCorrectionsByVehicle = `-- name: ListCorrectionsByVehicle :many
 SELECT c.id, c.history_record_id, c.reason, c.changes, c.created_by, c.created_at FROM correction c JOIN history_record h ON h.id = c.history_record_id JOIN vehicle_link l ON l.vehicle_id = h.vehicle_id WHERE h.vehicle_id = $1 AND l.workshop_id = $2 ORDER BY c.created_at DESC
 `

@@ -12,10 +12,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	decimalpkg "github.com/shopspring/decimal"
 	"kilora/api/internal/auth"
+	"kilora/api/internal/database"
 	"kilora/api/internal/database/sqlc"
 )
+
+var errQuoteFinalized = errors.New("cotización finalizada")
+var errQuoteNotFound = errors.New("cotización no encontrada")
 
 type quoteInputItem struct {
 	Kind        string          `json:"kind"`
@@ -42,7 +47,10 @@ func (s *server) saveQuote(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "Agrega al menos un ítem")
 		return
 	}
-	type item struct{ kind, description, quantity, price string }
+	type item struct {
+		kind, description string
+		quantity, price   pgtype.Numeric
+	}
 	var items []item
 	total := decimalpkg.Zero
 	for _, v := range in.Items {
@@ -54,46 +62,33 @@ func (s *server) saveQuote(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		total = total.Add(money(q).Mul(money(p)).Round(2))
-		items = append(items, item{v.Kind, v.Description, stringValue(q), stringValue(p)})
+		items = append(items, item{v.Kind, v.Description, q, p})
 	}
 	ctx := r.Context()
-	tx, e := s.db.Begin(ctx)
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	defer tx.Rollback(ctx)
-	var status string
-	e = tx.QueryRow(ctx, "SELECT status FROM work_order WHERE id=$1 AND workshop_id=$2 FOR UPDATE", o.ID, o.WorkshopID).Scan(&status)
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	var id uuid.UUID
-	var outcome string
-	e = tx.QueryRow(ctx, `INSERT INTO quote(work_order_id,workshop_id,total,created_by) VALUES($1,$2,$3,$4) ON CONFLICT(work_order_id) DO UPDATE SET total=EXCLUDED.total WHERE quote.outcome='pendiente' RETURNING id,outcome`, o.ID, o.WorkshopID, total.StringFixed(2), dbUUID(wc.UserID)).Scan(&id, &outcome)
-	if errors.Is(e, pgx.ErrNoRows) {
-		fail(w, 409, "La cotización ya tiene resultado")
-		return
-	}
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	_, e = tx.Exec(ctx, "DELETE FROM quote_item WHERE quote_id=$1", id)
-	if e == nil {
+	e := database.WithTx(ctx, s.db, func(q *sqlc.Queries) error {
+		if _, err := q.LockWorkOrder(ctx, sqlc.LockWorkOrderParams{ID: o.ID, WorkshopID: o.WorkshopID}); err != nil {
+			return err
+		}
+		quote, err := q.UpsertQuote(ctx, sqlc.UpsertQuoteParams{WorkOrderID: o.ID, WorkshopID: o.WorkshopID, Total: dbMoney(total), CreatedBy: dbUUID(wc.UserID)})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errQuoteFinalized
+		}
+		if err != nil {
+			return err
+		}
+		if err = q.DeleteQuoteItems(ctx, quote.ID); err != nil {
+			return err
+		}
 		for i, v := range items {
-			_, e = tx.Exec(ctx, "INSERT INTO quote_item(quote_id,position,kind,description,quantity,unit_price) VALUES($1,$2,$3,$4,$5,$6)", id, i, v.kind, v.description, v.quantity, v.price)
-			if e != nil {
-				break
+			if err = q.CreateQuoteItem(ctx, sqlc.CreateQuoteItemParams{QuoteID: quote.ID, Position: int32(i), Kind: sqlc.QuoteItemKind(v.kind), Description: v.description, Quantity: v.quantity, UnitPrice: v.price}); err != nil {
+				return err
 			}
 		}
-	}
-	if e == nil {
-		e = audit(ctx, sqlc.New(tx), wc, dbUUID(id), "quote", "quote.save")
-	}
-	if e == nil {
-		e = tx.Commit(ctx)
+		return audit(ctx, q, wc, quote.ID, "quote", "quote.save")
+	})
+	if errors.Is(e, errQuoteFinalized) {
+		fail(w, 409, "La cotización ya tiene resultado")
+		return
 	}
 	if e != nil {
 		fail(w, 500, "Error interno")
@@ -102,39 +97,41 @@ func (s *server) saveQuote(w http.ResponseWriter, r *http.Request) {
 	s.getQuote(w, r)
 }
 
-func (s *server) quoteData(r *http.Request, id uuid.UUID) (map[string]any, error) {
-	var total, currency, outcome string
-	var outcomeAt, sharedAt, expiresAt *time.Time
-	var outcomeBy *uuid.UUID
-	e := s.db.QueryRow(r.Context(), `SELECT total::text,currency,outcome::text,outcome_at,outcome_by,shared_at,share_expires_at FROM quote WHERE id=$1`, id).Scan(&total, &currency, &outcome, &outcomeAt, &outcomeBy, &sharedAt, &expiresAt)
-	if e != nil {
-		return nil, e
+func nullableTime(v pgtype.Timestamptz) *time.Time {
+	if !v.Valid {
+		return nil
 	}
-	rows, e := s.db.Query(r.Context(), `SELECT kind::text,description,quantity::text,unit_price::text FROM quote_item WHERE quote_id=$1 ORDER BY position`, id)
-	if e != nil {
-		return nil, e
+	return &v.Time
+}
+func nullableUUID(v pgtype.UUID) *uuid.UUID {
+	if !v.Valid {
+		return nil
 	}
-	defer rows.Close()
+	id := uuid.UUID(v.Bytes)
+	return &id
+}
+func (s *server) quoteData(r *http.Request, id pgtype.UUID) (map[string]any, error) {
+	q := sqlc.New(s.db)
+	data, err := q.GetQuoteData(r.Context(), id)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := q.ListQuoteItems(r.Context(), id)
+	if err != nil {
+		return nil, err
+	}
 	items := []any{}
-	for rows.Next() {
-		var kind, description, quantity, price string
-		if e = rows.Scan(&kind, &description, &quantity, &price); e != nil {
-			return nil, e
-		}
-		items = append(items, map[string]any{"kind": kind, "description": description, "quantity": quantity, "unit_price": price})
+	for _, v := range rows {
+		items = append(items, map[string]any{"kind": v.Kind, "description": v.Description, "quantity": v.Quantity, "unit_price": v.UnitPrice})
 	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	return map[string]any{"items": items, "total": total, "currency": currency, "outcome": outcome, "outcome_at": outcomeAt, "outcome_by": outcomeBy, "shared_at": sharedAt, "share_expires_at": expiresAt}, nil
+	return map[string]any{"items": items, "total": data.Total, "currency": data.Currency, "outcome": data.Outcome, "outcome_at": nullableTime(data.OutcomeAt), "outcome_by": nullableUUID(data.OutcomeBy), "shared_at": nullableTime(data.SharedAt), "share_expires_at": nullableTime(data.ShareExpiresAt)}, nil
 }
 func (s *server) getQuote(w http.ResponseWriter, r *http.Request) {
 	o, _, ok := s.findOrder(w, r)
 	if !ok {
 		return
 	}
-	var id uuid.UUID
-	e := s.db.QueryRow(r.Context(), "SELECT id FROM quote WHERE work_order_id=$1 AND workshop_id=$2", o.ID, o.WorkshopID).Scan(&id)
+	id, e := sqlc.New(s.db).GetQuoteIDByOrder(r.Context(), sqlc.GetQuoteIDByOrderParams{WorkOrderID: o.ID, WorkshopID: o.WorkshopID})
 	if errors.Is(e, pgx.ErrNoRows) {
 		fail(w, 404, "Cotización no encontrada")
 		return
@@ -164,29 +161,27 @@ func (s *server) shareQuote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	tx, e := s.db.Begin(ctx)
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	defer tx.Rollback(ctx)
-	var id uuid.UUID
-	var expires time.Time
-	var name, total string
-	var plate, phone *string
-	e = tx.QueryRow(ctx, `UPDATE quote SET share_token_hash=$1,shared_at=now(),share_expires_at=now()+interval '15 days' WHERE work_order_id=$2 AND workshop_id=$3 RETURNING id,share_expires_at,total::text`, auth.HashToken(token), o.ID, o.WorkshopID).Scan(&id, &expires, &total)
-	if errors.Is(e, pgx.ErrNoRows) {
+	var shared sqlc.ShareQuoteRow
+	var contact sqlc.GetQuoteContactRow
+	hash := auth.HashToken(token)
+	e = database.WithTx(ctx, s.db, func(q *sqlc.Queries) error {
+		var err error
+		shared, err = q.ShareQuote(ctx, sqlc.ShareQuoteParams{ShareTokenHash: &hash, WorkOrderID: o.ID, WorkshopID: o.WorkshopID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errQuoteNotFound
+		}
+		if err != nil {
+			return err
+		}
+		contact, err = q.GetQuoteContact(ctx, o.ID)
+		if err != nil {
+			return err
+		}
+		return audit(ctx, q, wc, shared.ID, "quote", "quote.share")
+	})
+	if errors.Is(e, errQuoteNotFound) {
 		fail(w, 404, "Cotización no encontrada")
 		return
-	}
-	if e == nil {
-		e = tx.QueryRow(ctx, `SELECT w.name,v.plate,v.contact_phone FROM work_order o JOIN workshop w ON w.id=o.workshop_id JOIN vehicle v ON v.id=o.vehicle_id WHERE o.id=$1`, o.ID).Scan(&name, &plate, &phone)
-	}
-	if e == nil {
-		e = audit(ctx, sqlc.New(tx), wc, dbUUID(id), "quote", "quote.share")
-	}
-	if e == nil {
-		e = tx.Commit(ctx)
 	}
 	if e != nil {
 		fail(w, 500, "Error interno")
@@ -194,15 +189,15 @@ func (s *server) shareQuote(w http.ResponseWriter, r *http.Request) {
 	}
 	link := strings.TrimRight(s.origin, "/") + "/c/" + token
 	plateText := "sin placa"
-	if plate != nil {
-		plateText = *plate
+	if contact.Plate != nil {
+		plateText = *contact.Plate
 	}
 	number := ""
-	if phone != nil {
-		number = strings.TrimPrefix(*phone, "+")
+	if contact.ContactPhone != nil {
+		number = strings.TrimPrefix(*contact.ContactPhone, "+")
 	}
-	text := fmt.Sprintf("Cotización de %s para %s: $%s. Consulta el detalle: %s", name, plateText, total, link)
-	writeJSON(w, 200, map[string]any{"url": link, "expires_at": expires, "whatsapp_url": "https://wa.me/" + number + "?text=" + url.QueryEscape(text)})
+	text := fmt.Sprintf("Cotización de %s para %s: $%s. Consulta el detalle: %s", contact.Name, plateText, shared.Total, link)
+	writeJSON(w, 200, map[string]any{"url": link, "expires_at": shared.ShareExpiresAt.Time, "whatsapp_url": "https://wa.me/" + number + "?text=" + url.QueryEscape(text)})
 }
 func (s *server) quoteOutcome(w http.ResponseWriter, r *http.Request) {
 	o, wc, ok := s.findOrder(w, r)
@@ -223,23 +218,19 @@ func (s *server) quoteOutcome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ctx := r.Context()
-	tx, e := s.db.Begin(ctx)
-	if e != nil {
-		fail(w, 500, "Error interno")
-		return
-	}
-	defer tx.Rollback(ctx)
-	var id uuid.UUID
-	e = tx.QueryRow(ctx, `UPDATE quote SET outcome=$1,outcome_at=now(),outcome_by=$2 WHERE work_order_id=$3 AND workshop_id=$4 RETURNING id`, in.Outcome, dbUUID(wc.UserID), o.ID, o.WorkshopID).Scan(&id)
-	if errors.Is(e, pgx.ErrNoRows) {
+	e := database.WithTx(ctx, s.db, func(q *sqlc.Queries) error {
+		id, err := q.SetQuoteOutcome(ctx, sqlc.SetQuoteOutcomeParams{Outcome: sqlc.QuoteOutcome(in.Outcome), OutcomeBy: dbUUID(wc.UserID), WorkOrderID: o.ID, WorkshopID: o.WorkshopID})
+		if errors.Is(err, pgx.ErrNoRows) {
+			return errQuoteNotFound
+		}
+		if err != nil {
+			return err
+		}
+		return audit(ctx, q, wc, id, "quote", "quote.outcome")
+	})
+	if errors.Is(e, errQuoteNotFound) {
 		fail(w, 404, "Cotización no encontrada")
 		return
-	}
-	if e == nil {
-		e = audit(ctx, sqlc.New(tx), wc, dbUUID(id), "quote", "quote.outcome")
-	}
-	if e == nil {
-		e = tx.Commit(ctx)
 	}
 	if e != nil {
 		fail(w, 500, "Error interno")
@@ -252,13 +243,8 @@ func (s *server) publicQuote(w http.ResponseWriter, r *http.Request) {
 		fail(w, 429, "Demasiadas solicitudes")
 		return
 	}
-	var id uuid.UUID
-	var name, make, model string
-	var verified, shared, expires *time.Time
-	var plate *string
-	var year *int32
-	var number int32
-	e := s.db.QueryRow(r.Context(), `SELECT q.id,w.name,w.verified_at,v.plate,v.make,v.model,v.year,o.number,q.shared_at,q.share_expires_at FROM quote q JOIN work_order o ON o.id=q.work_order_id JOIN workshop w ON w.id=q.workshop_id JOIN vehicle v ON v.id=o.vehicle_id WHERE q.share_token_hash=$1 AND q.share_expires_at>now()`, auth.HashToken(chi.URLParam(r, "token"))).Scan(&id, &name, &verified, &plate, &make, &model, &year, &number, &shared, &expires)
+	hash := auth.HashToken(chi.URLParam(r, "token"))
+	public, e := sqlc.New(s.db).GetPublicQuote(r.Context(), &hash)
 	if errors.Is(e, pgx.ErrNoRows) {
 		fail(w, 404, "Cotización no disponible")
 		return
@@ -267,10 +253,10 @@ func (s *server) publicQuote(w http.ResponseWriter, r *http.Request) {
 		fail(w, 500, "Error interno")
 		return
 	}
-	v, e := s.quoteData(r, id)
+	v, e := s.quoteData(r, public.ID)
 	if e != nil {
 		fail(w, 500, "Error interno")
 		return
 	}
-	writeJSON(w, 200, map[string]any{"workshop_name": name, "verified_at": verified, "plate": plate, "make": make, "model": model, "year": year, "order_number": number, "items": v["items"], "total": v["total"], "currency": v["currency"], "shared_at": shared, "share_expires_at": expires})
+	writeJSON(w, 200, map[string]any{"workshop_name": public.Name, "verified_at": nullableTime(public.VerifiedAt), "plate": public.Plate, "make": public.Make, "model": public.Model, "year": public.Year, "order_number": public.Number, "items": v["items"], "total": v["total"], "currency": v["currency"], "shared_at": nullableTime(public.SharedAt), "share_expires_at": nullableTime(public.ShareExpiresAt)})
 }

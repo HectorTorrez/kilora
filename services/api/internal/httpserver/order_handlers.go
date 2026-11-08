@@ -167,8 +167,7 @@ func (s *server) getOrder(w http.ResponseWriter, r *http.Request) {
 		js = append(js, item)
 	}
 	out["jobs"] = js
-	var quoteID uuid.UUID
-	qe := s.db.QueryRow(r.Context(), "SELECT id FROM quote WHERE work_order_id=$1 AND workshop_id=$2", o.ID, o.WorkshopID).Scan(&quoteID)
+	quoteID, qe := q.GetQuoteIDByOrder(r.Context(), sqlc.GetQuoteIDByOrderParams{WorkOrderID: o.ID, WorkshopID: o.WorkshopID})
 	if qe == nil {
 		quote, e := s.quoteData(r, quoteID)
 		if e != nil {
@@ -176,8 +175,7 @@ func (s *server) getOrder(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out["quote"] = quote
-		var charged string
-		e = s.db.QueryRow(r.Context(), "SELECT total::text FROM history_record WHERE work_order_id=$1", o.ID).Scan(&charged)
+		charged, e := q.GetHistoryTotalByWorkOrder(r.Context(), o.ID)
 		if e == nil {
 			quoted, _ := decimalpkg.NewFromString(quote["total"].(string))
 			actual, _ := decimalpkg.NewFromString(charged)
