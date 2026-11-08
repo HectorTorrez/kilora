@@ -5,9 +5,18 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
 	meQuery,
 	useCreateWorkshop,
@@ -191,34 +200,27 @@ export function AuthPage({
 		type = "text",
 		autoComplete?: string,
 	) => (
-		<div className="space-y-2">
-			<Label htmlFor={key}>{label}</Label>
-			<Input
-				id={key}
-				type={type}
-				defaultValue={
-					key === "email"
-						? initialAccount?.email
-						: key === "password"
-							? initialAccount?.password
-							: undefined
-				}
-				autoComplete={autoComplete}
-				aria-invalid={!!form.formState.errors[key]}
-				aria-describedby={
-					form.formState.errors[key] ? `${key}-error` : undefined
-				}
-				{...form.register(
-					key,
-					key === "email" ? { onChange: () => setSelectedRole(null) } : {},
-				)}
-			/>
-			{form.formState.errors[key] && (
-				<p id={`${key}-error`} className="text-sm text-destructive">
-					{form.formState.errors[key]?.message}
-				</p>
+		<FormField
+			control={form.control}
+			name={key}
+			render={({ field }) => (
+				<FormItem>
+					<FormLabel>{label}</FormLabel>
+					<FormControl>
+						<Input
+							{...field}
+							type={type}
+							autoComplete={autoComplete}
+							onChange={(event) => {
+								field.onChange(event);
+								if (key === "email") setSelectedRole(null);
+							}}
+						/>
+					</FormControl>
+					<FormMessage />
+				</FormItem>
 			)}
-		</div>
+		/>
 	);
 	const done =
 		mutation.isSuccess && ["olvide", "restablecer", "verificar"].includes(mode);
@@ -274,106 +276,115 @@ export function AuthPage({
 							</Link>
 						</output>
 					) : (
-						<form onSubmit={submit} className="mt-8 space-y-5" noValidate>
-							{accounts.length > 0 && (
-								<div className="space-y-2">
-									<div
-										className="grid grid-cols-3 rounded-lg border p-1"
-										role="radiogroup"
-										aria-label="Perfil demo"
-									>
-										{accounts.map((account) => (
-											<label
-												key={account.role}
-												className={`cursor-pointer rounded-md px-2 py-2 text-center text-sm font-semibold focus-within:ring-2 focus-within:ring-ring ${selectedRole === account.role ? "bg-foreground text-background" : "text-ink-3"}`}
-											>
-												<input
-													className="sr-only"
-													type="radio"
-													name="demo-profile"
+						<Form {...form}>
+							<form onSubmit={submit} className="mt-8 space-y-5" noValidate>
+								{accounts.length > 0 && (
+									<div className="space-y-2">
+										<ToggleGroup
+											type="single"
+											value={selectedRole ?? ""}
+											onValueChange={(value) => {
+												const account = accounts.find((a) => a.role === value);
+												if (!account) return;
+												setSelectedRole(account.role);
+												form.setValue("email", account.email, {
+													shouldValidate: true,
+												});
+												form.setValue("password", account.password, {
+													shouldValidate: true,
+												});
+											}}
+											className="grid grid-cols-3 rounded-lg border p-1"
+											aria-label="Perfil demo"
+										>
+											{accounts.map((account) => (
+												<ToggleGroupItem
+													key={account.role}
 													value={account.role}
-													checked={selectedRole === account.role}
-													onChange={() => {
-														setSelectedRole(account.role);
-														form.setValue("email", account.email, {
-															shouldValidate: true,
-														});
-														form.setValue("password", account.password, {
-															shouldValidate: true,
-														});
-													}}
-												/>
-												{account.role === "taller"
-													? "Taller"
-													: account.role === "propietario"
-														? "Propietario"
-														: "Otro taller"}
-											</label>
-										))}
+													className="px-2 py-2 text-center text-sm font-semibold data-[state=on]:bg-foreground data-[state=on]:text-background"
+												>
+													{account.role === "taller"
+														? "Taller"
+														: account.role === "propietario"
+															? "Propietario"
+															: "Otro taller"}
+												</ToggleGroupItem>
+											))}
+										</ToggleGroup>
+										<p className="text-sm text-ink-3">
+											Cuenta demo lista. Pulsa Entrar o cambia el perfil.
+										</p>
 									</div>
-									<p className="text-sm text-ink-3">
-										Cuenta demo lista. Pulsa Entrar o cambia el perfil.
-									</p>
-								</div>
-							)}
-							{mode === "registro" &&
-								field("full_name", "Nombre completo", "text", "name")}
-							{["login", "registro", "olvide"].includes(mode) &&
-								field("email", "Correo electrónico", "email", "email")}
-							{["login", "registro", "restablecer"].includes(mode) &&
-								field(
-									"password",
-									"Contraseña",
-									"password",
-									mode === "login" ? "current-password" : "new-password",
 								)}
-							{mode === "onboarding" && (
-								<>
-									{field("name", "Nombre del taller")}
-									{field("nit", "NIT (opcional)")}
-									{field("branch_name", "Nombre de la sucursal")}
-								</>
-							)}
-							{mode === "login" && (
-								<div className="text-right">
-									<Link
-										to="/olvide"
-										className="text-sm font-semibold text-seal"
+								{mode === "registro" &&
+									field("full_name", "Nombre completo", "text", "name")}
+								{["login", "registro", "olvide"].includes(mode) &&
+									field("email", "Correo electrónico", "email", "email")}
+								{["login", "registro", "restablecer"].includes(mode) &&
+									field(
+										"password",
+										"Contraseña",
+										"password",
+										mode === "login" ? "current-password" : "new-password",
+									)}
+								{mode === "onboarding" && (
+									<>
+										{field("name", "Nombre del taller")}
+										{field("nit", "NIT (opcional)")}
+										{field("branch_name", "Nombre de la sucursal")}
+									</>
+								)}
+								{mode === "login" && (
+									<div className="text-right">
+										<Link
+											to="/olvide"
+											className="text-sm font-semibold text-seal"
+										>
+											¿Olvidaste tu contraseña?
+										</Link>
+									</div>
+								)}
+								{["restablecer", "verificar"].includes(mode) && !token && (
+									<Alert
+										variant="destructive"
+										className="text-sm text-destructive"
 									>
-										¿Olvidaste tu contraseña?
-									</Link>
-								</div>
-							)}
-							{["restablecer", "verificar"].includes(mode) && !token && (
-								<p role="alert" className="text-sm text-destructive">
-									El enlace no contiene un token. Solicitá uno nuevo.
-								</p>
-							)}
-							{mutation.error && (
-								<p role="alert" className="text-sm text-destructive">
-									{mutation.error.message}
-								</p>
-							)}
-							<Button
-								className="w-full"
-								type="submit"
-								disabled={
-									mutation.isPending ||
-									(["restablecer", "verificar"].includes(mode) && !token)
-								}
-							>
-								{mutation.isPending
-									? "Un momento…"
-									: {
-											login: "Entrar",
-											registro: "Crear cuenta",
-											onboarding: "Crear taller",
-											olvide: "Enviar enlace",
-											restablecer: "Guardar contraseña",
-											verificar: "Verificar correo",
-										}[mode]}
-							</Button>
-						</form>
+										<AlertDescription>
+											El enlace no contiene un token. Solicitá uno nuevo.
+										</AlertDescription>
+									</Alert>
+								)}
+								{mutation.error && (
+									<Alert
+										variant="destructive"
+										className="text-sm text-destructive"
+									>
+										<AlertDescription>
+											{mutation.error.message}
+										</AlertDescription>
+									</Alert>
+								)}
+								<Button
+									className="w-full"
+									type="submit"
+									disabled={
+										mutation.isPending ||
+										(["restablecer", "verificar"].includes(mode) && !token)
+									}
+								>
+									{mutation.isPending
+										? "Un momento…"
+										: {
+												login: "Entrar",
+												registro: "Crear cuenta",
+												onboarding: "Crear taller",
+												olvide: "Enviar enlace",
+												restablecer: "Guardar contraseña",
+												verificar: "Verificar correo",
+											}[mode]}
+								</Button>
+							</form>
+						</Form>
 					)}
 					{!done && (
 						<p className="mt-7 text-center text-sm text-ink-3">

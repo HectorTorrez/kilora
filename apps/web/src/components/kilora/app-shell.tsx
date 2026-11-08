@@ -8,6 +8,15 @@ import {
 	useState,
 } from "react";
 import { DemoBanner } from "@/components/kilora/demo";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { Route as TallerRoute } from "@/routes/taller";
@@ -105,22 +114,25 @@ export function AppShell({ children }: { children: ReactNode }) {
 						{active?.branch_name}
 					</p>
 					{me.memberships.length > 1 && (
-						<select
-							aria-label="Taller activo"
-							value={active?.workshop_id}
-							onChange={(event) => selectWorkshop(event.target.value)}
-							className="mt-2 w-full rounded border bg-card p-1 text-xs"
-						>
-							{[
-								...new Map(
-									me.memberships.map((m) => [m.workshop_id, m]),
-								).values(),
-							].map((m) => (
-								<option key={m.workshop_id} value={m.workshop_id}>
-									{m.workshop_name}
-								</option>
-							))}
-						</select>
+						<Select value={active?.workshop_id} onValueChange={selectWorkshop}>
+							<SelectTrigger
+								aria-label="Taller activo"
+								className="mt-2 w-full text-xs"
+							>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{[
+									...new Map(
+										me.memberships.map((m) => [m.workshop_id, m]),
+									).values(),
+								].map((m) => (
+									<SelectItem key={m.workshop_id} value={m.workshop_id}>
+										{m.workshop_name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
 					)}
 				</div>
 
@@ -135,18 +147,20 @@ export function AppShell({ children }: { children: ReactNode }) {
 						<p className="text-[11px] text-ink-3">{active?.role}</p>
 					</div>
 				</div>
-				<button
+				<Button
+					variant="ghost"
+					size="sm"
 					type="button"
 					onClick={signOut}
 					disabled={logout.isPending}
 					className="text-left text-xs font-semibold text-seal"
 				>
 					Cerrar sesión
-				</button>
+				</Button>
 				{logout.error && (
-					<p role="alert" className="text-xs text-destructive">
-						{logout.error.message}
-					</p>
+					<Alert variant="destructive" className="text-xs text-destructive">
+						<AlertDescription>{logout.error.message}</AlertDescription>
+					</Alert>
 				)}
 			</aside>
 
@@ -179,19 +193,24 @@ export function AppShell({ children }: { children: ReactNode }) {
 					<span>
 						{me.user.full_name} · {active?.workshop_name}
 					</span>
-					<button
+					<Button
+						variant="ghost"
+						size="sm"
 						type="button"
 						onClick={signOut}
 						disabled={logout.isPending}
 						className="font-semibold text-seal"
 					>
 						Cerrar sesión
-					</button>
+					</Button>
 				</div>
 				{logout.error && (
-					<p role="alert" className="px-5 text-xs text-destructive lg:hidden">
-						{logout.error.message}
-					</p>
+					<Alert
+						variant="destructive"
+						className="px-5 text-xs text-destructive lg:hidden"
+					>
+						<AlertDescription>{logout.error.message}</AlertDescription>
+					</Alert>
 				)}
 				<WorkshopContext.Provider value={active?.workshop_id ?? ""}>
 					<DemoBanner email={me.user.email} />

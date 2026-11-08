@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge";
+
 type VehicleStatus = "ok" | "due" | "shop";
 const statusCopy: Record<VehicleStatus, string> = {
 	ok: "Al día",
@@ -27,7 +29,8 @@ export function StatusPill({
 	className?: string;
 }) {
 	return (
-		<span
+		<Badge
+			variant="secondary"
 			className={cn(
 				"inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold whitespace-nowrap",
 				styles[status],
@@ -36,6 +39,6 @@ export function StatusPill({
 		>
 			<span className={cn("size-1.5 rounded-full", dots[status])} />
 			{statusCopy[status]}
-		</span>
+		</Badge>
 	);
 }

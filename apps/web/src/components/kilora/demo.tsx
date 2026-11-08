@@ -1,5 +1,6 @@
 import type { components } from "@kilora/contracts";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
 export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
@@ -91,9 +92,12 @@ export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
 					))}
 				</ul>
 				{error && (
-					<p role="alert" className="mt-4 text-sm text-destructive">
-						{error}
-					</p>
+					<Alert
+						variant="destructive"
+						className="mt-4 text-sm text-destructive"
+					>
+						<AlertDescription>{error}</AlertDescription>
+					</Alert>
 				)}
 			</div>
 		</section>

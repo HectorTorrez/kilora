@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { date, day, km as formatKm, money, plural } from "@/lib/format";
 import {
 	ownerActions,
@@ -114,7 +117,7 @@ function Page() {
 					}}
 				>
 					<h2 className="font-bold">Agregar servicio</h2>
-					<label htmlFor="service-date">
+					<Label className="block" htmlFor="service-date">
 						Fecha
 						<Input
 							id="service-date"
@@ -123,7 +126,7 @@ function Page() {
 							max={new Date().toLocaleDateString("en-CA")}
 							required
 						/>
-					</label>
+					</Label>
 					<Input name="km" type="number" min="0" placeholder="Kilometraje" />
 					<Input name="summary" placeholder="Resumen" required />
 					{itemIds.map((i) => (
@@ -157,7 +160,11 @@ function Page() {
 					/>
 					<Input name="where" placeholder="Dónde se hizo" />
 					<Button disabled={manual.isPending}>Guardar servicio</Button>
-					{manual.error && <p role="alert">{manual.error.message}</p>}
+					{manual.error && (
+						<Alert variant="destructive">
+							<AlertDescription>{manual.error.message}</AlertDescription>
+						</Alert>
+					)}
 				</form>
 			)}
 			{form === "km" && (
@@ -181,7 +188,11 @@ function Page() {
 						required
 					/>
 					<Button>Guardar</Button>
-					{km.error && <p role="alert">{km.error.message}</p>}
+					{km.error && (
+						<Alert variant="destructive">
+							<AlertDescription>{km.error.message}</AlertDescription>
+						</Alert>
+					)}
 				</form>
 			)}
 			{warning && (
@@ -328,14 +339,15 @@ function Page() {
 												min="0"
 												placeholder="Nuevo kilometraje"
 											/>
-											<label className="flex items-center gap-2 text-sm">
-												<input
-													type="checkbox"
+											<Label className="flex items-center gap-2 text-sm">
+												<Checkbox
 													checked={editItems}
-													onChange={(e) => setEditItems(e.target.checked)}
+													onCheckedChange={(checked) =>
+														setEditItems(checked === true)
+													}
 												/>{" "}
 												Corregir ítems
-											</label>
+											</Label>
 											{editItems && (
 												<div className="grid gap-2">
 													{correctionItems.map((item, index) => (
@@ -407,7 +419,11 @@ function Page() {
 											)}
 											<Button>Guardar corrección</Button>
 											{correction.error && (
-												<p role="alert">{correction.error.message}</p>
+												<Alert variant="destructive">
+													<AlertDescription>
+														{correction.error.message}
+													</AlertDescription>
+												</Alert>
 											)}
 										</form>
 									</DialogContent>

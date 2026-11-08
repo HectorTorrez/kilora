@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { actions, useWorkshopMutation } from "@/lib/workshop";
 
 export function VehicleForm({
@@ -42,15 +43,15 @@ export function VehicleForm({
 				} catch {}
 			}}
 		>
-			<label htmlFor="field-1">
+			<Label className="block" htmlFor="field-1">
 				Placa (opcional)
 				<Input
 					id="field-1"
 					value={plate}
 					onChange={(e) => setPlate(e.target.value)}
 				/>
-			</label>
-			<label htmlFor="field-2">
+			</Label>
+			<Label className="block" htmlFor="field-2">
 				Marca
 				<Input
 					id="field-2"
@@ -58,8 +59,8 @@ export function VehicleForm({
 					value={make}
 					onChange={(e) => setMake(e.target.value)}
 				/>
-			</label>
-			<label htmlFor="field-3">
+			</Label>
+			<Label className="block" htmlFor="field-3">
 				Modelo
 				<Input
 					id="field-3"
@@ -67,8 +68,8 @@ export function VehicleForm({
 					value={model}
 					onChange={(e) => setModel(e.target.value)}
 				/>
-			</label>
-			<label htmlFor="field-4">
+			</Label>
+			<Label className="block" htmlFor="field-4">
 				Año
 				<Input
 					id="field-4"
@@ -76,16 +77,16 @@ export function VehicleForm({
 					value={year}
 					onChange={(e) => setYear(e.target.value)}
 				/>
-			</label>
-			<label htmlFor="field-5">
+			</Label>
+			<Label className="block" htmlFor="field-5">
 				Nombre de contacto
 				<Input
 					id="field-5"
 					value={name}
 					onChange={(e) => setName(e.target.value)}
 				/>
-			</label>
-			<label htmlFor="field-6">
+			</Label>
+			<Label className="block" htmlFor="field-6">
 				Teléfono (+503)
 				<Input
 					id="field-6"
@@ -93,7 +94,7 @@ export function VehicleForm({
 					value={phone}
 					onChange={(e) => setPhone(e.target.value)}
 				/>
-			</label>
+			</Label>
 			<Button disabled={create.isPending} type="submit">
 				Registrar vehículo
 			</Button>

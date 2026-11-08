@@ -6,7 +6,10 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { meQuery } from "@/lib/auth";
 import { date } from "@/lib/format";
 import { invitationQuery, ownerActions, useOwnerMutation } from "@/lib/owner";
@@ -97,17 +100,16 @@ function Page() {
 						</div>
 					) : (
 						<div className="space-y-4">
-							<label className="flex items-start gap-3 text-sm">
-								<input
-									type="checkbox"
+							<Label className="flex items-start gap-3 text-sm">
+								<Checkbox
 									checked={consent}
-									onChange={(e) => setConsent(e.target.checked)}
+									onCheckedChange={(checked) => setConsent(checked === true)}
 									className="mt-1"
 								/>
 								Autorizo que {inv.workshop_name} registre los servicios de este
 								vehículo en mi historial Kilora y acceda a la información
 								compartida con talleres vinculados.
-							</label>
+							</Label>
 							<Button
 								disabled={!consent || accept.isPending}
 								onClick={async () => {
@@ -124,9 +126,9 @@ function Page() {
 								Aceptar invitación
 							</Button>
 							{accept.error && (
-								<p role="alert" className="text-destructive">
-									{accept.error.message}
-								</p>
+								<Alert variant="destructive" className="text-destructive">
+									<AlertDescription>{accept.error.message}</AlertDescription>
+								</Alert>
 							)}
 						</div>
 					)}

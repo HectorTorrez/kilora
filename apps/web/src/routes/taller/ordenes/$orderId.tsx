@@ -6,7 +6,16 @@ import { toast } from "sonner";
 import { useWorkshopId } from "@/components/kilora/app-shell";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { money, statusLabel } from "@/lib/format";
 import {
@@ -114,7 +123,7 @@ function OrderDetail({
 					</p>
 				)}
 			</header>
-			<section className="space-y-3 rounded-lg border bg-card p-5">
+			<Card className="space-y-3 gap-0 rounded-lg p-5 shadow-none">
 				<h2 className="font-semibold">Estado de la orden</h2>
 				<div className="flex flex-wrap gap-2">
 					{next[order.status] && (
@@ -151,7 +160,7 @@ function OrderDetail({
 						</>
 					)}
 				</div>
-			</section>
+			</Card>
 			<form
 				className="space-y-3 rounded-lg border bg-card p-5"
 				onSubmit={(e) => {
@@ -165,7 +174,7 @@ function OrderDetail({
 				}}
 			>
 				<h2 className="font-semibold">Datos de la orden</h2>
-				<label className="block" htmlFor="field-1">
+				<Label className="block" htmlFor="field-1">
 					Motivo
 					<Input
 						id="field-1"
@@ -173,8 +182,8 @@ function OrderDetail({
 						value={reason}
 						onChange={(e) => setReason(e.target.value)}
 					/>
-				</label>
-				<label className="block" htmlFor="field-2">
+				</Label>
+				<Label className="block" htmlFor="field-2">
 					Kilometraje
 					<Input
 						id="field-2"
@@ -183,26 +192,26 @@ function OrderDetail({
 						value={km}
 						onChange={(e) => setKm(e.target.value)}
 					/>
-				</label>
-				<label className="block" htmlFor="field-3">
+				</Label>
+				<Label className="block" htmlFor="field-3">
 					Notas públicas · las ve el propietario
 					<Textarea
 						id="field-3"
 						value={publicNotes}
 						onChange={(e) => setPublicNotes(e.target.value)}
 					/>
-				</label>
-				<label className="block" htmlFor="field-4">
+				</Label>
+				<Label className="block" htmlFor="field-4">
 					Notas internas · privadas del taller
 					<Textarea
 						id="field-4"
 						value={internalNotes}
 						onChange={(e) => setInternalNotes(e.target.value)}
 					/>
-				</label>
+				</Label>
 				<Button>Guardar cambios</Button>
 			</form>
-			<section className="space-y-3 rounded-lg border bg-card p-5">
+			<Card className="space-y-3 gap-0 rounded-lg p-5 shadow-none">
 				<h2 className="font-semibold">Trabajos y piezas</h2>
 				{order.jobs.map((j) => (
 					<div key={j.id} className="space-y-2 border-b pb-3">
@@ -226,14 +235,16 @@ function OrderDetail({
 								<span>
 									{p.name} · {p.quantity} × {money(p.unit_price || 0)}
 								</span>
-								<button
+								<Button
+									variant="ghost"
+									size="sm"
 									type="button"
 									onClick={() =>
 										deletePart.mutate({ jobID: j.id, partID: p.id })
 									}
 								>
 									Eliminar pieza
-								</button>
+								</Button>
 							</div>
 						))}
 						<Button
@@ -322,8 +333,8 @@ function OrderDetail({
 					/>
 					<Button>Agregar trabajo</Button>
 				</form>
-			</section>
-			<section className="space-y-3 rounded-lg border bg-card p-5">
+			</Card>
+			<Card className="space-y-3 gap-0 rounded-lg p-5 shadow-none">
 				<h2 className="font-semibold">Cotización</h2>
 				{items.map((item, i) => (
 					<div
@@ -331,23 +342,26 @@ function OrderDetail({
 						key={`item-${i}`}
 						className="grid gap-2 sm:grid-cols-[1fr_2fr_1fr_1fr_auto]"
 					>
-						<select
-							aria-label="Tipo"
-							className="rounded border p-2"
+						<Select
 							value={item.kind}
-							onChange={(e) =>
+							onValueChange={(value) =>
 								setItems(
 									items.map((x, n) =>
 										n === i
-											? { ...x, kind: e.target.value as S["QuoteItem"]["kind"] }
+											? { ...x, kind: value as S["QuoteItem"]["kind"] }
 											: x,
 									),
 								)
 							}
 						>
-							<option value="repuesto">Repuesto</option>
-							<option value="mano_de_obra">Mano de obra</option>
-						</select>
+							<SelectTrigger aria-label="Tipo">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="repuesto">Repuesto</SelectItem>
+								<SelectItem value="mano_de_obra">Mano de obra</SelectItem>
+							</SelectContent>
+						</Select>
 						<Input
 							aria-label="Descripción"
 							placeholder="Descripción"
@@ -474,7 +488,7 @@ function OrderDetail({
 						Diferencia: {money(order.quote_comparison.difference || 0)}
 					</p>
 				)}
-			</section>
+			</Card>
 		</main>
 	);
 }

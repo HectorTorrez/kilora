@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { invitationsQuery, ownerActions, useOwnerMutation } from "@/lib/owner";
 export function OwnerInvitation({
@@ -24,7 +26,7 @@ export function OwnerInvitation({
 		if (invite.data?.url) void QRCode.toDataURL(invite.data.url).then(setQr);
 	}, [invite.data?.url]);
 	return (
-		<section className="space-y-3 rounded-xl border bg-card p-5">
+		<Card className="space-y-3 gap-0 p-5 shadow-none">
 			<h2 className="font-display text-xl font-bold">Propietario</h2>
 			{linked ? (
 				<p>Vinculado a {name || "propietario"}</p>
@@ -49,9 +51,9 @@ export function OwnerInvitation({
 				</form>
 			)}
 			{invite.error && (
-				<p role="alert" className="text-destructive">
-					{invite.error.message}
-				</p>
+				<Alert variant="destructive" className="text-destructive">
+					<AlertDescription>{invite.error.message}</AlertDescription>
+				</Alert>
 			)}
 			{invite.data && (
 				<div className="space-y-3">
@@ -95,6 +97,6 @@ export function OwnerInvitation({
 					))}
 				</div>
 			)}
-		</section>
+		</Card>
 	);
 }

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { day, km, plural } from "@/lib/format";
@@ -61,10 +62,18 @@ function Page() {
 						min="1886"
 					/>
 					<Button disabled={create.isPending}>Guardar vehículo</Button>
-					{create.error && <p role="alert">{create.error.message}</p>}
+					{create.error && (
+						<Alert variant="destructive">
+							<AlertDescription>{create.error.message}</AlertDescription>
+						</Alert>
+					)}
 				</form>
 			)}
-			{error && <p role="alert">{error.message}</p>}
+			{error && (
+				<Alert variant="destructive">
+					<AlertDescription>{error.message}</AlertDescription>
+				</Alert>
+			)}
 			{!data.length && !error && (
 				<div className="rounded-xl border bg-card p-8 text-center">
 					<h2 className="font-display text-xl font-bold">
