@@ -26,9 +26,12 @@ import {
 	maskSvPhone,
 	optionalPhone,
 	optionalText,
+	optionalVehicleText,
 	optionalYearField,
+	plateField,
 	requiredText,
 	toSvPhone,
+	vehicleText,
 } from "./form-schemas";
 
 import {
@@ -41,13 +44,16 @@ import {
 type Schemas = components["schemas"];
 
 const schema = z.object({
-	customer_name: requiredText("Ingresá el nombre del cliente"),
+	customer_name: requiredText("Ingresá el nombre del cliente").max(
+		100,
+		"Usá como máximo 100 caracteres",
+	),
 	customer_phone: optionalPhone,
 	vehicle_id: z.string(),
-	vehicle_make: optionalText,
-	vehicle_model: requiredText("Ingresá el modelo"),
+	vehicle_make: optionalVehicleText,
+	vehicle_model: vehicleText,
 	vehicle_year: optionalYearField(),
-	vehicle_plate: optionalText,
+	vehicle_plate: plateField,
 	branch_id: z.string().min(1, "Elegí una sucursal"),
 	notes: optionalText,
 	valid_days: z
@@ -146,6 +152,7 @@ export function CounterQuoteForm({
 		enabled: openSearch,
 	});
 	const form = useForm({
+		mode: "onBlur",
 		resolver: zodResolver(schema),
 		defaultValues: initial,
 	});

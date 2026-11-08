@@ -26,9 +26,9 @@ import {
 	TextField,
 } from "@/components/kilora/form-fields";
 import {
-	optionalText,
 	optionalYearField,
-	requiredText,
+	plateField,
+	vehicleText,
 	yearBounds,
 } from "@/components/kilora/form-schemas";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -77,12 +77,13 @@ function Page() {
 	const navigate = useNavigate();
 	const bounds = yearBounds();
 	const form = useForm({
+		mode: "onBlur",
 		resolver: zodResolver(
 			z.object({
-				make: requiredText("Ingresá la marca"),
-				model: requiredText("Ingresá el modelo"),
+				make: vehicleText,
+				model: vehicleText,
 				year: optionalYearField(),
-				plate: optionalText,
+				plate: plateField,
 			}),
 		),
 		defaultValues: { make: "", model: "", year: "", plate: "" },

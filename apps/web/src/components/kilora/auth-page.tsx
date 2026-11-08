@@ -28,13 +28,15 @@ import {
 	TextField,
 } from "./form-fields";
 
+import { emailField, personName, requiredText } from "./form-schemas";
+
 const schema = z.object({
-	full_name: z.string(),
-	email: z.string(),
+	full_name: z.string().trim(),
+	email: z.string().trim(),
 	password: z.string(),
-	name: z.string(),
-	nit: z.string(),
-	branch_name: z.string(),
+	name: z.string().trim(),
+	nit: z.string().trim(),
+	branch_name: z.string().trim(),
 });
 type Values = z.infer<typeof schema>;
 type Mode =
@@ -162,16 +164,27 @@ export function AuthPage({
 		verificar: verify,
 	}[mode];
 	const form = useForm<Values>({
+		mode: "onBlur",
 		resolver: zodResolver(
 			schema.superRefine((v, ctx) => {
 				const need = (key: keyof Values, message: string) => {
 					if (!v[key].trim())
 						ctx.addIssue({ code: "custom", path: [key], message });
 				};
-				if (mode === "registro") need("full_name", "Ingresá tu nombre");
+				const check = (key: keyof Values, rule: z.ZodType<string>) => {
+					const result = rule.safeParse(v[key]);
+					if (!result.success)
+						for (const issue of result.error.issues)
+							ctx.addIssue({
+								code: "custom",
+								path: [key],
+								message: issue.message,
+							});
+				};
+				if (mode === "registro") check("full_name", personName);
 				if (
 					["login", "registro", "olvide"].includes(mode) &&
-					!z.email().safeParse(v.email).success
+					!emailField.safeParse(v.email).success
 				)
 					ctx.addIssue({
 						code: "custom",
@@ -186,8 +199,20 @@ export function AuthPage({
 						message: "Usá al menos 8 caracteres",
 					});
 				if (mode === "onboarding") {
-					need("name", "Ingresá el nombre del taller");
-					need("branch_name", "Ingresá el nombre de la sucursal");
+					check(
+						"name",
+						requiredText("Ingresá el nombre del taller").max(
+							100,
+							"Usá como máximo 100 caracteres",
+						),
+					);
+					check(
+						"branch_name",
+						requiredText("Ingresá el nombre de la sucursal").max(
+							100,
+							"Usá como máximo 100 caracteres",
+						),
+					);
 				}
 			}),
 		),
@@ -349,6 +374,8 @@ export function AuthPage({
 								{mode === "registro" && (
 									<TextField
 										name="full_name"
+										maxLength={100}
+										inputPattern={/^[\p{L}\p{M} ’'.-]*$/u}
 										label="Nombre completo"
 										autoComplete="name"
 										autoFocus

@@ -16,20 +16,21 @@ import {
 } from "./form-fields";
 import {
 	maskSvPhone,
+	optionalPersonName,
 	optionalPhone,
-	optionalText,
 	optionalYearField,
-	requiredText,
+	plateField,
 	toSvPhone,
+	vehicleText,
 	yearBounds,
 } from "./form-schemas";
 
 const schema = z.object({
-	make: requiredText("Ingresá la marca"),
-	model: requiredText("Ingresá el modelo"),
+	make: vehicleText,
+	model: vehicleText,
 	year: optionalYearField(),
-	plate: optionalText,
-	contact_name: optionalText,
+	plate: plateField,
+	contact_name: optionalPersonName,
 	contact_phone: optionalPhone,
 });
 
@@ -52,6 +53,7 @@ export function VehicleForm({
 		createVehicleAction(workshopID),
 	);
 	const form = useForm({
+		mode: "onBlur",
 		resolver: zodResolver(schema),
 		defaultValues: {
 			make: "",
@@ -100,7 +102,13 @@ export function VehicleForm({
 					uppercase
 					placeholder="P123456"
 				/>
-				<TextField name="contact_name" label="Nombre de contacto" optional />
+				<TextField
+					name="contact_name"
+					maxLength={100}
+					inputPattern={/^[\p{L}\p{M} ’'.-]*$/u}
+					label="Nombre de contacto"
+					optional
+				/>
 				<TextField
 					name="contact_phone"
 					label="Teléfono"

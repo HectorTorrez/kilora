@@ -13,7 +13,7 @@ import (
 	"kilora/api/internal/values"
 )
 
-const invalidVehicle = "Marca, modelo o año inválido"
+const invalidVehicle = "Marca, modelo, año o placa inválidos"
 
 func vehicleDTO(v sqlc.Vehicle, km *int32) map[string]any {
 	return map[string]any{"id": v.ID, "status": v.Status, "plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year, "vin": v.Vin, "contact_name": v.ContactName, "contact_phone": v.ContactPhone, "last_odometer_km": km, "last_activity_at": v.LastActivityAt.Time, "created_at": v.CreatedAt.Time}
@@ -50,8 +50,12 @@ func (s *server) createVehicle(w http.ResponseWriter, r *http.Request, wc worksh
 		return err
 	}
 	in.Make, in.Model = strings.TrimSpace(in.Make), strings.TrimSpace(in.Model)
-	if in.Make == "" || in.Model == "" || !values.ValidYear(in.Year) {
+	if !values.VehicleText(in.Make) || !values.VehicleText(in.Model) || !values.ValidYear(in.Year) || !values.ValidPlate(in.Plate) {
 		return badRequest(invalidVehicle)
+	}
+	in.ContactName = values.OptionalText(in.ContactName)
+	if in.ContactName != nil && !values.PersonName(*in.ContactName) {
+		return badRequest("Nombre de contacto inválido: usá letras, espacios, apóstrofos o guiones (2 a 100 caracteres)")
 	}
 	phone, ok := values.OptionalPhone(in.ContactPhone)
 	if !ok {

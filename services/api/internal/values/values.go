@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/shopspring/decimal"
 )
@@ -83,7 +84,7 @@ func OptionalPhone(p *string) (*string, bool) {
 	return &v, true
 }
 
-func ValidYear(y *int32) bool { return y == nil || (*y >= 1886 && *y <= 2100) }
+func ValidYear(y *int32) bool { return y == nil || (*y >= 1886 && *y <= int32(time.Now().Year()+1)) }
 
 func OptionalText(p *string) *string {
 	if p == nil {
@@ -123,4 +124,22 @@ func Quantity(s string) (decimal.Decimal, bool) {
 
 func LineTotal(quantity, price decimal.Decimal) decimal.Decimal {
 	return quantity.Mul(price).Round(2)
+}
+
+var personNamePattern = regexp.MustCompile(`^[\p{L}\p{M}]+\.?(?:[ ’'-][\p{L}\p{M}]+\.?)*$`)
+var vehicleTextPattern = regexp.MustCompile(`^[\p{L}\p{M}0-9 .’'&()+/-]+$`)
+var vehicleContentPattern = regexp.MustCompile(`[\p{L}0-9]`)
+var platePattern = regexp.MustCompile(`^[A-Z0-9]{3,12}$`)
+
+func PersonName(s string) bool {
+	n := utf8.RuneCountInString(s)
+	return n >= 2 && n <= 100 && personNamePattern.MatchString(s)
+}
+
+func VehicleText(s string) bool {
+	return utf8.RuneCountInString(s) <= 100 && vehicleTextPattern.MatchString(s) && vehicleContentPattern.MatchString(s)
+}
+
+func ValidPlate(p *string) bool {
+	return p == nil || Plate(*p) == "" || platePattern.MatchString(Plate(*p))
 }

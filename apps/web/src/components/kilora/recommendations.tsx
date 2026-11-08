@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Check, Lightbulb, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { SectionCard } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import {
 import { categoryLabels } from "@/lib/domain";
 import { dueText, type Urgency, urgency } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
+import { kmField, requiredText } from "./form-schemas";
 
 const urgencyStyle: Record<Urgency, string> = {
 	vencida: "bg-destructive/10 text-destructive",
@@ -91,11 +93,21 @@ export function RecommendationsCard({
 					className="grid gap-3 border-b bg-secondary/30 p-4 sm:p-5"
 					onSubmit={(e) => {
 						e.preventDefault();
+						const validation = z
+							.object({
+								description: requiredText("Ingresá la recomendación"),
+								km: kmField(),
+							})
+							.safeParse({ description, km: dueKm });
+						if (!validation.success) {
+							toast.error(validation.error.issues[0].message);
+							return;
+						}
 						create.mutate(
 							{
 								vehicleID,
 								body: {
-									description,
+									description: description.trim(),
 									category:
 										category === "none"
 											? null

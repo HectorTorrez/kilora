@@ -80,7 +80,7 @@ func (s *server) register(w http.ResponseWriter, r *http.Request) error {
 	}
 	email, validEmail := values.Email(in.Email)
 	in.FullName = strings.TrimSpace(in.FullName)
-	if !validEmail || in.FullName == "" {
+	if !validEmail || !values.PersonName(in.FullName) {
 		return badRequest("Correo o nombre inválido")
 	}
 	hash, err := auth.HashPassword(in.Password)

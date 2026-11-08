@@ -128,6 +128,8 @@ type TextFieldProps = SharedField & {
 	min?: string | number;
 	max?: string | number;
 	step?: string | number;
+	maxLength?: number;
+	inputPattern?: RegExp;
 	normalize?: (value: string) => string;
 	onValueChange?: (value: string) => void;
 };
@@ -150,6 +152,8 @@ export function TextField({
 	min,
 	max,
 	step,
+	maxLength = 2000,
+	inputPattern,
 	normalize,
 	onValueChange,
 }: TextFieldProps) {
@@ -170,6 +174,7 @@ export function TextField({
 						min={min}
 						max={max}
 						step={step}
+						maxLength={maxLength}
 						name={field.name}
 						ref={field.ref}
 						onBlur={field.onBlur}
@@ -179,6 +184,7 @@ export function TextField({
 							let next = event.target.value;
 							if (uppercase) next = next.toUpperCase();
 							if (normalize) next = normalize(next);
+							if (inputPattern && !inputPattern.test(next)) return;
 							field.onChange(next);
 							onValueChange?.(next);
 						}}
@@ -203,12 +209,14 @@ export function TextField({
 }
 
 export function NumberField(props: Omit<TextFieldProps, "type" | "uppercase">) {
-	const step = props.step === undefined ? undefined : Number(props.step);
+	const decimal = props.step !== undefined && Number(props.step) < 1;
 	return (
 		<TextField
 			{...props}
-			type="number"
-			inputMode={step !== undefined && step < 1 ? "decimal" : "numeric"}
+			type="text"
+			inputMode={decimal ? "decimal" : "numeric"}
+			inputPattern={decimal ? /^\d*(?:[.,]\d{0,2})?$/ : /^\d*$/}
+			normalize={(value) => value.replace(",", ".")}
 		/>
 	);
 }
@@ -269,6 +277,7 @@ export function TextareaField({
 					<FormControl>
 						<Textarea
 							rows={rows}
+							maxLength={2000}
 							autoFocus={autoFocus}
 							placeholder={placeholder}
 							name={field.name}

@@ -7,18 +7,12 @@ import { money } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import { NumberField, SelectField, TextField } from "./form-fields";
-import { moneyField, requiredText } from "./form-schemas";
+import { moneyField, quantityField, requiredText } from "./form-schemas";
 
 export const quoteItemSchema = z.object({
 	kind: z.enum(["repuesto", "mano_de_obra"]),
 	description: requiredText("Ingresá la descripción"),
-	quantity: z
-		.string()
-		.trim()
-		.refine(
-			(value) => /^\d+(\.\d{1,2})?$/.test(value) && Number(value) > 0,
-			"Ingresá una cantidad mayor a 0",
-		),
+	quantity: quantityField,
 	unit_price: moneyField(true),
 });
 

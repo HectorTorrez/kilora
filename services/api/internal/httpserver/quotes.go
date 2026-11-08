@@ -322,8 +322,8 @@ func parseCounterQuote(in counterQuoteBody) (counterDraft, error) {
 	if d.name == "" {
 		return d, badRequest("Nombre del cliente obligatorio")
 	}
-	if d.model == "" {
-		return d, badRequest("Modelo del vehículo obligatorio")
+	if !values.VehicleText(d.model) || (d.makeName != nil && !values.VehicleText(*d.makeName)) || !values.ValidPlate(in.VehiclePlate) {
+		return d, badRequest("Marca, modelo o placa inválidos")
 	}
 	phone, ok := values.OptionalPhone(in.CustomerPhone)
 	if !ok {

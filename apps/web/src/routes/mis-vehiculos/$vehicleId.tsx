@@ -296,6 +296,7 @@ function ManualDialog({
 	onSave: (body: ManualBody) => Promise<unknown>;
 }) {
 	const form = useForm({
+		mode: "onBlur",
 		resolver: zodResolver(manualSchema),
 		defaultValues: {
 			date: "",
@@ -455,6 +456,7 @@ function KmDialog({
 	onSave: (km: number) => Promise<unknown>;
 }) {
 	const form = useForm({
+		mode: "onBlur",
 		resolver: zodResolver(z.object({ km: kmField(true) })),
 		defaultValues: { km: "" },
 	});
@@ -564,6 +566,7 @@ function CorrectionDialog({
 	onSave: (body: CorrectionBody) => Promise<unknown>;
 }) {
 	const form = useForm({
+		mode: "onBlur",
 		resolver: zodResolver(correctionSchema),
 		defaultValues: {
 			reason: "",

@@ -35,6 +35,7 @@ export function OrderQuoteCard({
 	const share = useWorkshopMutation(workshopID, a.share);
 	const outcome = useWorkshopMutation(workshopID, a.outcome);
 	const form = useForm({
+		mode: "onBlur",
 		resolver: zodResolver(z.object({ items: quoteItemsSchema })),
 		defaultValues: {
 			items: order.quote?.items.map(quoteItemValues) ?? [blankQuoteItem("0")],

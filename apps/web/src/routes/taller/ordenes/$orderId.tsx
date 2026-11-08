@@ -16,6 +16,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
+import {
+	kmField,
+	moneyField,
+	optionalText,
+	quantityField,
+	requiredText,
+} from "@/components/kilora/form-schemas";
 import { OrderQuoteCard } from "@/components/kilora/order-quote-card";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
@@ -477,11 +485,26 @@ function JobsCard({
 										className="mt-3 flex flex-wrap gap-2 rounded-md bg-secondary/50 p-2"
 										onSubmit={(e) => {
 											e.preventDefault();
+											const validation = z
+												.object({
+													name: requiredText("Ingresá el nombre de la pieza"),
+													quantity: quantityField,
+													price: moneyField(),
+												})
+												.safeParse({
+													name: partName.trim(),
+													quantity: partQty || "1",
+													price: partPrice,
+												});
+											if (!validation.success) {
+												toast.error(validation.error.issues[0].message);
+												return;
+											}
 											part.mutate(
 												{
 													jobID: j.id,
 													body: {
-														name: partName,
+														name: partName.trim(),
 														quantity: partQty || 1,
 														unit_price: partPrice || "0",
 													},
@@ -557,6 +580,16 @@ function JobsCard({
 					className="flex flex-wrap gap-2 border-t bg-secondary/30 px-4 py-3 sm:px-5"
 					onSubmit={(e) => {
 						e.preventDefault();
+						const validation = z
+							.object({
+								name: requiredText("Ingresá el trabajo realizado"),
+								labor: moneyField(),
+							})
+							.safeParse({ name: jobName.trim(), labor });
+						if (!validation.success) {
+							toast.error(validation.error.issues[0].message);
+							return;
+						}
 						job.mutate(
 							{
 								description: jobName,
@@ -650,6 +683,18 @@ function OrderDataCard({
 				className="grid gap-3.5"
 				onSubmit={(e) => {
 					e.preventDefault();
+					const validation = z
+						.object({
+							reason: requiredText("Ingresá el motivo"),
+							km: kmField(),
+							publicNotes: optionalText,
+							internalNotes: optionalText,
+						})
+						.safeParse({ reason, km, publicNotes, internalNotes });
+					if (!validation.success) {
+						toast.error(validation.error.issues[0].message);
+						return;
+					}
 					edit.mutate(
 						{
 							reason,

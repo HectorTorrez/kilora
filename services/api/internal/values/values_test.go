@@ -50,3 +50,52 @@ func TestPastDateRejectsTomorrow(t *testing.T) {
 		t.Fatal("mañana no debe ser válido")
 	}
 }
+
+func TestPersonalNames(t *testing.T) {
+	for _, name := range []string{"María José", "Ana-María", "O'Connor", "D’Arcy", "José Núñez", "J. R. Pérez"} {
+		if !PersonName(name) {
+			t.Errorf("nombre válido rechazado: %q", name)
+		}
+	}
+	for _, name := range []string{"", "123", "Ana123", "Ana@Pérez", "---", "Ana\nPérez"} {
+		if PersonName(name) {
+			t.Errorf("nombre inválido aceptado: %q", name)
+		}
+	}
+}
+
+func TestVehicleInputs(t *testing.T) {
+	for _, model := range []string{"911", "CX-5", "F-150", "C 200", "Citroën", "Model 3"} {
+		if !VehicleText(model) {
+			t.Errorf("modelo válido rechazado: %q", model)
+		}
+	}
+	for _, model := range []string{"", "---", "Toyota<script>", "BMW🚗", "Toyota\nFord"} {
+		if VehicleText(model) {
+			t.Errorf("modelo inválido aceptado: %q", model)
+		}
+	}
+	for _, plate := range []string{"", " p-123 ", "P123456"} {
+		if !ValidPlate(&plate) {
+			t.Errorf("placa válida rechazada: %q", plate)
+		}
+	}
+	for _, plate := range []string{"P@123", "🚗123", "AB", "P1234567890123"} {
+		if ValidPlate(&plate) {
+			t.Errorf("placa inválida aceptada: %q", plate)
+		}
+	}
+}
+
+func TestVehicleYearBounds(t *testing.T) {
+	for _, year := range []int32{1886, int32(Today().Year() + 1)} {
+		if !ValidYear(&year) {
+			t.Errorf("año válido rechazado: %d", year)
+		}
+	}
+	for _, year := range []int32{1885, int32(Today().Year() + 2)} {
+		if ValidYear(&year) {
+			t.Errorf("año inválido aceptado: %d", year)
+		}
+	}
+}

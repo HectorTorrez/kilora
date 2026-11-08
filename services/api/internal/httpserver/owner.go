@@ -144,7 +144,7 @@ func (s *server) createOwnerVehicle(w http.ResponseWriter, r *http.Request) erro
 		return err
 	}
 	in.Make, in.Model = strings.TrimSpace(in.Make), strings.TrimSpace(in.Model)
-	if in.Make == "" || in.Model == "" || !values.ValidYear(in.Year) {
+	if !values.VehicleText(in.Make) || !values.VehicleText(in.Model) || !values.ValidYear(in.Year) || !values.ValidPlate(in.Plate) {
 		return badRequest(invalidVehicle)
 	}
 	ctx := r.Context()
