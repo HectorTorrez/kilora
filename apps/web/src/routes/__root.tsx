@@ -3,9 +3,11 @@ import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
 	createRootRouteWithContext,
 	HeadContent,
+	Link,
 	Scripts,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -54,8 +56,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 			],
 		}),
 		shellComponent: RootDocument,
+		notFoundComponent: NotFoundPage,
 	},
 );
+
+function NotFoundPage() {
+	return (
+		<main className="grid min-h-dvh place-items-center px-5 py-12">
+			<div className="max-w-md space-y-4 text-center">
+				<p className="font-mono text-sm text-ink-3">404</p>
+				<h1 className="font-display text-3xl font-bold">
+					Página no encontrada
+				</h1>
+				<p className="text-sm text-ink-2">
+					El enlace puede estar incompleto o la página ya no está disponible.
+				</p>
+				<Button asChild>
+					<Link to="/">Volver al inicio</Link>
+				</Button>
+			</div>
+		</main>
+	);
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	const { queryClient } = Route.useRouteContext();
@@ -65,7 +87,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			<head>
 				<HeadContent />
 			</head>
-			<body className="antialiased">
+			<body className="antialiased" suppressHydrationWarning>
 				<QueryClientProvider client={queryClient}>
 					<TooltipProvider>{children}</TooltipProvider>
 					<Toaster richColors position="top-center" />
