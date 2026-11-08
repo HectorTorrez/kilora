@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -16,10 +17,10 @@ INSERT INTO correction (history_record_id, reason, changes, created_by) VALUES (
 `
 
 type CreateCorrectionParams struct {
-	HistoryRecordID pgtype.UUID `json:"history_record_id"`
-	Reason          string      `json:"reason"`
-	Changes         []byte      `json:"changes"`
-	CreatedBy       pgtype.UUID `json:"created_by"`
+	HistoryRecordID uuid.UUID `json:"history_record_id"`
+	Reason          string    `json:"reason"`
+	Changes         []byte    `json:"changes"`
+	CreatedBy       uuid.UUID `json:"created_by"`
 }
 
 func (q *Queries) CreateCorrection(ctx context.Context, arg CreateCorrectionParams) (Correction, error) {
@@ -46,9 +47,9 @@ INSERT INTO history_record (vehicle_id, workshop_id, work_order_id, source, perf
 `
 
 type CreateHistoryRecordParams struct {
-	VehicleID     pgtype.UUID    `json:"vehicle_id"`
-	WorkshopID    pgtype.UUID    `json:"workshop_id"`
-	WorkOrderID   pgtype.UUID    `json:"work_order_id"`
+	VehicleID     uuid.UUID      `json:"vehicle_id"`
+	WorkshopID    *uuid.UUID     `json:"workshop_id"`
+	WorkOrderID   *uuid.UUID     `json:"work_order_id"`
 	Source        HistorySource  `json:"source"`
 	PerformedOn   pgtype.Date    `json:"performed_on"`
 	OdometerKm    *int32         `json:"odometer_km"`
@@ -59,7 +60,7 @@ type CreateHistoryRecordParams struct {
 	WorkshopNotes *string        `json:"workshop_notes"`
 	InternalCost  pgtype.Numeric `json:"internal_cost"`
 	InternalNotes *string        `json:"internal_notes"`
-	CreatedBy     pgtype.UUID    `json:"created_by"`
+	CreatedBy     *uuid.UUID     `json:"created_by"`
 }
 
 func (q *Queries) CreateHistoryRecord(ctx context.Context, arg CreateHistoryRecordParams) (HistoryRecord, error) {
@@ -101,44 +102,11 @@ func (q *Queries) CreateHistoryRecord(ctx context.Context, arg CreateHistoryReco
 	return i, err
 }
 
-const getHistoryRecord = `-- name: GetHistoryRecord :one
-SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle_link l ON l.vehicle_id = h.vehicle_id WHERE h.id = $1 AND l.workshop_id = $2
-`
-
-type GetHistoryRecordParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
-}
-
-func (q *Queries) GetHistoryRecord(ctx context.Context, arg GetHistoryRecordParams) (HistoryRecord, error) {
-	row := q.db.QueryRow(ctx, getHistoryRecord, arg.ID, arg.WorkshopID)
-	var i HistoryRecord
-	err := row.Scan(
-		&i.ID,
-		&i.VehicleID,
-		&i.WorkshopID,
-		&i.WorkOrderID,
-		&i.Source,
-		&i.PerformedOn,
-		&i.OdometerKm,
-		&i.Summary,
-		&i.Items,
-		&i.Total,
-		&i.Currency,
-		&i.WorkshopNotes,
-		&i.InternalCost,
-		&i.InternalNotes,
-		&i.CreatedBy,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const getHistoryTotalByWorkOrder = `-- name: GetHistoryTotalByWorkOrder :one
 SELECT total::text FROM history_record WHERE work_order_id = $1
 `
 
-func (q *Queries) GetHistoryTotalByWorkOrder(ctx context.Context, workOrderID pgtype.UUID) (string, error) {
+func (q *Queries) GetHistoryTotalByWorkOrder(ctx context.Context, workOrderID *uuid.UUID) (string, error) {
 	row := q.db.QueryRow(ctx, getHistoryTotalByWorkOrder, workOrderID)
 	var total string
 	err := row.Scan(&total)
@@ -150,8 +118,8 @@ SELECT c.id, c.history_record_id, c.reason, c.changes, c.created_by, c.created_a
 `
 
 type ListCorrectionsByVehicleParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VehicleID  uuid.UUID `json:"vehicle_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) ListCorrectionsByVehicle(ctx context.Context, arg ListCorrectionsByVehicleParams) ([]Correction, error) {
@@ -186,8 +154,8 @@ SELECT c.id, c.history_record_id, c.reason, c.changes, c.created_by, c.created_a
 `
 
 type ListCorrectionsForOwnerParams struct {
-	VehicleID   pgtype.UUID `json:"vehicle_id"`
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
 }
 
 func (q *Queries) ListCorrectionsForOwner(ctx context.Context, arg ListCorrectionsForOwnerParams) ([]Correction, error) {
@@ -222,8 +190,8 @@ SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed
 `
 
 type ListHistoryByVehicleParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VehicleID  uuid.UUID `json:"vehicle_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) ListHistoryByVehicle(ctx context.Context, arg ListHistoryByVehicleParams) ([]HistoryRecord, error) {
@@ -268,8 +236,8 @@ SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed
 `
 
 type ListHistoryForOwnerParams struct {
-	VehicleID   pgtype.UUID `json:"vehicle_id"`
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
 }
 
 func (q *Queries) ListHistoryForOwner(ctx context.Context, arg ListHistoryForOwnerParams) ([]HistoryRecord, error) {

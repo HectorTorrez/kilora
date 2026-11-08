@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -18,14 +19,14 @@ RETURNING id, vehicle_id, workshop_id, work_order_id, description, category, due
 `
 
 type CreateRecommendationParams struct {
-	VehicleID   pgtype.UUID   `json:"vehicle_id"`
-	WorkshopID  pgtype.UUID   `json:"workshop_id"`
-	WorkOrderID pgtype.UUID   `json:"work_order_id"`
+	VehicleID   uuid.UUID     `json:"vehicle_id"`
+	WorkshopID  uuid.UUID     `json:"workshop_id"`
+	WorkOrderID *uuid.UUID    `json:"work_order_id"`
 	Description string        `json:"description"`
 	Category    *PartCategory `json:"category"`
 	DueDate     pgtype.Date   `json:"due_date"`
 	DueKm       *int32        `json:"due_km"`
-	CreatedBy   pgtype.UUID   `json:"created_by"`
+	CreatedBy   uuid.UUID     `json:"created_by"`
 }
 
 func (q *Queries) CreateRecommendation(ctx context.Context, arg CreateRecommendationParams) (Recommendation, error) {
@@ -64,8 +65,8 @@ ORDER BY (status = 'pendiente') DESC, due_date NULLS LAST, created_at DESC
 `
 
 type ListRecommendationsByVehicleParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VehicleID  uuid.UUID `json:"vehicle_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) ListRecommendationsByVehicle(ctx context.Context, arg ListRecommendationsByVehicleParams) ([]Recommendation, error) {
@@ -111,23 +112,23 @@ LIMIT 200
 `
 
 type ListRecommendationsForWorkshopParams struct {
-	WorkshopID pgtype.UUID           `json:"workshop_id"`
+	WorkshopID uuid.UUID             `json:"workshop_id"`
 	Status     *RecommendationStatus `json:"status"`
 }
 
 type ListRecommendationsForWorkshopRow struct {
-	ID          pgtype.UUID          `json:"id"`
-	VehicleID   pgtype.UUID          `json:"vehicle_id"`
-	WorkshopID  pgtype.UUID          `json:"workshop_id"`
-	WorkOrderID pgtype.UUID          `json:"work_order_id"`
+	ID          uuid.UUID            `json:"id"`
+	VehicleID   uuid.UUID            `json:"vehicle_id"`
+	WorkshopID  uuid.UUID            `json:"workshop_id"`
+	WorkOrderID *uuid.UUID           `json:"work_order_id"`
 	Description string               `json:"description"`
 	Category    *PartCategory        `json:"category"`
 	DueDate     pgtype.Date          `json:"due_date"`
 	DueKm       *int32               `json:"due_km"`
 	Status      RecommendationStatus `json:"status"`
 	ResolvedAt  pgtype.Timestamptz   `json:"resolved_at"`
-	ResolvedBy  pgtype.UUID          `json:"resolved_by"`
-	CreatedBy   pgtype.UUID          `json:"created_by"`
+	ResolvedBy  *uuid.UUID           `json:"resolved_by"`
+	CreatedBy   uuid.UUID            `json:"created_by"`
 	CreatedAt   pgtype.Timestamptz   `json:"created_at"`
 	Plate       *string              `json:"plate"`
 	Make        string               `json:"make"`
@@ -179,9 +180,9 @@ RETURNING id, vehicle_id, workshop_id, work_order_id, description, category, due
 
 type ResolveRecommendationParams struct {
 	Status     RecommendationStatus `json:"status"`
-	ResolvedBy pgtype.UUID          `json:"resolved_by"`
-	ID         pgtype.UUID          `json:"id"`
-	WorkshopID pgtype.UUID          `json:"workshop_id"`
+	ResolvedBy *uuid.UUID           `json:"resolved_by"`
+	ID         uuid.UUID            `json:"id"`
+	WorkshopID uuid.UUID            `json:"workshop_id"`
 }
 
 func (q *Queries) ResolveRecommendation(ctx context.Context, arg ResolveRecommendationParams) (Recommendation, error) {

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -16,8 +17,8 @@ UPDATE invitation SET accepted_at=now(), accepted_by=$2, consent_at=now() WHERE 
 `
 
 type AcceptInvitationParams struct {
-	ID         pgtype.UUID `json:"id"`
-	AcceptedBy pgtype.UUID `json:"accepted_by"`
+	ID         uuid.UUID  `json:"id"`
+	AcceptedBy *uuid.UUID `json:"accepted_by"`
 }
 
 func (q *Queries) AcceptInvitation(ctx context.Context, arg AcceptInvitationParams) error {
@@ -30,12 +31,12 @@ INSERT INTO invitation(vehicle_id,workshop_id,email,token_hash,expires_at,create
 `
 
 type CreateInvitationParams struct {
-	VehicleID  pgtype.UUID        `json:"vehicle_id"`
-	WorkshopID pgtype.UUID        `json:"workshop_id"`
+	VehicleID  uuid.UUID          `json:"vehicle_id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
 	Email      string             `json:"email"`
 	TokenHash  string             `json:"token_hash"`
 	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
-	CreatedBy  pgtype.UUID        `json:"created_by"`
+	CreatedBy  uuid.UUID          `json:"created_by"`
 }
 
 func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationParams) (Invitation, error) {
@@ -69,7 +70,7 @@ const getInvitationVehicle = `-- name: GetInvitationVehicle :one
 SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id=$1
 `
 
-func (q *Queries) GetInvitationVehicle(ctx context.Context, id pgtype.UUID) (Vehicle, error) {
+func (q *Queries) GetInvitationVehicle(ctx context.Context, id uuid.UUID) (Vehicle, error) {
 	row := q.db.QueryRow(ctx, getInvitationVehicle, id)
 	var i Vehicle
 	err := row.Scan(
@@ -97,9 +98,9 @@ SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed
 `
 
 type GetOwnerHistoryRecordParams struct {
-	ID          pgtype.UUID `json:"id"`
-	ID_2        pgtype.UUID `json:"id_2"`
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
+	ID          uuid.UUID  `json:"id"`
+	ID_2        uuid.UUID  `json:"id_2"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
 }
 
 func (q *Queries) GetOwnerHistoryRecord(ctx context.Context, arg GetOwnerHistoryRecordParams) (HistoryRecord, error) {
@@ -155,8 +156,8 @@ SELECT id, vehicle_id, workshop_id, email, token_hash, expires_at, created_by, c
 `
 
 type ListInvitationsParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VehicleID  uuid.UUID `json:"vehicle_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) ListInvitations(ctx context.Context, arg ListInvitationsParams) ([]Invitation, error) {
@@ -197,8 +198,8 @@ SELECT w.id, w.name, w.nit, w.verified_at, w.verified_by, w.created_at, w.update
 `
 
 type ListOwnerWorkshopsParams struct {
-	ID          pgtype.UUID `json:"id"`
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
+	ID          uuid.UUID  `json:"id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
 }
 
 func (q *Queries) ListOwnerWorkshops(ctx context.Context, arg ListOwnerWorkshopsParams) ([]Workshop, error) {
@@ -233,7 +234,7 @@ const lockInvitationVehicle = `-- name: LockInvitationVehicle :one
 SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id=$1 FOR UPDATE
 `
 
-func (q *Queries) LockInvitationVehicle(ctx context.Context, id pgtype.UUID) (Vehicle, error) {
+func (q *Queries) LockInvitationVehicle(ctx context.Context, id uuid.UUID) (Vehicle, error) {
 	row := q.db.QueryRow(ctx, lockInvitationVehicle, id)
 	var i Vehicle
 	err := row.Scan(
@@ -261,8 +262,8 @@ SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.mak
 `
 
 type LockLinkedVehicleParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) LockLinkedVehicle(ctx context.Context, arg LockLinkedVehicleParams) (Vehicle, error) {
@@ -316,7 +317,7 @@ const revokeVehicleInvitations = `-- name: RevokeVehicleInvitations :exec
 UPDATE invitation SET revoked_at=now() WHERE vehicle_id=$1 AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at > now()
 `
 
-func (q *Queries) RevokeVehicleInvitations(ctx context.Context, vehicleID pgtype.UUID) error {
+func (q *Queries) RevokeVehicleInvitations(ctx context.Context, vehicleID uuid.UUID) error {
 	_, err := q.db.Exec(ctx, revokeVehicleInvitations, vehicleID)
 	return err
 }
@@ -326,8 +327,8 @@ UPDATE vehicle SET owner_user_id=$2, status='vinculado' WHERE id=$1 AND owner_us
 `
 
 type SetUnownedVehicleOwnerParams struct {
-	ID          pgtype.UUID `json:"id"`
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
+	ID          uuid.UUID  `json:"id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
 }
 
 func (q *Queries) SetUnownedVehicleOwner(ctx context.Context, arg SetUnownedVehicleOwnerParams) (Vehicle, error) {

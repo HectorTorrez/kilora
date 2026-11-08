@@ -1,6 +1,3 @@
--- name: GetQuoteIDByOrder :one
-SELECT id FROM quote WHERE work_order_id = $1 AND workshop_id = $2;
-
 -- name: GetOrderQuoteMeta :one
 SELECT id, number FROM quote WHERE work_order_id = sqlc.arg(work_order_id) AND workshop_id = sqlc.arg(workshop_id);
 
@@ -20,10 +17,10 @@ DELETE FROM quote_item WHERE quote_id = $1;
 INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price) VALUES ($1, $2, $3, $4, $5, $6);
 
 -- name: GetQuoteData :one
-SELECT total::text, currency, outcome::text, outcome_at, outcome_by, shared_at, share_expires_at FROM quote WHERE id = $1;
+SELECT total::text, currency, outcome, outcome_at, outcome_by, shared_at, share_expires_at FROM quote WHERE id = $1;
 
 -- name: ListQuoteItems :many
-SELECT kind::text, description, quantity::text, unit_price::text FROM quote_item WHERE quote_id = $1 ORDER BY position;
+SELECT kind, description, quantity::text, unit_price::text FROM quote_item WHERE quote_id = $1 ORDER BY position;
 
 -- name: ShareQuote :one
 UPDATE quote SET share_token_hash = $1, shared_at = now(), share_expires_at = now() + interval '15 days' WHERE work_order_id = $2 AND workshop_id = $3 RETURNING id, share_expires_at, total::text;
@@ -32,7 +29,7 @@ UPDATE quote SET share_token_hash = $1, shared_at = now(), share_expires_at = no
 SELECT w.name, v.plate, v.contact_phone FROM work_order o JOIN workshop w ON w.id = o.workshop_id JOIN vehicle v ON v.id = o.vehicle_id WHERE o.id = $1;
 
 -- name: SetQuoteOutcome :one
-UPDATE quote SET outcome = $1, outcome_at = now(), outcome_by = $2 WHERE work_order_id = $3 AND workshop_id = $4 RETURNING id;
+UPDATE quote SET outcome = $1, outcome_at = now(), outcome_by = $2 WHERE work_order_id = $3 AND workshop_id = $4 AND converted_order_id IS NULL RETURNING id;
 
 -- name: GetPublicQuote :one
 SELECT q.id, w.name, w.verified_at,
@@ -83,7 +80,7 @@ RETURNING id;
 SELECT
   q.id, q.workshop_id, q.branch_id, q.number, q.customer_name, q.customer_phone, q.vehicle_id,
   q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate, q.notes, q.valid_until,
-  q.total::text AS total, q.currency, q.outcome::text AS outcome, q.outcome_at, q.outcome_by,
+  q.total::text AS total, q.currency, q.outcome, q.outcome_at, q.outcome_by,
   q.shared_at, q.share_expires_at, q.created_at, q.work_order_id, q.converted_order_id,
   w.name AS workshop_name, w.nit AS workshop_nit, w.verified_at, b.name AS branch_name,
   o.number AS converted_order_number
@@ -97,7 +94,7 @@ WHERE q.id = sqlc.arg(id) AND q.workshop_id = sqlc.arg(workshop_id)
 -- name: ListCounterQuotes :many
 SELECT
   q.id, q.number, q.customer_name, q.customer_phone, q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate,
-  q.total::text AS total, q.currency, q.outcome::text AS outcome, q.created_at, q.valid_until,
+  q.total::text AS total, q.currency, q.outcome, q.created_at, q.valid_until,
   q.converted_order_id, o.number AS converted_order_number, COUNT(*) OVER() AS total_count
 FROM quote q
 LEFT JOIN work_order o ON o.id = q.converted_order_id
@@ -116,7 +113,7 @@ ORDER BY q.created_at DESC, q.number DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: LockCounterQuote :one
-SELECT id, number, outcome::text AS outcome, branch_id, vehicle_id, customer_name, customer_phone,
+SELECT id, number, outcome, branch_id, vehicle_id, customer_name, customer_phone,
   vehicle_make, vehicle_model, vehicle_year, vehicle_plate, work_order_id, converted_order_id
 FROM quote
 WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id)

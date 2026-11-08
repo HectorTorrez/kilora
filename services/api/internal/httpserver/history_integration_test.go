@@ -90,12 +90,12 @@ func TestHistoryHTTP(t *testing.T) {
 	}
 	wa, wb, wc := workshop(a), workshop(b), workshop(c)
 	q := sqlc.New(db)
-	vehicle, err := q.CreateVehicle(ctx, sqlc.CreateVehicleParams{OwnerUserID: dbUUID(oid), CreatedByWorkshopID: dbUUID(wa), Status: sqlc.VehicleStatusVinculado, Make: "Marca", Model: "Modelo"})
+	vehicle, err := q.CreateVehicle(ctx, sqlc.CreateVehicleParams{OwnerUserID: &oid, CreatedByWorkshopID: &wa, Status: sqlc.VehicleStatusVinculado, Make: "Marca", Model: "Modelo"})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, wid := range []uuid.UUID{wa, wb} {
-		if err = q.LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: vehicle.ID, WorkshopID: dbUUID(wid)}); err != nil {
+		if err = q.LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: vehicle.ID, WorkshopID: wid}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -105,11 +105,11 @@ func TestHistoryHTTP(t *testing.T) {
 	if err = cost.Scan("12345.67"); err != nil {
 		t.Fatal(err)
 	}
-	_, err = q.CreateHistoryRecord(ctx, sqlc.CreateHistoryRecordParams{VehicleID: vehicle.ID, WorkshopID: dbUUID(wa), Source: sqlc.HistorySourceTaller, PerformedOn: pgtype.Date{Time: time.Now(), Valid: true}, Summary: "Servicio", Items: []byte(fmt.Sprintf(`[{"kind":"pieza","description":"filtro","price":%q,"internal_cost":%q,"mechanic_notes":%q}]`, price, secret, secret)), Currency: "USD", InternalCost: cost, InternalNotes: &secret, CreatedBy: dbUUID(aid)})
+	_, err = q.CreateHistoryRecord(ctx, sqlc.CreateHistoryRecordParams{VehicleID: vehicle.ID, WorkshopID: &wa, Source: sqlc.HistorySourceTaller, PerformedOn: pgtype.Date{Time: time.Now(), Valid: true}, Summary: "Servicio", Items: []byte(fmt.Sprintf(`[{"kind":"pieza","description":"filtro","price":%q,"internal_cost":%q,"mechanic_notes":%q}]`, price, secret, secret)), Currency: "USD", InternalCost: cost, InternalNotes: &secret, CreatedBy: &aid})
 	if err != nil {
 		t.Fatal(err)
 	}
-	vehicleID := uuid.UUID(vehicle.ID.Bytes).String()
+	vehicleID := vehicle.ID.String()
 	path := func(w uuid.UUID) string {
 		return "/api/v1/workshops/" + w.String() + "/vehicles/" + vehicleID + "/history"
 	}

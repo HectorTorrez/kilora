@@ -2,8 +2,7 @@ package httpserver
 
 import (
 	"context"
-	"encoding/json"
-	"io"
+	"log/slog"
 	"mime"
 	"net"
 	"net/http"
@@ -13,54 +12,68 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"kilora/api/internal/auth"
 	"kilora/api/internal/database/sqlc"
 )
 
-type contextKey int
-
 const (
-	userKey contextKey = iota
-	workshopKey
+	loginAttemptLimit = 10
+	publicReadLimit   = 60
+	limiterWindow     = 15 * time.Minute
 )
 
-type sessionUser struct {
-	ID                           uuid.UUID
-	Email, FullName, SessionHash string
-	VerifiedAt                   *time.Time
-}
-type WorkshopContext struct {
-	UserID, WorkshopID uuid.UUID
-	Role               string
-	BranchIDs          []uuid.UUID
-	WriteBranchIDs     []uuid.UUID
+func health(db *pgxpool.Pool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := db.Ping(ctx); err != nil {
+			writeJSON(w, http.StatusServiceUnavailable, map[string]string{"status": "degraded", "db": "down"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "db": "up"})
+	}
 }
 
-func CurrentWorkshop(ctx context.Context) (WorkshopContext, bool) {
-	v, ok := ctx.Value(workshopKey).(WorkshopContext)
-	return v, ok
-}
-func currentUser(ctx context.Context) *sessionUser {
-	v, _ := ctx.Value(userKey).(*sessionUser)
-	return v
-}
-func fail(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
-}
-func decode(w http.ResponseWriter, r *http.Request, v any) bool {
-	d := json.NewDecoder(r.Body)
-	d.DisallowUnknownFields()
-	if err := d.Decode(v); err != nil {
-		fail(w, 400, "JSON inválido")
-		return false
+func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			next.ServeHTTP(ww, r)
+			logger.Info("request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", ww.Status(),
+				"bytes", ww.BytesWritten(),
+				"duration_ms", time.Since(start).Milliseconds(),
+				"request_id", middleware.GetReqID(r.Context()),
+			)
+		})
 	}
-	if err := d.Decode(&struct{}{}); err != io.EOF {
-		fail(w, 400, "JSON inválido")
-		return false
-	}
-	return true
 }
+
+func cors(origin string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if o := r.Header.Get("Origin"); o == origin {
+				w.Header().Set("Access-Control-Allow-Origin", o)
+				w.Header().Set("Access-Control-Allow-Credentials", "true")
+				w.Header().Set("Vary", "Origin")
+				w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, DELETE, OPTIONS")
+			}
+			if r.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 func security(origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -70,19 +83,19 @@ func security(origin string) func(http.Handler) http.Handler {
 				if o == "" && r.Header.Get("Referer") != "" {
 					u, err := url.Parse(r.Header.Get("Referer"))
 					if err != nil || u.Scheme == "" || u.Host == "" {
-						fail(w, 403, "Origen no permitido")
+						fail(w, http.StatusForbidden, "Origen no permitido")
 						return
 					}
 					o = u.Scheme + "://" + u.Host
 				}
 				if o != "" && o != origin {
-					fail(w, 403, "Origen no permitido")
+					fail(w, http.StatusForbidden, "Origen no permitido")
 					return
 				}
 				if r.ContentLength != 0 || len(r.TransferEncoding) > 0 {
 					t, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 					if err != nil || t != "application/json" {
-						fail(w, 415, "Se requiere application/json")
+						fail(w, http.StatusUnsupportedMediaType, "Se requiere application/json")
 						return
 					}
 				}
@@ -91,87 +104,96 @@ func security(origin string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+type sessionUser struct {
+	ID                           uuid.UUID
+	Email, FullName, SessionHash string
+	VerifiedAt                   *time.Time
+}
+
+func currentUser(ctx context.Context) *sessionUser {
+	v, _ := ctx.Value(userKey).(*sessionUser)
+	return v
+}
+
 func (s *server) loadSession(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie("kilora_session")
-		if err == nil && c.Value != "" {
-			hash := auth.HashToken(c.Value)
-			u := &sessionUser{SessionHash: hash}
-			q := sqlc.New(s.db)
-			session, e := q.GetSession(r.Context(), hash)
-			if e == nil {
-				user, e := q.GetUserByID(r.Context(), session.UserID)
-				if e == nil {
-					u.ID = uuid.UUID(user.ID.Bytes)
-					u.Email = user.Email
-					u.FullName = user.FullName
-					if user.EmailVerifiedAt.Valid {
-						t := user.EmailVerifiedAt.Time
-						u.VerifiedAt = &t
-					}
-					if time.Since(session.LastSeenAt.Time) >= time.Hour {
-						n, e := q.TouchSession(r.Context(), hash)
-						if e == nil && n > 0 {
-							s.setCookie(w, c.Value)
-						}
-					}
-					r = r.WithContext(context.WithValue(r.Context(), userKey, u))
-				}
+		if c, err := r.Cookie(auth.SessionCookie); err == nil && c.Value != "" {
+			if u := s.sessionUser(w, r, c.Value); u != nil {
+				r = r.WithContext(context.WithValue(r.Context(), userKey, u))
 			}
 		}
 		next.ServeHTTP(w, r)
 	})
 }
+
+func (s *server) sessionUser(w http.ResponseWriter, r *http.Request, token string) *sessionUser {
+	hash := auth.HashToken(token)
+	q := sqlc.New(s.db)
+	session, err := q.GetSession(r.Context(), hash)
+	if err != nil {
+		return nil
+	}
+	user, err := q.GetUserByID(r.Context(), session.UserID)
+	if err != nil {
+		return nil
+	}
+	if time.Since(session.LastSeenAt.Time) >= auth.SessionTouchInterval {
+		if n, err := q.TouchSession(r.Context(), hash); err == nil && n > 0 {
+			s.setCookie(w, token)
+		}
+	}
+	return &sessionUser{ID: user.ID, Email: user.Email, FullName: user.FullName, SessionHash: hash, VerifiedAt: nullableTime(user.EmailVerifiedAt)}
+}
+
 func requireUser(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if currentUser(r.Context()) == nil {
-			fail(w, 401, "Debes iniciar sesión")
+			fail(w, http.StatusUnauthorized, "Debes iniciar sesión")
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
+
 func (s *server) requireWorkshop(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) error {
 		id, err := uuid.Parse(chi.URLParam(r, "workshopID"))
 		if err != nil {
-			fail(w, 403, "Acceso denegado")
-			return
+			return errAccessDenied
 		}
 		u := currentUser(r.Context())
-		wc := WorkshopContext{UserID: u.ID, WorkshopID: id, BranchIDs: []uuid.UUID{}}
-		rows, err := sqlc.New(s.db).ListMembershipsByUser(r.Context(), dbUUID(u.ID))
+		rows, err := sqlc.New(s.db).ListMembershipsByUser(r.Context(), u.ID)
 		if err != nil {
-			fail(w, 500, "Error interno")
-			return
+			return err
 		}
-		rank := map[string]int{"mecanico": 1, "recepcion": 2, "admin": 3}
+		wc := workshopAccess{userID: u.ID, workshopID: id, branchIDs: []uuid.UUID{}}
+		rank := map[sqlc.MembershipRole]int{sqlc.MembershipRoleMecanico: 1, sqlc.MembershipRoleRecepcion: 2, sqlc.MembershipRoleAdmin: 3}
 		for _, row := range rows {
-			if row.WorkshopID.Bytes != id {
+			if row.WorkshopID != id {
 				continue
 			}
-			wc.BranchIDs = append(wc.BranchIDs, uuid.UUID(row.BranchID.Bytes))
-			role := string(row.Role)
-			if role == "recepcion" || role == "admin" {
-				wc.WriteBranchIDs = append(wc.WriteBranchIDs, uuid.UUID(row.BranchID.Bytes))
+			wc.branchIDs = append(wc.branchIDs, row.BranchID)
+			if canWrite(row.Role) {
+				wc.writeBranchIDs = append(wc.writeBranchIDs, row.BranchID)
 			}
-			if rank[role] > rank[wc.Role] {
-				wc.Role = role
+			if rank[row.Role] > rank[wc.role] {
+				wc.role = row.Role
 			}
 		}
-		if len(wc.BranchIDs) == 0 {
-			fail(w, 403, "Acceso denegado")
-			return
+		if len(wc.branchIDs) == 0 {
+			return errAccessDenied
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), workshopKey, wc)))
+		return nil
 	})
 }
+
 func clientIP(r *http.Request) string {
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		return r.RemoteAddr
+	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return ip
 	}
-	return ip
+	return r.RemoteAddr
 }
 
 type limiter struct {
@@ -179,19 +201,18 @@ type limiter struct {
 	attempts map[string][]time.Time
 }
 
-func (l *limiter) allow(key string) bool { return l.allowLimit(key, 10) }
-func (l *limiter) allowLimit(key string, limit int) bool {
+func (l *limiter) allow(key string, limit int) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	now := time.Now()
 	for k, ts := range l.attempts {
-		if len(ts) == 0 || now.Sub(ts[len(ts)-1]) >= 15*time.Minute {
+		if len(ts) == 0 || now.Sub(ts[len(ts)-1]) >= limiterWindow {
 			delete(l.attempts, k)
 		}
 	}
 	ts := l.attempts[key]
 	i := 0
-	for i < len(ts) && now.Sub(ts[i]) >= 15*time.Minute {
+	for i < len(ts) && now.Sub(ts[i]) >= limiterWindow {
 		i++
 	}
 	ts = ts[i:]
@@ -202,4 +223,14 @@ func (l *limiter) allowLimit(key string, limit int) bool {
 	l.attempts[key] = append(ts, now)
 	return true
 }
+
 func normalizedEmail(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
+
+var errTooManyRequests = httpError{http.StatusTooManyRequests, "Demasiadas solicitudes"}
+
+func (s *server) limitPublicRead(r *http.Request, scope string) error {
+	if !s.limiter.allow(scope+":"+clientIP(r), publicReadLimit) {
+		return errTooManyRequests
+	}
+	return nil
+}

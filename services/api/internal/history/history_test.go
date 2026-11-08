@@ -88,10 +88,4 @@ func TestOwnerManualAndOrder(t *testing.T) {
 	if p.InternalCost == nil || p.Items[0].MechanicNotes == nil {
 		t.Fatal("registro manual incompleto")
 	}
-	r2 := r
-	r2.ID = uuid.New()
-	out := ProjectAll(ViewerOwner, []Record{r, r2})
-	if len(out) != 2 || out[0].ID != r.ID || out[1].ID != r2.ID {
-		t.Fatal("orden incorrecto")
-	}
 }

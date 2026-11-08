@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -16,12 +17,12 @@ INSERT INTO odometer_reading (vehicle_id, km, read_at, source, work_order_id, re
 `
 
 type CreateOdometerReadingParams struct {
-	VehicleID   pgtype.UUID        `json:"vehicle_id"`
+	VehicleID   uuid.UUID          `json:"vehicle_id"`
 	Km          int32              `json:"km"`
 	ReadAt      pgtype.Timestamptz `json:"read_at"`
 	Source      OdometerSource     `json:"source"`
-	WorkOrderID pgtype.UUID        `json:"work_order_id"`
-	RecordedBy  pgtype.UUID        `json:"recorded_by"`
+	WorkOrderID *uuid.UUID         `json:"work_order_id"`
+	RecordedBy  *uuid.UUID         `json:"recorded_by"`
 }
 
 func (q *Queries) CreateOdometerReading(ctx context.Context, arg CreateOdometerReadingParams) (OdometerReading, error) {
@@ -52,8 +53,8 @@ SELECT o.id, o.vehicle_id, o.km, o.read_at, o.source, o.work_order_id, o.recorde
 `
 
 type GetLatestOdometerReadingParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VehicleID  uuid.UUID `json:"vehicle_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) GetLatestOdometerReading(ctx context.Context, arg GetLatestOdometerReadingParams) (OdometerReading, error) {
@@ -72,34 +73,29 @@ func (q *Queries) GetLatestOdometerReading(ctx context.Context, arg GetLatestOdo
 	return i, err
 }
 
-const listOdometerReadings = `-- name: ListOdometerReadings :many
-SELECT o.id, o.vehicle_id, o.km, o.read_at, o.source, o.work_order_id, o.recorded_by, o.created_at FROM odometer_reading o JOIN vehicle_link l ON l.vehicle_id = o.vehicle_id WHERE o.vehicle_id = $1 AND l.workshop_id = $2 ORDER BY o.read_at DESC, o.created_at DESC
+const listLatestOdometerForWorkshop = `-- name: ListLatestOdometerForWorkshop :many
+SELECT DISTINCT ON (o.vehicle_id) o.vehicle_id, o.km
+FROM odometer_reading o
+JOIN vehicle_link l ON l.vehicle_id = o.vehicle_id
+WHERE l.workshop_id = $1
+ORDER BY o.vehicle_id, o.read_at DESC, o.created_at DESC
 `
 
-type ListOdometerReadingsParams struct {
-	VehicleID  pgtype.UUID `json:"vehicle_id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+type ListLatestOdometerForWorkshopRow struct {
+	VehicleID uuid.UUID `json:"vehicle_id"`
+	Km        int32     `json:"km"`
 }
 
-func (q *Queries) ListOdometerReadings(ctx context.Context, arg ListOdometerReadingsParams) ([]OdometerReading, error) {
-	rows, err := q.db.Query(ctx, listOdometerReadings, arg.VehicleID, arg.WorkshopID)
+func (q *Queries) ListLatestOdometerForWorkshop(ctx context.Context, workshopID uuid.UUID) ([]ListLatestOdometerForWorkshopRow, error) {
+	rows, err := q.db.Query(ctx, listLatestOdometerForWorkshop, workshopID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []OdometerReading{}
+	items := []ListLatestOdometerForWorkshopRow{}
 	for rows.Next() {
-		var i OdometerReading
-		if err := rows.Scan(
-			&i.ID,
-			&i.VehicleID,
-			&i.Km,
-			&i.ReadAt,
-			&i.Source,
-			&i.WorkOrderID,
-			&i.RecordedBy,
-			&i.CreatedAt,
-		); err != nil {
+		var i ListLatestOdometerForWorkshopRow
+		if err := rows.Scan(&i.VehicleID, &i.Km); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -115,8 +111,8 @@ SELECT o.id, o.vehicle_id, o.km, o.read_at, o.source, o.work_order_id, o.recorde
 `
 
 type ListOdometerReadingsForOwnerParams struct {
-	VehicleID   pgtype.UUID `json:"vehicle_id"`
-	OwnerUserID pgtype.UUID `json:"owner_user_id"`
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
 }
 
 func (q *Queries) ListOdometerReadingsForOwner(ctx context.Context, arg ListOdometerReadingsForOwnerParams) ([]OdometerReading, error) {

@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -23,8 +24,8 @@ type CreateJobParams struct {
 	InternalCost  pgtype.Numeric `json:"internal_cost"`
 	MechanicNotes *string        `json:"mechanic_notes"`
 	Currency      string         `json:"currency"`
-	WorkOrderID   pgtype.UUID    `json:"work_order_id"`
-	WorkshopID    pgtype.UUID    `json:"workshop_id"`
+	WorkOrderID   uuid.UUID      `json:"work_order_id"`
+	WorkshopID    uuid.UUID      `json:"workshop_id"`
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
@@ -67,8 +68,8 @@ type CreatePartParams struct {
 	UnitPrice    pgtype.Numeric `json:"unit_price"`
 	InternalCost pgtype.Numeric `json:"internal_cost"`
 	Currency     string         `json:"currency"`
-	JobID        pgtype.UUID    `json:"job_id"`
-	WorkshopID   pgtype.UUID    `json:"workshop_id"`
+	JobID        uuid.UUID      `json:"job_id"`
+	WorkshopID   uuid.UUID      `json:"workshop_id"`
 }
 
 func (q *Queries) CreatePart(ctx context.Context, arg CreatePartParams) (Part, error) {
@@ -104,8 +105,8 @@ DELETE FROM job j USING work_order wo WHERE j.work_order_id = wo.id AND j.id = $
 `
 
 type DeleteJobParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) DeleteJob(ctx context.Context, arg DeleteJobParams) (int64, error) {
@@ -117,20 +118,49 @@ func (q *Queries) DeleteJob(ctx context.Context, arg DeleteJobParams) (int64, er
 }
 
 const deletePart = `-- name: DeletePart :execrows
-DELETE FROM part p USING job j, work_order wo WHERE p.job_id = j.id AND j.work_order_id = wo.id AND p.id = $1 AND wo.workshop_id = $2
+DELETE FROM part p USING job j, work_order wo WHERE p.job_id = j.id AND j.work_order_id = wo.id AND p.id = $1 AND p.job_id = $2 AND wo.workshop_id = $3
 `
 
 type DeletePartParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	JobID      uuid.UUID `json:"job_id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) DeletePart(ctx context.Context, arg DeletePartParams) (int64, error) {
-	result, err := q.db.Exec(ctx, deletePart, arg.ID, arg.WorkshopID)
+	result, err := q.db.Exec(ctx, deletePart, arg.ID, arg.JobID, arg.WorkshopID)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const getJob = `-- name: GetJob :one
+SELECT j.id, j.work_order_id, j.position, j.description, j.category, j.labor_price, j.internal_cost, j.mechanic_notes, j.currency, j.created_at FROM job j JOIN work_order wo ON wo.id = j.work_order_id WHERE j.id = $1 AND j.work_order_id = $2 AND wo.workshop_id = $3
+`
+
+type GetJobParams struct {
+	ID          uuid.UUID `json:"id"`
+	WorkOrderID uuid.UUID `json:"work_order_id"`
+	WorkshopID  uuid.UUID `json:"workshop_id"`
+}
+
+func (q *Queries) GetJob(ctx context.Context, arg GetJobParams) (Job, error) {
+	row := q.db.QueryRow(ctx, getJob, arg.ID, arg.WorkOrderID, arg.WorkshopID)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.WorkOrderID,
+		&i.Position,
+		&i.Description,
+		&i.Category,
+		&i.LaborPrice,
+		&i.InternalCost,
+		&i.MechanicNotes,
+		&i.Currency,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const listJobsByWorkOrder = `-- name: ListJobsByWorkOrder :many
@@ -138,8 +168,8 @@ SELECT j.id, j.work_order_id, j.position, j.description, j.category, j.labor_pri
 `
 
 type ListJobsByWorkOrderParams struct {
-	WorkOrderID pgtype.UUID `json:"work_order_id"`
-	WorkshopID  pgtype.UUID `json:"workshop_id"`
+	WorkOrderID uuid.UUID `json:"work_order_id"`
+	WorkshopID  uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) ListJobsByWorkOrder(ctx context.Context, arg ListJobsByWorkOrderParams) ([]Job, error) {
@@ -178,8 +208,8 @@ SELECT p.id, p.job_id, p.name, p.brand, p.model, p.quantity, p.unit_price, p.int
 `
 
 type ListPartsByWorkOrderParams struct {
-	WorkOrderID pgtype.UUID `json:"work_order_id"`
-	WorkshopID  pgtype.UUID `json:"workshop_id"`
+	WorkOrderID uuid.UUID `json:"work_order_id"`
+	WorkshopID  uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) ListPartsByWorkOrder(ctx context.Context, arg ListPartsByWorkOrderParams) ([]Part, error) {
@@ -211,4 +241,15 @@ func (q *Queries) ListPartsByWorkOrder(ctx context.Context, arg ListPartsByWorkO
 		return nil, err
 	}
 	return items, nil
+}
+
+const nextJobPosition = `-- name: NextJobPosition :one
+SELECT (COALESCE(MAX(position), -1) + 1)::int AS position FROM job WHERE work_order_id = $1
+`
+
+func (q *Queries) NextJobPosition(ctx context.Context, workOrderID uuid.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, nextJobPosition, workOrderID)
+	var position int32
+	err := row.Scan(&position)
+	return position, err
 }

@@ -8,7 +8,7 @@ package sqlc
 import (
 	"context"
 
-	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/google/uuid"
 )
 
 const createBranch = `-- name: CreateBranch :one
@@ -16,10 +16,10 @@ INSERT INTO branch (workshop_id, name, address, phone) VALUES ($1, $2, $3, $4) R
 `
 
 type CreateBranchParams struct {
-	WorkshopID pgtype.UUID `json:"workshop_id"`
-	Name       string      `json:"name"`
-	Address    *string     `json:"address"`
-	Phone      *string     `json:"phone"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
+	Name       string    `json:"name"`
+	Address    *string   `json:"address"`
+	Phone      *string   `json:"phone"`
 }
 
 func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error) {
@@ -70,8 +70,8 @@ SELECT id, workshop_id, name, address, phone, created_at FROM branch WHERE id = 
 `
 
 type GetBranchParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error) {
@@ -92,7 +92,7 @@ const getWorkshop = `-- name: GetWorkshop :one
 SELECT id, name, nit, verified_at, verified_by, created_at, updated_at FROM workshop WHERE id = $1
 `
 
-func (q *Queries) GetWorkshop(ctx context.Context, workshopID pgtype.UUID) (Workshop, error) {
+func (q *Queries) GetWorkshop(ctx context.Context, workshopID uuid.UUID) (Workshop, error) {
 	row := q.db.QueryRow(ctx, getWorkshop, workshopID)
 	var i Workshop
 	err := row.Scan(
@@ -111,7 +111,7 @@ const listBranchesByWorkshop = `-- name: ListBranchesByWorkshop :many
 SELECT id, workshop_id, name, address, phone, created_at FROM branch WHERE workshop_id = $1 ORDER BY name
 `
 
-func (q *Queries) ListBranchesByWorkshop(ctx context.Context, workshopID pgtype.UUID) ([]Branch, error) {
+func (q *Queries) ListBranchesByWorkshop(ctx context.Context, workshopID uuid.UUID) ([]Branch, error) {
 	rows, err := q.db.Query(ctx, listBranchesByWorkshop, workshopID)
 	if err != nil {
 		return nil, err
@@ -143,8 +143,8 @@ UPDATE workshop SET verified_at = now(), verified_by = $1 WHERE id = $2
 `
 
 type VerifyWorkshopParams struct {
-	VerifiedBy *string     `json:"verified_by"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	VerifiedBy *string   `json:"verified_by"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) VerifyWorkshop(ctx context.Context, arg VerifyWorkshopParams) (int64, error) {

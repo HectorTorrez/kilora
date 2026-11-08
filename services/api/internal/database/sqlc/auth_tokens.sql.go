@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -20,9 +21,9 @@ type ConsumeAuthTokenParams struct {
 	Purpose   AuthTokenPurpose `json:"purpose"`
 }
 
-func (q *Queries) ConsumeAuthToken(ctx context.Context, arg ConsumeAuthTokenParams) (pgtype.UUID, error) {
+func (q *Queries) ConsumeAuthToken(ctx context.Context, arg ConsumeAuthTokenParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, consumeAuthToken, arg.TokenHash, arg.Purpose)
-	var user_id pgtype.UUID
+	var user_id uuid.UUID
 	err := row.Scan(&user_id)
 	return user_id, err
 }
@@ -33,7 +34,7 @@ INSERT INTO auth_token (token_hash, user_id, purpose, expires_at) VALUES ($1, $2
 
 type CreateAuthTokenParams struct {
 	TokenHash string             `json:"token_hash"`
-	UserID    pgtype.UUID        `json:"user_id"`
+	UserID    uuid.UUID          `json:"user_id"`
 	Purpose   AuthTokenPurpose   `json:"purpose"`
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }

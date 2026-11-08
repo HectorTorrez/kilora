@@ -137,7 +137,7 @@ func TestInvitationOwnerFlow(t *testing.T) {
 	}
 	id, _ := uuid.Parse(vid)
 	wid, _ := uuid.Parse(wb)
-	if err := sqlc.New(db).LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: dbUUID(id), WorkshopID: dbUUID(wid)}); err != nil {
+	if err := sqlc.New(db).LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: id, WorkshopID: wid}); err != nil {
 		t.Fatal(err)
 	}
 	blind := string(req(b, "GET", pb+"/vehicles/"+vid+"/history", "", 200))

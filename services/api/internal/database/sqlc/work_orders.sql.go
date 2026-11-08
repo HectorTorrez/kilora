@@ -8,6 +8,7 @@ package sqlc
 import (
 	"context"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
@@ -19,14 +20,14 @@ RETURNING id, workshop_id, branch_id, vehicle_id, number, status, reason, odomet
 `
 
 type CreateWorkOrderParams struct {
-	WorkshopID    pgtype.UUID `json:"workshop_id"`
-	BranchID      pgtype.UUID `json:"branch_id"`
-	VehicleID     pgtype.UUID `json:"vehicle_id"`
-	Number        int32       `json:"number"`
-	Reason        string      `json:"reason"`
-	OdometerKm    *int32      `json:"odometer_km"`
-	InternalNotes *string     `json:"internal_notes"`
-	CreatedBy     pgtype.UUID `json:"created_by"`
+	WorkshopID    uuid.UUID `json:"workshop_id"`
+	BranchID      uuid.UUID `json:"branch_id"`
+	VehicleID     uuid.UUID `json:"vehicle_id"`
+	Number        int32     `json:"number"`
+	Reason        string    `json:"reason"`
+	OdometerKm    *int32    `json:"odometer_km"`
+	InternalNotes *string   `json:"internal_notes"`
+	CreatedBy     uuid.UUID `json:"created_by"`
 }
 
 // CreateWorkOrder solo inserta si el vehículo está vinculado al taller; sin vínculo no devuelve filas.
@@ -69,12 +70,12 @@ UPDATE work_order SET reason = $1, odometer_km = $2, public_notes = $3, internal
 `
 
 type EditWorkOrderParams struct {
-	Reason        string      `json:"reason"`
-	OdometerKm    *int32      `json:"odometer_km"`
-	PublicNotes   *string     `json:"public_notes"`
-	InternalNotes *string     `json:"internal_notes"`
-	ID            pgtype.UUID `json:"id"`
-	WorkshopID    pgtype.UUID `json:"workshop_id"`
+	Reason        string    `json:"reason"`
+	OdometerKm    *int32    `json:"odometer_km"`
+	PublicNotes   *string   `json:"public_notes"`
+	InternalNotes *string   `json:"internal_notes"`
+	ID            uuid.UUID `json:"id"`
+	WorkshopID    uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) EditWorkOrder(ctx context.Context, arg EditWorkOrderParams) (WorkOrder, error) {
@@ -113,9 +114,9 @@ const getHistoryIDByOrder = `-- name: GetHistoryIDByOrder :one
 SELECT id FROM history_record WHERE work_order_id = $1
 `
 
-func (q *Queries) GetHistoryIDByOrder(ctx context.Context, workOrderID pgtype.UUID) (pgtype.UUID, error) {
+func (q *Queries) GetHistoryIDByOrder(ctx context.Context, workOrderID *uuid.UUID) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, getHistoryIDByOrder, workOrderID)
-	var id pgtype.UUID
+	var id uuid.UUID
 	err := row.Scan(&id)
 	return id, err
 }
@@ -125,8 +126,8 @@ SELECT id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_
 `
 
 type GetWorkOrderParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) GetWorkOrder(ctx context.Context, arg GetWorkOrderParams) (WorkOrder, error) {
@@ -159,16 +160,16 @@ SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status,
 `
 
 type ListWorkOrdersByWorkshopParams struct {
-	WorkshopID pgtype.UUID      `json:"workshop_id"`
+	WorkshopID uuid.UUID        `json:"workshop_id"`
 	Status     *WorkOrderStatus `json:"status"`
-	BranchID   pgtype.UUID      `json:"branch_id"`
+	BranchID   *uuid.UUID       `json:"branch_id"`
 }
 
 type ListWorkOrdersByWorkshopRow struct {
-	ID            pgtype.UUID        `json:"id"`
-	WorkshopID    pgtype.UUID        `json:"workshop_id"`
-	BranchID      pgtype.UUID        `json:"branch_id"`
-	VehicleID     pgtype.UUID        `json:"vehicle_id"`
+	ID            uuid.UUID          `json:"id"`
+	WorkshopID    uuid.UUID          `json:"workshop_id"`
+	BranchID      uuid.UUID          `json:"branch_id"`
+	VehicleID     uuid.UUID          `json:"vehicle_id"`
 	Number        int32              `json:"number"`
 	Status        WorkOrderStatus    `json:"status"`
 	Reason        string             `json:"reason"`
@@ -178,7 +179,7 @@ type ListWorkOrdersByWorkshopRow struct {
 	CompletedAt   pgtype.Timestamptz `json:"completed_at"`
 	CancelledAt   pgtype.Timestamptz `json:"cancelled_at"`
 	CancelReason  *string            `json:"cancel_reason"`
-	CreatedBy     pgtype.UUID        `json:"created_by"`
+	CreatedBy     uuid.UUID          `json:"created_by"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 	PublicNotes   *string            `json:"public_notes"`
@@ -233,8 +234,8 @@ SELECT id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_
 `
 
 type LockWorkOrderParams struct {
-	ID         pgtype.UUID `json:"id"`
-	WorkshopID pgtype.UUID `json:"workshop_id"`
+	ID         uuid.UUID `json:"id"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
 }
 
 func (q *Queries) LockWorkOrder(ctx context.Context, arg LockWorkOrderParams) (WorkOrder, error) {
@@ -267,7 +268,7 @@ SELECT (COALESCE(MAX(number), 0) + 1)::int AS number FROM work_order WHERE works
 `
 
 // NextWorkOrderNumber debe ejecutarse dentro de la transacción; UNIQUE (workshop_id, number) protege contra duplicados.
-func (q *Queries) NextWorkOrderNumber(ctx context.Context, workshopID pgtype.UUID) (int32, error) {
+func (q *Queries) NextWorkOrderNumber(ctx context.Context, workshopID uuid.UUID) (int32, error) {
 	row := q.db.QueryRow(ctx, nextWorkOrderNumber, workshopID)
 	var number int32
 	err := row.Scan(&number)
@@ -283,8 +284,8 @@ type TransitionWorkOrderStatusParams struct {
 	CompletedAt    pgtype.Timestamptz `json:"completed_at"`
 	CancelledAt    pgtype.Timestamptz `json:"cancelled_at"`
 	CancelReason   *string            `json:"cancel_reason"`
-	ID             pgtype.UUID        `json:"id"`
-	WorkshopID     pgtype.UUID        `json:"workshop_id"`
+	ID             uuid.UUID          `json:"id"`
+	WorkshopID     uuid.UUID          `json:"workshop_id"`
 	PreviousStatus WorkOrderStatus    `json:"previous_status"`
 }
 
@@ -297,34 +298,6 @@ func (q *Queries) TransitionWorkOrderStatus(ctx context.Context, arg TransitionW
 		arg.ID,
 		arg.WorkshopID,
 		arg.PreviousStatus,
-	)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const updateWorkOrderStatus = `-- name: UpdateWorkOrderStatus :execrows
-UPDATE work_order SET status = $1, completed_at = $2, cancelled_at = $3, cancel_reason = $4 WHERE id = $5 AND workshop_id = $6
-`
-
-type UpdateWorkOrderStatusParams struct {
-	Status       WorkOrderStatus    `json:"status"`
-	CompletedAt  pgtype.Timestamptz `json:"completed_at"`
-	CancelledAt  pgtype.Timestamptz `json:"cancelled_at"`
-	CancelReason *string            `json:"cancel_reason"`
-	ID           pgtype.UUID        `json:"id"`
-	WorkshopID   pgtype.UUID        `json:"workshop_id"`
-}
-
-func (q *Queries) UpdateWorkOrderStatus(ctx context.Context, arg UpdateWorkOrderStatusParams) (int64, error) {
-	result, err := q.db.Exec(ctx, updateWorkOrderStatus,
-		arg.Status,
-		arg.CompletedAt,
-		arg.CancelledAt,
-		arg.CancelReason,
-		arg.ID,
-		arg.WorkshopID,
 	)
 	if err != nil {
 		return 0, err

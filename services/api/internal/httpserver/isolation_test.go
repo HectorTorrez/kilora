@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/values"
 )
 
 func TestWorkshopIsolation(t *testing.T) {
@@ -93,20 +94,20 @@ func TestWorkshopIsolation(t *testing.T) {
 	req(a, "GET", pb+"/vehicles/"+vb, "", 403)
 	q := sqlc.New(db)
 	wid := uuid.MustParse(strings.TrimPrefix(pa, "/api/v1/workshops/"))
-	branch2, e := q.CreateBranch(context.Background(), sqlc.CreateBranchParams{WorkshopID: dbUUID(wid), Name: uuid.NewString()})
+	branch2, e := q.CreateBranch(context.Background(), sqlc.CreateBranchParams{WorkshopID: wid, Name: uuid.NewString()})
 	if e != nil {
 		t.Fatal(e)
 	}
 	for _, role := range []sqlc.MembershipRole{sqlc.MembershipRoleRecepcion, sqlc.MembershipRoleMecanico} {
 		c := client()
 		_, _, uid := setup(c)
-		_, e = q.CreateMembership(context.Background(), sqlc.CreateMembershipParams{UserID: dbUUID(uid), WorkshopID: dbUUID(wid), BranchID: dbUUID(uuid.MustParse(ba)), Role: role})
+		_, e = q.CreateMembership(context.Background(), sqlc.CreateMembershipParams{UserID: uid, WorkshopID: wid, BranchID: uuid.MustParse(ba), Role: role})
 		if e != nil {
 			t.Fatal(e)
 		}
 		req(c, "GET", pa+"/vehicles/"+vid, "", 200)
 		if role == sqlc.MembershipRoleRecepcion {
-			req(c, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"x"}`, vid, uuid.UUID(branch2.ID.Bytes)), 403)
+			req(c, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"x"}`, vid, branch2.ID), 403)
 		} else {
 			req(c, "POST", pa+"/vehicles", `{"make":"x","model":"y"}`, 403)
 		}
@@ -165,19 +166,19 @@ func TestWorkshopIsolation(t *testing.T) {
 
 }
 func TestNormalizationAndTransitions(t *testing.T) {
-	if normalizePlate(" p - 123 ") != "P123" {
+	if values.Plate(" p - 123 ") != "P123" {
 		t.Fatal("placa")
 	}
 	for _, s := range []string{"77778888", "+503 7777-8888", "50377778888"} {
-		if p, ok := normalizePhone(s); !ok || p != "+50377778888" {
+		if p, ok := values.Phone(s); !ok || p != "+50377778888" {
 			t.Fatal(s, p)
 		}
 	}
-	if _, ok := normalizePhone("123"); ok {
+	if _, ok := values.Phone("123"); ok {
 		t.Fatal("teléfono inválido")
 	}
 	for _, v := range []struct {
-		a, b string
+		a, b sqlc.WorkOrderStatus
 		want bool
 	}{{"recibido", "diagnostico", true}, {"diagnostico", "en_reparacion", true}, {"en_reparacion", "listo", true}, {"recibido", "cancelado", true}, {"listo", "cancelado", false}, {"recibido", "listo", false}} {
 		if validTransition(v.a, v.b) != v.want {
