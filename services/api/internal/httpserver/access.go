@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -84,12 +83,4 @@ func (a workshopAccess) requireAdmin() error {
 func (a workshopAccess) event(entity string, id uuid.UUID, action string) auditEvent {
 	workshop := a.workshopID
 	return auditEvent{actor: a.userID, workshop: &workshop, entity: entity, id: id, action: action}
-}
-
-func (s *server) requireBranch(ctx context.Context, wc workshopAccess, id uuid.UUID) error {
-	if !wc.canWriteBranch(id) {
-		return errAccessDenied
-	}
-	_, err := sqlc.New(s.db).GetBranch(ctx, sqlc.GetBranchParams{ID: id, WorkshopID: wc.workshopID})
-	return notFoundIfMissing(err, "Sucursal no encontrada")
 }

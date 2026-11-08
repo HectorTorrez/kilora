@@ -63,13 +63,6 @@ func (e AuthTokenPurpose) Valid() bool {
 	return false
 }
 
-func AllAuthTokenPurposeValues() []AuthTokenPurpose {
-	return []AuthTokenPurpose{
-		AuthTokenPurposeVerifyEmail,
-		AuthTokenPurposeResetPassword,
-	}
-}
-
 type HistorySource string
 
 const (
@@ -119,13 +112,6 @@ func (e HistorySource) Valid() bool {
 		return true
 	}
 	return false
-}
-
-func AllHistorySourceValues() []HistorySource {
-	return []HistorySource{
-		HistorySourceTaller,
-		HistorySourcePropietario,
-	}
 }
 
 type MembershipRole string
@@ -181,14 +167,6 @@ func (e MembershipRole) Valid() bool {
 	return false
 }
 
-func AllMembershipRoleValues() []MembershipRole {
-	return []MembershipRole{
-		MembershipRoleAdmin,
-		MembershipRoleRecepcion,
-		MembershipRoleMecanico,
-	}
-}
-
 type OdometerSource string
 
 const (
@@ -240,14 +218,6 @@ func (e OdometerSource) Valid() bool {
 		return true
 	}
 	return false
-}
-
-func AllOdometerSourceValues() []OdometerSource {
-	return []OdometerSource{
-		OdometerSourceOrden,
-		OdometerSourcePropietario,
-		OdometerSourceTaller,
-	}
 }
 
 type PartCategory string
@@ -309,17 +279,6 @@ func (e PartCategory) Valid() bool {
 	return false
 }
 
-func AllPartCategoryValues() []PartCategory {
-	return []PartCategory{
-		PartCategoryAceite,
-		PartCategoryFrenos,
-		PartCategoryAmortiguadores,
-		PartCategoryBateria,
-		PartCategoryLlantas,
-		PartCategoryOtro,
-	}
-}
-
 type QuoteItemKind string
 
 const (
@@ -369,13 +328,6 @@ func (e QuoteItemKind) Valid() bool {
 		return true
 	}
 	return false
-}
-
-func AllQuoteItemKindValues() []QuoteItemKind {
-	return []QuoteItemKind{
-		QuoteItemKindRepuesto,
-		QuoteItemKindManoDeObra,
-	}
 }
 
 type QuoteOutcome string
@@ -433,15 +385,6 @@ func (e QuoteOutcome) Valid() bool {
 	return false
 }
 
-func AllQuoteOutcomeValues() []QuoteOutcome {
-	return []QuoteOutcome{
-		QuoteOutcomePendiente,
-		QuoteOutcomeAcepto,
-		QuoteOutcomeRechazo,
-		QuoteOutcomeNoRespondio,
-	}
-}
-
 type RecommendationStatus string
 
 const (
@@ -495,14 +438,6 @@ func (e RecommendationStatus) Valid() bool {
 	return false
 }
 
-func AllRecommendationStatusValues() []RecommendationStatus {
-	return []RecommendationStatus{
-		RecommendationStatusPendiente,
-		RecommendationStatusHecha,
-		RecommendationStatusDescartada,
-	}
-}
-
 type VehicleStatus string
 
 const (
@@ -554,14 +489,6 @@ func (e VehicleStatus) Valid() bool {
 		return true
 	}
 	return false
-}
-
-func AllVehicleStatusValues() []VehicleStatus {
-	return []VehicleStatus{
-		VehicleStatusProvisional,
-		VehicleStatusVinculado,
-		VehicleStatusArchivado,
-	}
 }
 
 type WorkOrderStatus string
@@ -619,16 +546,6 @@ func (e WorkOrderStatus) Valid() bool {
 		return true
 	}
 	return false
-}
-
-func AllWorkOrderStatusValues() []WorkOrderStatus {
-	return []WorkOrderStatus{
-		WorkOrderStatusRecibido,
-		WorkOrderStatusDiagnostico,
-		WorkOrderStatusEnReparacion,
-		WorkOrderStatusListo,
-		WorkOrderStatusCancelado,
-	}
 }
 
 type AppUser struct {

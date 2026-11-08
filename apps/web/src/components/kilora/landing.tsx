@@ -99,7 +99,6 @@ function Logo() {
 	);
 }
 
-
 export function Hero({ hasDemo }: { hasDemo: boolean }) {
 	return (
 		<section
@@ -373,7 +372,6 @@ function SpecStrip() {
 		</div>
 	);
 }
-
 
 function SectionHead({
 	index,

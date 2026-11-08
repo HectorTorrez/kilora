@@ -186,7 +186,7 @@ FROM vehicle v
 JOIN vehicle_link l ON l.vehicle_id = v.id
 WHERE l.workshop_id = $1
   AND ($2::boolean OR v.status <> 'archivado')
-  AND ($3::text = '' OR v.plate LIKE $3::text || '%')
+  AND ($3::text = '' OR starts_with(v.plate, $3::text))
 ORDER BY v.last_activity_at DESC
 `
 

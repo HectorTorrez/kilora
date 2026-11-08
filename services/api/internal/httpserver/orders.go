@@ -96,7 +96,7 @@ func (s *server) createOrder(w http.ResponseWriter, r *http.Request, wc workshop
 	if in.VehicleID == uuid.Nil || in.BranchID == uuid.Nil || in.Reason == "" || (in.OdometerKm != nil && *in.OdometerKm < 0) {
 		return errInvalidOrder
 	}
-	if err := s.requireBranch(r.Context(), wc, in.BranchID); err != nil {
+	if err := wc.requireBranchWriter(in.BranchID); err != nil {
 		return err
 	}
 	var o sqlc.WorkOrder

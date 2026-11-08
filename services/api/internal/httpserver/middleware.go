@@ -7,7 +7,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 
@@ -226,8 +225,6 @@ func (l *limiter) allow(key string, limit int) bool {
 	l.attempts[key] = append(ts, now)
 	return true
 }
-
-func normalizedEmail(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
 
 var errTooManyRequests = httpError{http.StatusTooManyRequests, "Demasiadas solicitudes"}
 

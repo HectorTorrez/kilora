@@ -238,36 +238,32 @@ export function RecommendationsCard({
 									{r.category && <span>· {categoryLabels[r.category]}</span>}
 								</p>
 							</div>
-							{
-								<div className="flex shrink-0 gap-1">
-									<Button
-										variant="ghost"
-										size="icon"
-										className="size-8 text-ok hover:bg-ok-soft hover:text-ok"
-										aria-label={`Marcar como hecha: ${r.description}`}
-										title="Marcar como hecha"
-										disabled={resolve.isPending}
-										onClick={() =>
-											resolve.mutate({ id: r.id, status: "hecha" })
-										}
-									>
-										<Check className="size-4" />
-									</Button>
-									<Button
-										variant="ghost"
-										size="icon"
-										className="size-8 text-ink-3"
-										aria-label={`Descartar: ${r.description}`}
-										title="Descartar"
-										disabled={resolve.isPending}
-										onClick={() =>
-											resolve.mutate({ id: r.id, status: "descartada" })
-										}
-									>
-										<X className="size-4" />
-									</Button>
-								</div>
-							}
+							<div className="flex shrink-0 gap-1">
+								<Button
+									variant="ghost"
+									size="icon"
+									className="size-8 text-ok hover:bg-ok-soft hover:text-ok"
+									aria-label={`Marcar como hecha: ${r.description}`}
+									title="Marcar como hecha"
+									disabled={resolve.isPending}
+									onClick={() => resolve.mutate({ id: r.id, status: "hecha" })}
+								>
+									<Check className="size-4" />
+								</Button>
+								<Button
+									variant="ghost"
+									size="icon"
+									className="size-8 text-ink-3"
+									aria-label={`Descartar: ${r.description}`}
+									title="Descartar"
+									disabled={resolve.isPending}
+									onClick={() =>
+										resolve.mutate({ id: r.id, status: "descartada" })
+									}
+								>
+									<X className="size-4" />
+								</Button>
+							</div>
 						</li>
 					))}
 					{resolved.map((r) => (

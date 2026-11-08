@@ -96,8 +96,10 @@ func OptionalText(p *string) *string {
 	return &v
 }
 
+func NormalizeEmail(s string) string { return strings.ToLower(strings.TrimSpace(s)) }
+
 func Email(s string) (string, bool) {
-	s = strings.ToLower(strings.TrimSpace(s))
+	s = NormalizeEmail(s)
 	a, err := mail.ParseAddress(s)
 	return s, err == nil && a.Address == s
 }

@@ -126,7 +126,7 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	email := normalizedEmail(in.Email)
+	email := values.NormalizeEmail(in.Email)
 	if !s.limiter.allow(clientIP(r)+"|"+email, loginAttemptLimit) {
 		return httpError{http.StatusTooManyRequests, "Demasiados intentos. Intenta más tarde"}
 	}
@@ -203,7 +203,7 @@ func (s *server) forgot(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	w.WriteHeader(http.StatusNoContent)
-	email := normalizedEmail(in.Email)
+	email := values.NormalizeEmail(in.Email)
 	if auth.IsDemoEmail(email) {
 		return nil
 	}

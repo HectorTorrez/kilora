@@ -423,7 +423,7 @@ func (s *server) createCounterQuote(w http.ResponseWriter, r *http.Request, wc w
 		return err
 	}
 	ctx := r.Context()
-	if err = s.requireBranch(ctx, wc, d.branch); err != nil {
+	if err = wc.requireBranchWriter(d.branch); err != nil {
 		return err
 	}
 	var created uuid.UUID
@@ -538,7 +538,7 @@ func (s *server) updateCounterQuote(w http.ResponseWriter, r *http.Request, wc w
 		return err
 	}
 	ctx := r.Context()
-	if err = s.requireBranch(ctx, wc, d.branch); err != nil {
+	if err = wc.requireBranchWriter(d.branch); err != nil {
 		return err
 	}
 	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {

@@ -86,8 +86,10 @@ func (s *server) createRecommendation(w http.ResponseWriter, r *http.Request, wc
 	if in.Description == "" {
 		return badRequest("La descripción es obligatoria")
 	}
-	due := values.OptionalText(in.DueDate)
-	if due == nil && in.DueKm == nil {
+	if in.DueDate != nil && *in.DueDate == "" {
+		in.DueDate = nil
+	}
+	if in.DueDate == nil && in.DueKm == nil {
 		return badRequest("Indicá una fecha o un kilometraje objetivo")
 	}
 	if in.DueKm != nil && *in.DueKm < 0 {
@@ -100,8 +102,8 @@ func (s *server) createRecommendation(w http.ResponseWriter, r *http.Request, wc
 		}
 		params.Category = in.Category
 	}
-	if due != nil {
-		d, err := time.Parse(values.DateLayout, *due)
+	if in.DueDate != nil {
+		d, err := time.Parse(values.DateLayout, *in.DueDate)
 		if err != nil {
 			return badRequest("Fecha inválida")
 		}

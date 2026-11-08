@@ -6,6 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/values"
 )
 
 func (s *server) listMembers(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
@@ -40,17 +41,13 @@ func (s *server) addMember(w http.ResponseWriter, r *http.Request, wc workshopAc
 		return err
 	}
 	ctx := r.Context()
-	user, err := sqlc.New(s.db).GetUserByEmail(ctx, normalizedEmail(in.Email))
+	user, err := sqlc.New(s.db).GetUserByEmail(ctx, values.NormalizeEmail(in.Email))
 	if err != nil {
 		return notFoundIfMissing(err, "No existe una cuenta con ese correo. Pedile que se registre primero.")
 	}
 	var membershipID uuid.UUID
 	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
-		branch, err := q.GetBranch(ctx, sqlc.GetBranchParams{ID: in.BranchID, WorkshopID: wc.workshopID})
-		if err != nil {
-			return auditEvent{}, notFoundIfMissing(err, "Sucursal no encontrada")
-		}
-		m, err := q.CreateMembership(ctx, sqlc.CreateMembershipParams{UserID: user.ID, WorkshopID: wc.workshopID, BranchID: branch.ID, Role: in.Role})
+		m, err := q.CreateMembership(ctx, sqlc.CreateMembershipParams{UserID: user.ID, WorkshopID: wc.workshopID, BranchID: in.BranchID, Role: in.Role})
 		membershipID = m.ID
 		return wc.event("membership", m.ID, "membership.create"), err
 	})

@@ -45,9 +45,10 @@ function MechanicSheet() {
 		enabled: !!vehicleID,
 	});
 	const workshop = useQuery(workshopQuery(workshopID));
-	const recommendations = useQuery(
-		vehicleRecommendationsQuery(workshopID, vehicleID),
-	);
+	const recommendations = useQuery({
+		...vehicleRecommendationsQuery(workshopID, vehicleID),
+		enabled: !!vehicleID,
+	});
 	const [qr, setQr] = useState("");
 	useEffect(() => {
 		if (typeof window === "undefined") return;

@@ -30,7 +30,6 @@ type CreateWorkOrderParams struct {
 	CreatedBy     uuid.UUID `json:"created_by"`
 }
 
-// CreateWorkOrder solo inserta si el vehículo está vinculado al taller; sin vínculo no devuelve filas.
 func (q *Queries) CreateWorkOrder(ctx context.Context, arg CreateWorkOrderParams) (WorkOrder, error) {
 	row := q.db.QueryRow(ctx, createWorkOrder,
 		arg.WorkshopID,

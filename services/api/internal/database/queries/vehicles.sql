@@ -13,7 +13,7 @@ FROM vehicle v
 JOIN vehicle_link l ON l.vehicle_id = v.id
 WHERE l.workshop_id = sqlc.arg(workshop_id)
   AND (sqlc.arg(include_archived)::boolean OR v.status <> 'archivado')
-  AND (sqlc.arg(plate_prefix)::text = '' OR v.plate LIKE sqlc.arg(plate_prefix)::text || '%')
+  AND (sqlc.arg(plate_prefix)::text = '' OR starts_with(v.plate, sqlc.arg(plate_prefix)::text))
 ORDER BY v.last_activity_at DESC;
 
 -- name: LinkVehicleToWorkshop :exec
