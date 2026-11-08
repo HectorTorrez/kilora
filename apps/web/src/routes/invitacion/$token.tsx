@@ -6,10 +6,12 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { meQuery } from "@/lib/auth";
 import { date } from "@/lib/format";
 import { invitationQuery, ownerActions, useOwnerMutation } from "@/lib/owner";
@@ -26,13 +28,13 @@ export const Route = createFileRoute("/invitacion/$token")({
 	},
 	notFoundComponent: () => (
 		<main className="mx-auto max-w-lg p-8">
-			<h1 className="font-display text-2xl font-bold">
-				Invitación no disponible
-			</h1>
-			<p className="mt-3">
-				Puede haber vencido o ya no estar disponible. Pedí un nuevo enlace al
-				taller.
-			</p>
+			<Alert>
+				<AlertTitle>Invitación no disponible</AlertTitle>
+				<AlertDescription>
+					Puede haber vencido o ya no estar disponible. Pedí un nuevo enlace al
+					taller.
+				</AlertDescription>
+			</Alert>
 		</main>
 	),
 	component: Page,
@@ -55,17 +57,15 @@ function Page() {
 				KILORA
 			</Link>
 			{isLoading ? (
-				<p className="mt-10">Cargando invitación…</p>
+				<Skeleton className="mt-10 h-32" aria-label="Cargando invitación…" />
 			) : !inv ? (
-				<section className="mt-12">
-					<h1 className="font-display text-2xl font-bold">
-						Invitación no disponible
-					</h1>
-					<p className="mt-3 text-ink-3">
+				<Alert className="mt-12">
+					<AlertTitle>Invitación no disponible</AlertTitle>
+					<AlertDescription>
 						Puede haber vencido o ya no estar disponible. Pedí un nuevo enlace
 						al taller.
-					</p>
-				</section>
+					</AlertDescription>
+				</Alert>
 			) : (
 				<section className="mt-12 space-y-5">
 					<p className="text-sm text-seal">INVITACIÓN AL HISTORIAL</p>
@@ -75,7 +75,7 @@ function Page() {
 					{inv.workshop_verified_at && (
 						<p className="text-sm text-seal">✓ Taller verificado</p>
 					)}
-					<div className="rounded-xl border bg-card p-5">
+					<Card className="gap-0 p-5 shadow-none">
 						<p className="font-mono">{inv.vehicle?.plate || "Sin placa"}</p>
 						<p className="mt-2 text-xl font-bold">
 							{inv.vehicle?.make} {inv.vehicle?.model} {inv.vehicle?.year}
@@ -84,7 +84,7 @@ function Page() {
 							Para {inv.email_hint} · Vence{" "}
 							{inv.expires_at ? date(inv.expires_at) : "—"}
 						</p>
-					</div>
+					</Card>
 					{!me ? (
 						<div className="grid gap-3">
 							<Button asChild>

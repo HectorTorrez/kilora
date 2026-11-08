@@ -3,6 +3,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { day, km, plural } from "@/lib/format";
 import {
@@ -34,40 +35,42 @@ function Page() {
 				<Button onClick={() => setOpen(!open)}>Registrar mi vehículo</Button>
 			</div>
 			{open && (
-				<form
-					className="grid gap-3 rounded-xl border bg-card p-5 sm:grid-cols-2"
-					onSubmit={async (e) => {
-						e.preventDefault();
-						const f = new FormData(e.currentTarget);
-						const v = await create.mutateAsync({
-							plate: String(f.get("plate") || ""),
-							make: String(f.get("make")),
-							model: String(f.get("model")),
-							...(f.get("year") ? { year: Number(f.get("year")) } : {}),
-						});
-						if (v.id)
-							await navigate({
-								to: "/mis-vehiculos/$vehicleId",
-								params: { vehicleId: v.id },
+				<Card className="gap-0 p-5 shadow-none">
+					<form
+						className="grid gap-3 sm:grid-cols-2"
+						onSubmit={async (e) => {
+							e.preventDefault();
+							const f = new FormData(e.currentTarget);
+							const v = await create.mutateAsync({
+								plate: String(f.get("plate") || ""),
+								make: String(f.get("make")),
+								model: String(f.get("model")),
+								...(f.get("year") ? { year: Number(f.get("year")) } : {}),
 							});
-					}}
-				>
-					<Input name="plate" placeholder="Placa (opcional)" />
-					<Input name="make" placeholder="Marca" required />
-					<Input name="model" placeholder="Modelo" required />
-					<Input
-						name="year"
-						placeholder="Año (opcional)"
-						type="number"
-						min="1886"
-					/>
-					<Button disabled={create.isPending}>Guardar vehículo</Button>
-					{create.error && (
-						<Alert variant="destructive">
-							<AlertDescription>{create.error.message}</AlertDescription>
-						</Alert>
-					)}
-				</form>
+							if (v.id)
+								await navigate({
+									to: "/mis-vehiculos/$vehicleId",
+									params: { vehicleId: v.id },
+								});
+						}}
+					>
+						<Input name="plate" placeholder="Placa (opcional)" />
+						<Input name="make" placeholder="Marca" required />
+						<Input name="model" placeholder="Modelo" required />
+						<Input
+							name="year"
+							placeholder="Año (opcional)"
+							type="number"
+							min="1886"
+						/>
+						<Button disabled={create.isPending}>Guardar vehículo</Button>
+						{create.error && (
+							<Alert variant="destructive">
+								<AlertDescription>{create.error.message}</AlertDescription>
+							</Alert>
+						)}
+					</form>
+				</Card>
 			)}
 			{error && (
 				<Alert variant="destructive">
@@ -75,14 +78,14 @@ function Page() {
 				</Alert>
 			)}
 			{!data.length && !error && (
-				<div className="rounded-xl border bg-card p-8 text-center">
+				<Card className="gap-0 p-8 text-center shadow-none">
 					<h2 className="font-display text-xl font-bold">
 						Todavía no tenés vehículos
 					</h2>
 					<p className="mt-2 text-ink-3">
 						Registrá uno para comenzar tu historial.
 					</p>
-				</div>
+				</Card>
 			)}
 			<div className="grid gap-4 sm:grid-cols-2">
 				{data.map((v) => (
@@ -90,26 +93,28 @@ function Page() {
 						key={v.id}
 						to="/mis-vehiculos/$vehicleId"
 						params={{ vehicleId: v.id || "" }}
-						className="rounded-xl border bg-card p-5 hover:border-seal"
+						className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 					>
-						<p className="font-mono text-sm text-seal">
-							{v.plate || "Sin placa"}
-						</p>
-						<h2 className="mt-2 font-display text-xl font-bold">
-							{v.make} {v.model} {v.year}
-						</h2>
-						<p className="mt-4 text-sm text-ink-3">
-							Último servicio:{" "}
-							{v.last_service
-								? v.last_service.summary ||
-									day(v.last_service.performed_on) ||
-									"Registrado"
-								: "Sin servicios"}
-						</p>
-						<p className="text-sm text-ink-3">
-							{km(v.last_odometer_km)} ·{" "}
-							{plural(v.history_count ?? 0, "registro", "registros")}
-						</p>
+						<Card className="h-full gap-0 p-5 shadow-none hover:border-seal">
+							<p className="font-mono text-sm text-seal">
+								{v.plate || "Sin placa"}
+							</p>
+							<h2 className="mt-2 font-display text-xl font-bold">
+								{v.make} {v.model} {v.year}
+							</h2>
+							<p className="mt-4 text-sm text-ink-3">
+								Último servicio:{" "}
+								{v.last_service
+									? v.last_service.summary ||
+										day(v.last_service.performed_on) ||
+										"Registrado"
+									: "Sin servicios"}
+							</p>
+							<p className="text-sm text-ink-3">
+								{km(v.last_odometer_km)} ·{" "}
+								{plural(v.history_count ?? 0, "registro", "registros")}
+							</p>
+						</Card>
 					</Link>
 				))}
 			</div>

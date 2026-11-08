@@ -3,7 +3,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useWorkshopId } from "@/components/kilora/app-shell";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -11,6 +13,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { vehiclesQuery } from "@/lib/workshop";
 export const Route = createFileRoute("/taller/")({ component: VehiclesPage });
 function VehiclesPage() {
@@ -43,13 +46,13 @@ function VehiclesPage() {
 				onChange={(e) => setSearch(e.target.value)}
 				className="max-w-sm bg-card"
 			/>
-			<div className="overflow-hidden rounded-lg border bg-card">
+			<Card className="gap-0 overflow-hidden py-0 shadow-none">
 				{isLoading ? (
-					<p className="p-6">Cargando vehículos…</p>
+					<Skeleton className="m-6 h-20" aria-label="Cargando vehículos…" />
 				) : error ? (
-					<p className="p-6" role="alert">
-						{error.message}
-					</p>
+					<Alert variant="destructive">
+						<AlertDescription>{error.message}</AlertDescription>
+					</Alert>
 				) : !data?.length ? (
 					<p className="p-8 text-center text-ink-3">
 						No hay vehículos{search ? " con esa placa" : " registrados"}.
@@ -81,7 +84,7 @@ function VehiclesPage() {
 						</div>
 					))
 				)}
-			</div>
+			</Card>
 			<Dialog open={open} onOpenChange={setOpen}>
 				<DialogContent>
 					<DialogHeader>

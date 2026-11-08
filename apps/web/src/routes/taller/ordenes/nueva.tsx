@@ -78,73 +78,77 @@ function NewOrderPage() {
 					/>
 				)}
 			</Card>
-			<form
-				className="space-y-4 rounded-lg border bg-card p-5"
-				onSubmit={async (e) => {
-					e.preventDefault();
-					try {
-						const order = await create.mutateAsync({
-							vehicle_id: vehicle,
-							branch_id: branch || branches[0]?.branch_id,
-							reason,
-							odometer_km: km ? Number(km) : null,
-							internal_notes: notes || null,
-						});
-						await navigate({
-							to: "/taller/ordenes/$orderId",
-							params: { orderId: order.id },
-						});
-					} catch {}
-				}}
-			>
-				<div>
-					<Label htmlFor="branch">Sucursal</Label>
-					<Select
-						value={branch || branches[0]?.branch_id || ""}
-						onValueChange={setBranch}
-						required
-					>
-						<SelectTrigger id="branch" className="mt-1 w-full">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{branches.map((b) => (
-								<SelectItem key={b.branch_id} value={b.branch_id}>
-									{b.branch_name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<Label className="block" htmlFor="field-1">
-					Motivo
-					<Input
-						id="field-1"
-						required
-						value={reason}
-						onChange={(e) => setReason(e.target.value)}
-					/>
-				</Label>
-				<Label className="block" htmlFor="field-2">
-					Kilometraje
-					<Input
-						id="field-2"
-						type="number"
-						min="0"
-						value={km}
-						onChange={(e) => setKm(e.target.value)}
-					/>
-				</Label>
-				<Label className="block" htmlFor="field-3">
-					Notas internas · privadas del taller
-					<Textarea
-						id="field-3"
-						value={notes}
-						onChange={(e) => setNotes(e.target.value)}
-					/>
-				</Label>
-				<Button disabled={!vehicle || create.isPending}>Registrar orden</Button>
-			</form>
+			<Card className="gap-0 rounded-lg p-5 shadow-none">
+				<form
+					className="space-y-4"
+					onSubmit={async (e) => {
+						e.preventDefault();
+						try {
+							const order = await create.mutateAsync({
+								vehicle_id: vehicle,
+								branch_id: branch || branches[0]?.branch_id,
+								reason,
+								odometer_km: km ? Number(km) : null,
+								internal_notes: notes || null,
+							});
+							await navigate({
+								to: "/taller/ordenes/$orderId",
+								params: { orderId: order.id },
+							});
+						} catch {}
+					}}
+				>
+					<div>
+						<Label htmlFor="branch">Sucursal</Label>
+						<Select
+							value={branch || branches[0]?.branch_id || ""}
+							onValueChange={setBranch}
+							required
+						>
+							<SelectTrigger id="branch" className="mt-1 w-full">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{branches.map((b) => (
+									<SelectItem key={b.branch_id} value={b.branch_id}>
+										{b.branch_name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</div>
+					<Label className="block" htmlFor="field-1">
+						Motivo
+						<Input
+							id="field-1"
+							required
+							value={reason}
+							onChange={(e) => setReason(e.target.value)}
+						/>
+					</Label>
+					<Label className="block" htmlFor="field-2">
+						Kilometraje
+						<Input
+							id="field-2"
+							type="number"
+							min="0"
+							value={km}
+							onChange={(e) => setKm(e.target.value)}
+						/>
+					</Label>
+					<Label className="block" htmlFor="field-3">
+						Notas internas · privadas del taller
+						<Textarea
+							id="field-3"
+							value={notes}
+							onChange={(e) => setNotes(e.target.value)}
+						/>
+					</Label>
+					<Button disabled={!vehicle || create.isPending}>
+						Registrar orden
+					</Button>
+				</form>
+			</Card>
 		</main>
 	);
 }

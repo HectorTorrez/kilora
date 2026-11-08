@@ -3,10 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { date, day, km as formatKm, money, plural } from "@/lib/format";
 import {
 	ownerActions,
@@ -58,7 +61,12 @@ function Page() {
 		(body: Parameters<typeof ownerActions.correction>[1]) =>
 			ownerActions.correction(id, body),
 	);
-	if (!h || !v) return <main className="p-8">Cargando historial…</main>;
+	if (!h || !v)
+		return (
+			<main className="p-8">
+				<Skeleton className="h-32" aria-label="Cargando historial…" />
+			</main>
+		);
 	return (
 		<main className="mx-auto max-w-5xl space-y-6 px-5 py-8">
 			<Link to="/mis-vehiculos" className="text-sm text-seal">
@@ -86,117 +94,123 @@ function Page() {
 				</Button>
 			</div>
 			{form === "manual" && (
-				<form
-					className="grid gap-3 rounded-xl border p-5"
-					onSubmit={async (e) => {
-						e.preventDefault();
-						const f = new FormData(e.currentTarget);
-						try {
-							await manual.mutateAsync({
-								performed_on: String(f.get("date")),
-								summary: String(f.get("summary")),
-								...(f.get("km") ? { odometer_km: Number(f.get("km")) } : {}),
-								...(f.get("total") ? { total: String(f.get("total")) } : {}),
-								workshop_name_text: String(f.get("where") || ""),
-								items: itemIds.flatMap((i) => {
-									const description = String(f.get(`item-${i}`) || "").trim();
-									const price = String(f.get(`price-${i}`) || "");
-									return description
-										? [
-												{
-													kind: "trabajo" as const,
-													description,
-													...(price ? { price } : {}),
-												},
-											]
-										: [];
-								}),
-							});
-							setForm("");
-						} catch {}
-					}}
-				>
-					<h2 className="font-bold">Agregar servicio</h2>
-					<Label className="block" htmlFor="service-date">
-						Fecha
-						<Input
-							id="service-date"
-							name="date"
-							type="date"
-							max={new Date().toLocaleDateString("en-CA")}
-							required
-						/>
-					</Label>
-					<Input name="km" type="number" min="0" placeholder="Kilometraje" />
-					<Input name="summary" placeholder="Resumen" required />
-					{itemIds.map((i) => (
-						<div className="grid gap-2 sm:grid-cols-2" key={i}>
-							<Input
-								name={`item-${i}`}
-								placeholder="Trabajo o pieza (opcional)"
-							/>
-							<Input
-								name={`price-${i}`}
-								type="number"
-								min="0"
-								step="0.01"
-								placeholder="Precio del ítem"
-							/>
-						</div>
-					))}
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => setItemIds([...itemIds, Math.max(...itemIds) + 1])}
+				<Card className="gap-0 p-5 shadow-none">
+					<form
+						className="grid gap-3"
+						onSubmit={async (e) => {
+							e.preventDefault();
+							const f = new FormData(e.currentTarget);
+							try {
+								await manual.mutateAsync({
+									performed_on: String(f.get("date")),
+									summary: String(f.get("summary")),
+									...(f.get("km") ? { odometer_km: Number(f.get("km")) } : {}),
+									...(f.get("total") ? { total: String(f.get("total")) } : {}),
+									workshop_name_text: String(f.get("where") || ""),
+									items: itemIds.flatMap((i) => {
+										const description = String(f.get(`item-${i}`) || "").trim();
+										const price = String(f.get(`price-${i}`) || "");
+										return description
+											? [
+													{
+														kind: "trabajo" as const,
+														description,
+														...(price ? { price } : {}),
+													},
+												]
+											: [];
+									}),
+								});
+								setForm("");
+							} catch {}
+						}}
 					>
-						Agregar otro ítem
-					</Button>
-					<Input
-						name="total"
-						type="number"
-						min="0"
-						step="0.01"
-						placeholder="Total"
-					/>
-					<Input name="where" placeholder="Dónde se hizo" />
-					<Button disabled={manual.isPending}>Guardar servicio</Button>
-					{manual.error && (
-						<Alert variant="destructive">
-							<AlertDescription>{manual.error.message}</AlertDescription>
-						</Alert>
-					)}
-				</form>
+						<h2 className="font-bold">Agregar servicio</h2>
+						<Label className="block" htmlFor="service-date">
+							Fecha
+							<Input
+								id="service-date"
+								name="date"
+								type="date"
+								max={new Date().toLocaleDateString("en-CA")}
+								required
+							/>
+						</Label>
+						<Input name="km" type="number" min="0" placeholder="Kilometraje" />
+						<Input name="summary" placeholder="Resumen" required />
+						{itemIds.map((i) => (
+							<div className="grid gap-2 sm:grid-cols-2" key={i}>
+								<Input
+									name={`item-${i}`}
+									placeholder="Trabajo o pieza (opcional)"
+								/>
+								<Input
+									name={`price-${i}`}
+									type="number"
+									min="0"
+									step="0.01"
+									placeholder="Precio del ítem"
+								/>
+							</div>
+						))}
+						<Button
+							type="button"
+							variant="outline"
+							onClick={() => setItemIds([...itemIds, Math.max(...itemIds) + 1])}
+						>
+							Agregar otro ítem
+						</Button>
+						<Input
+							name="total"
+							type="number"
+							min="0"
+							step="0.01"
+							placeholder="Total"
+						/>
+						<Input name="where" placeholder="Dónde se hizo" />
+						<Button disabled={manual.isPending}>Guardar servicio</Button>
+						{manual.error && (
+							<Alert variant="destructive">
+								<AlertDescription>{manual.error.message}</AlertDescription>
+							</Alert>
+						)}
+					</form>
+				</Card>
 			)}
 			{form === "km" && (
-				<form
-					className="flex flex-wrap gap-3 rounded-xl border p-5"
-					onSubmit={async (e) => {
-						e.preventDefault();
-						const f = new FormData(e.currentTarget);
-						try {
-							const result = await km.mutateAsync(Number(f.get("km")));
-							setWarning(result.warning || "Kilometraje actualizado.");
-							setForm("");
-						} catch {}
-					}}
-				>
-					<Input
-						name="km"
-						type="number"
-						min="0"
-						placeholder="Kilometraje actual"
-						required
-					/>
-					<Button>Guardar</Button>
-					{km.error && (
-						<Alert variant="destructive">
-							<AlertDescription>{km.error.message}</AlertDescription>
-						</Alert>
-					)}
-				</form>
+				<Card className="gap-0 p-5 shadow-none">
+					<form
+						className="flex flex-wrap gap-3"
+						onSubmit={async (e) => {
+							e.preventDefault();
+							const f = new FormData(e.currentTarget);
+							try {
+								const result = await km.mutateAsync(Number(f.get("km")));
+								setWarning(result.warning || "Kilometraje actualizado.");
+								setForm("");
+							} catch {}
+						}}
+					>
+						<Input
+							name="km"
+							type="number"
+							min="0"
+							placeholder="Kilometraje actual"
+							required
+						/>
+						<Button>Guardar</Button>
+						{km.error && (
+							<Alert variant="destructive">
+								<AlertDescription>{km.error.message}</AlertDescription>
+							</Alert>
+						)}
+					</form>
+				</Card>
 			)}
 			{warning && (
-				<output className="block rounded-lg bg-secondary p-3">{warning}</output>
+				<Alert>
+					<AlertDescription>{warning}</AlertDescription>
+				</Alert>
 			)}
 			<div className="grid gap-6 md:grid-cols-[1fr_260px]">
 				<section>
@@ -208,7 +222,7 @@ function Page() {
 							<p className="text-ink-3">Aún no hay servicios registrados.</p>
 						)}
 						{h.records.map((r) => (
-							<article key={r.id} className="rounded-xl border bg-card p-5">
+							<Card key={r.id} className="gap-0 p-5 shadow-none">
 								<p className="text-sm text-ink-3">
 									{day(r.performed_on)} · {formatKm(r.odometer_km)}
 								</p>
@@ -428,12 +442,12 @@ function Page() {
 										</form>
 									</DialogContent>
 								</Dialog>
-							</article>
+							</Card>
 						))}
 					</div>
 				</section>
 				<aside className="space-y-5">
-					<section className="rounded-xl border p-5">
+					<Card className="gap-0 p-5 shadow-none">
 						<h2 className="font-bold">Talleres vinculados</h2>
 						{(v.workshops || []).length ? (
 							v.workshops?.map((w) => (
@@ -444,19 +458,24 @@ function Page() {
 						) : (
 							<p className="mt-2 text-sm text-ink-3">Sin talleres vinculados</p>
 						)}
-					</section>
-					<section className="rounded-xl border p-5">
+					</Card>
+					<Card className="gap-0 p-5 shadow-none">
 						<h2 className="font-bold">Lecturas de kilometraje</h2>
 						{(v.odometer_readings || []).length ? (
-							v.odometer_readings?.map((o) => (
-								<p className="mt-2 text-sm" key={JSON.stringify(o)}>
-									{formatKm(o.km)} · {date(o.read_at)}
-								</p>
-							))
+							<Table>
+								<TableBody>
+									{v.odometer_readings?.map((o) => (
+										<TableRow key={JSON.stringify(o)}>
+											<TableCell>{formatKm(o.km)}</TableCell>
+											<TableCell>{date(o.read_at)}</TableCell>
+										</TableRow>
+									))}
+								</TableBody>
+							</Table>
 						) : (
 							<p className="mt-2 text-sm text-ink-3">Sin lecturas</p>
 						)}
-					</section>
+					</Card>
 				</aside>
 			</div>
 		</main>

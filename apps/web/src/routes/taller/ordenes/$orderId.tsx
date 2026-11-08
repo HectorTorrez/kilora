@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useWorkshopId } from "@/components/kilora/app-shell";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,9 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { money, statusLabel } from "@/lib/format";
 import {
@@ -43,11 +47,20 @@ function OrderPage() {
 		...vehicleQuery(workshopID, order.data?.vehicle_id || ""),
 		enabled: !!order.data,
 	});
-	if (order.isLoading) return <main className="p-8">Cargando orden…</main>;
+	if (order.isLoading)
+		return (
+			<main className="p-8">
+				<Skeleton className="h-32" aria-label="Cargando orden…" />
+			</main>
+		);
 	if (order.error || !order.data)
 		return (
-			<main className="p-8" role="alert">
-				{order.error?.message || "Orden no disponible"}
+			<main className="p-8">
+				<Alert variant="destructive">
+					<AlertDescription>
+						{order.error?.message || "Orden no disponible"}
+					</AlertDescription>
+				</Alert>
 			</main>
 		);
 	return (
@@ -104,12 +117,6 @@ function OrderDetail({
 	};
 	return (
 		<main className="mx-auto max-w-5xl space-y-5 px-5 py-7">
-			<OwnerInvitation
-				workshopID={workshopID}
-				vehicleID={order.vehicle_id}
-				linked={vehicle?.owner_linked}
-				name={vehicle?.owner_name}
-			/>
 			<header>
 				<p className="text-sm text-ink-3">
 					Orden #{order.number} · {statusLabel(order.status)}
@@ -161,92 +168,105 @@ function OrderDetail({
 					)}
 				</div>
 			</Card>
-			<form
-				className="space-y-3 rounded-lg border bg-card p-5"
-				onSubmit={(e) => {
-					e.preventDefault();
-					edit.mutate({
-						reason,
-						odometer_km: km ? Number(km) : null,
-						public_notes: publicNotes || null,
-						internal_notes: internalNotes || null,
-					});
-				}}
-			>
-				<h2 className="font-semibold">Datos de la orden</h2>
-				<Label className="block" htmlFor="field-1">
-					Motivo
-					<Input
-						id="field-1"
-						required
-						value={reason}
-						onChange={(e) => setReason(e.target.value)}
-					/>
-				</Label>
-				<Label className="block" htmlFor="field-2">
-					Kilometraje
-					<Input
-						id="field-2"
-						type="number"
-						min="0"
-						value={km}
-						onChange={(e) => setKm(e.target.value)}
-					/>
-				</Label>
-				<Label className="block" htmlFor="field-3">
-					Notas públicas · las ve el propietario
-					<Textarea
-						id="field-3"
-						value={publicNotes}
-						onChange={(e) => setPublicNotes(e.target.value)}
-					/>
-				</Label>
-				<Label className="block" htmlFor="field-4">
-					Notas internas · privadas del taller
-					<Textarea
-						id="field-4"
-						value={internalNotes}
-						onChange={(e) => setInternalNotes(e.target.value)}
-					/>
-				</Label>
-				<Button>Guardar cambios</Button>
-			</form>
+			<Card className="gap-0 rounded-lg p-5 shadow-none">
+				<form
+					className="space-y-3"
+					onSubmit={(e) => {
+						e.preventDefault();
+						edit.mutate({
+							reason,
+							odometer_km: km ? Number(km) : null,
+							public_notes: publicNotes || null,
+							internal_notes: internalNotes || null,
+						});
+					}}
+				>
+					<h2 className="font-semibold">Datos de la orden</h2>
+					<Label className="block" htmlFor="field-1">
+						Motivo
+						<Input
+							id="field-1"
+							required
+							value={reason}
+							onChange={(e) => setReason(e.target.value)}
+						/>
+					</Label>
+					<Label className="block" htmlFor="field-2">
+						Kilometraje
+						<Input
+							id="field-2"
+							type="number"
+							min="0"
+							value={km}
+							onChange={(e) => setKm(e.target.value)}
+						/>
+					</Label>
+					<Label className="block" htmlFor="field-3">
+						Notas públicas · las ve el propietario
+						<Textarea
+							id="field-3"
+							value={publicNotes}
+							onChange={(e) => setPublicNotes(e.target.value)}
+						/>
+					</Label>
+					<Label className="block" htmlFor="field-4">
+						Notas internas · privadas del taller
+						<Textarea
+							id="field-4"
+							value={internalNotes}
+							onChange={(e) => setInternalNotes(e.target.value)}
+						/>
+					</Label>
+					<Button>Guardar cambios</Button>
+				</form>
+			</Card>
+			<OwnerInvitation
+				workshopID={workshopID}
+				vehicleID={order.vehicle_id}
+				linked={vehicle?.owner_linked}
+				name={vehicle?.owner_name}
+			/>
 			<Card className="space-y-3 gap-0 rounded-lg p-5 shadow-none">
 				<h2 className="font-semibold">Trabajos y piezas</h2>
 				{order.jobs.map((j) => (
-					<div key={j.id} className="space-y-2 border-b pb-3">
-						<div className="flex justify-between gap-2">
-							<span>
-								{j.description} · mano de obra {money(j.labor_price || 0)}
-							</span>
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => deleteJob.mutate(j.id)}
-							>
-								Eliminar trabajo
-							</Button>
-						</div>
-						{j.parts.map((p) => (
-							<div
-								key={p.id}
-								className="flex justify-between gap-2 pl-4 text-sm"
-							>
-								<span>
-									{p.name} · {p.quantity} × {money(p.unit_price || 0)}
-								</span>
-								<Button
-									variant="ghost"
-									size="sm"
-									type="button"
-									onClick={() =>
-										deletePart.mutate({ jobID: j.id, partID: p.id })
-									}
-								>
-									Eliminar pieza
-								</Button>
-							</div>
-						))}
+					<div key={j.id} className="space-y-2 pb-3">
+						<Table>
+							<TableBody>
+								<TableRow>
+									<TableCell className="whitespace-normal">
+										{j.description} · mano de obra {money(j.labor_price || 0)}
+									</TableCell>
+									<TableCell className="text-right">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => deleteJob.mutate(j.id)}
+										>
+											Eliminar trabajo
+										</Button>
+									</TableCell>
+								</TableRow>
+								{j.parts.map((p) => (
+									<TableRow key={p.id}>
+										<TableCell className="whitespace-normal pl-4 text-sm">
+											{p.name} · {p.quantity} × {money(p.unit_price || 0)}
+										</TableCell>
+										<TableCell className="text-right">
+											<Button
+												variant="ghost"
+												size="sm"
+												type="button"
+												onClick={() =>
+													deletePart.mutate({ jobID: j.id, partID: p.id })
+												}
+											>
+												Eliminar pieza
+											</Button>
+										</TableCell>
+									</TableRow>
+								))}
+							</TableBody>
+						</Table>
 						<Button
 							type="button"
 							variant="outline"
@@ -298,6 +318,7 @@ function OrderDetail({
 								<Button>Guardar pieza</Button>
 							</form>
 						)}
+						<Separator />
 					</div>
 				))}
 				<form

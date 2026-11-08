@@ -1,6 +1,9 @@
 import { createApiClient } from "@kilora/contracts";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { date, money } from "@/lib/format";
 
 const getQuote = createServerFn({ method: "GET" })
@@ -24,8 +27,12 @@ export const Route = createFileRoute("/c/$token")({
 	},
 	notFoundComponent: () => (
 		<main className="p-8 text-center">
-			<h1 className="text-2xl font-bold">Cotización no disponible</h1>
-			<p>El enlace puede haber vencido o ya no estar disponible.</p>
+			<Alert>
+				<AlertTitle>Cotización no disponible</AlertTitle>
+				<AlertDescription>
+					El enlace puede haber vencido o ya no estar disponible.
+				</AlertDescription>
+			</Alert>
 		</main>
 	),
 	component: PublicQuote,
@@ -41,38 +48,42 @@ function PublicQuote() {
 					<p className="text-sm text-seal">✓ Taller verificado</p>
 				)}
 			</header>
-			<section className="rounded-lg border bg-card p-5">
+			<Card className="gap-0 rounded-lg p-5 shadow-none">
 				<p className="text-sm text-ink-3">Orden #{q.order_number}</p>
 				<h2 className="mt-1 text-xl font-semibold">{q.plate || "Sin placa"}</h2>
 				<p>
 					{q.make} {q.model} {q.year}
 				</p>
-			</section>
-			<section className="rounded-lg border bg-card p-5">
+			</Card>
+			<Card className="gap-0 rounded-lg p-5 shadow-none">
 				<h2 className="mb-3 font-semibold">Detalle de cotización</h2>
-				{q.items.map((item, i) => (
-					<div
-						// biome-ignore lint/suspicious/noArrayIndexKey: Items have no IDs.
-						key={`${item.description}-${i}`}
-						className="flex justify-between gap-4 border-b py-3 text-sm"
-					>
-						<div>
-							{item.description}
-							<p className="text-ink-3">
-								{item.kind === "repuesto" ? "Repuesto" : "Mano de obra"} ·{" "}
-								{item.quantity} × {money(item.unit_price)}
-							</p>
-						</div>
-						<span>
-							{money(Number(item.quantity) * Number(item.unit_price))}
-						</span>
-					</div>
-				))}
+				<Table>
+					<TableBody>
+						{q.items.map((item, i) => (
+							<TableRow
+								// biome-ignore lint/suspicious/noArrayIndexKey: Items have no IDs.
+								key={`${item.description}-${i}`}
+								className="text-sm"
+							>
+								<TableCell className="whitespace-normal">
+									{item.description}
+									<p className="text-ink-3">
+										{item.kind === "repuesto" ? "Repuesto" : "Mano de obra"} ·{" "}
+										{item.quantity} × {money(item.unit_price)}
+									</p>
+								</TableCell>
+								<TableCell className="text-right">
+									{money(Number(item.quantity) * Number(item.unit_price))}
+								</TableCell>
+							</TableRow>
+						))}
+					</TableBody>
+				</Table>
 				<p className="mt-4 flex justify-between text-lg font-bold">
 					<span>Total USD</span>
 					<span>{money(q.total)}</span>
 				</p>
-			</section>
+			</Card>
 			<p className="text-sm text-ink-3">
 				Enviada el {date(q.shared_at)} · válida hasta {date(q.share_expires_at)}
 			</p>

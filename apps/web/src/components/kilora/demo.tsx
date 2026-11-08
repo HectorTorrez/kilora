@@ -2,6 +2,7 @@ import type { components } from "@kilora/contracts";
 import { useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
 	const [busy, setBusy] = useState("");
@@ -61,33 +62,32 @@ export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
 				</div>
 				<ul className="mt-14 grid gap-px overflow-hidden rounded-lg border bg-line md:grid-cols-3">
 					{accounts.map((a, i) => (
-						<li
-							key={a.role}
-							className="reveal flex flex-col bg-card p-6 md:p-7"
-						>
-							<div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-widest text-ink-3">
-								<span>{meta[a.role]?.tag ?? a.role}</span>
-								<span>0{i + 1}</span>
-							</div>
-							<h3 className="mt-6 font-display text-xl font-bold">
-								{meta[a.role]?.title ?? a.label}
-							</h3>
-							<p className="mt-2 flex-1 text-sm leading-relaxed text-ink-2">
-								{a.label}: {a.description}
-							</p>
-							<p className="mt-5 break-all rounded-md border bg-surface px-3 py-2 font-mono text-xs text-ink-3">
-								{a.email} / {a.password}
-							</p>
-							<Button
-								className="mt-5 w-full"
-								variant={
-									a.role === "taller_competencia" ? "outline" : "default"
-								}
-								disabled={!!busy}
-								onClick={() => enter(a.role)}
-							>
-								{busy === a.role ? "Ingresando…" : "Entrar a la demo"}
-							</Button>
+						<li key={a.role} className="reveal">
+							<Card className="h-full gap-0 rounded-none border-0 p-6 shadow-none md:p-7">
+								<div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-widest text-ink-3">
+									<span>{meta[a.role]?.tag ?? a.role}</span>
+									<span>0{i + 1}</span>
+								</div>
+								<h3 className="mt-6 font-display text-xl font-bold">
+									{meta[a.role]?.title ?? a.label}
+								</h3>
+								<p className="mt-2 flex-1 text-sm leading-relaxed text-ink-2">
+									{a.label}: {a.description}
+								</p>
+								<p className="mt-5 break-all rounded-md border bg-surface px-3 py-2 font-mono text-xs text-ink-3">
+									{a.email} / {a.password}
+								</p>
+								<Button
+									className="mt-5 w-full"
+									variant={
+										a.role === "taller_competencia" ? "outline" : "default"
+									}
+									disabled={!!busy}
+									onClick={() => enter(a.role)}
+								>
+									{busy === a.role ? "Ingresando…" : "Entrar a la demo"}
+								</Button>
+							</Card>
 						</li>
 					))}
 				</ul>
@@ -105,8 +105,10 @@ export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
 }
 export function DemoBanner({ email }: { email: string }) {
 	return email.toLowerCase().endsWith("@demo.kilora.app") ? (
-		<div className="bg-secondary px-4 py-2 text-center text-xs">
-			Estás en la demo · los datos son compartidos con otros visitantes
-		</div>
+		<Alert className="rounded-none border-0 bg-secondary px-4 py-2 text-center text-xs">
+			<AlertDescription className="block text-center text-xs">
+				Estás en la demo · los datos son compartidos con otros visitantes
+			</AlertDescription>
+		</Alert>
 	) : null;
 }

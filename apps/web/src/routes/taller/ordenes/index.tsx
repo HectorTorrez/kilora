@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useWorkshopId } from "@/components/kilora/app-shell";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
 	Select,
 	SelectContent,
@@ -11,6 +13,15 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "@/components/ui/table";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { date } from "@/lib/format";
 import { ordersQuery } from "@/lib/workshop";
@@ -98,37 +109,52 @@ function OrdersPage() {
 					</Select>
 				)}
 			</div>
-			<div className="overflow-hidden rounded-lg border bg-card">
+			<Card className="gap-0 overflow-hidden py-0 shadow-none">
 				{isLoading ? (
-					<p className="p-6">Cargando órdenes…</p>
+					<Skeleton className="m-6 h-20" aria-label="Cargando órdenes…" />
 				) : error ? (
-					<p className="p-6" role="alert">
-						{error.message}
-					</p>
+					<Alert variant="destructive">
+						<AlertDescription>{error.message}</AlertDescription>
+					</Alert>
 				) : !data?.length ? (
 					<p className="p-8 text-center text-ink-3">
 						No hay órdenes con este filtro.
 					</p>
 				) : (
-					data.map((o) => (
-						<Link
-							key={o.id}
-							to="/taller/ordenes/$orderId"
-							params={{ orderId: o.id }}
-							className="grid gap-2 border-b p-4 hover:bg-paper sm:grid-cols-4"
-						>
-							<span className="font-mono">#{o.number}</span>
-							<span>
-								{o.plate || "Sin placa"} · {o.make} {o.model}
-							</span>
-							<span>{o.reason}</span>
-							<span className="text-sm text-ink-3">
-								{o.status.replaceAll("_", " ")} · {date(o.received_at)}
-							</span>
-						</Link>
-					))
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableHead>Orden</TableHead>
+								<TableHead>Vehículo</TableHead>
+								<TableHead>Motivo</TableHead>
+								<TableHead>Estado</TableHead>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
+							{data.map((o) => (
+								<TableRow key={o.id} className="relative cursor-pointer">
+									<TableCell>
+										<Link
+											className="font-mono underline after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+											to="/taller/ordenes/$orderId"
+											params={{ orderId: o.id }}
+										>
+											#{o.number}
+										</Link>
+									</TableCell>
+									<TableCell>
+										{o.plate || "Sin placa"} · {o.make} {o.model}
+									</TableCell>
+									<TableCell>{o.reason}</TableCell>
+									<TableCell className="text-ink-3">
+										{o.status.replaceAll("_", " ")} · {date(o.received_at)}
+									</TableCell>
+								</TableRow>
+							))}
+						</TableBody>
+					</Table>
 				)}
-			</div>
+			</Card>
 		</main>
 	);
 }
