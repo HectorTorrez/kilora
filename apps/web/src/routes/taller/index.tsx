@@ -6,11 +6,17 @@ import {
 	Car,
 	CheckCircle2,
 	ClipboardList,
+	Lightbulb,
 	Mail,
 	Plus,
 	Wrench,
 } from "lucide-react";
 import { useWorkshopId } from "@/components/kilora/app-shell";
+import {
+	dueText,
+	UrgencyBadge,
+	urgency,
+} from "@/components/kilora/recommendations";
 import {
 	EmptyState,
 	OrderStatusBadge,
@@ -27,7 +33,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { statusLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ordersQuery, vehiclesQuery } from "@/lib/workshop";
+import {
+	ordersQuery,
+	recommendationsQuery,
+	vehiclesQuery,
+} from "@/lib/workshop";
 import { Route as TallerRoute } from "@/routes/taller";
 
 type S = components["schemas"];
@@ -77,6 +87,15 @@ function DashboardPage() {
 	const linked = vlist.filter((v) => v.status === "vinculado");
 	const provisional = vlist.filter((v) => v.status === "provisional");
 	const loading = orders.isLoading || vehicles.isLoading;
+	const recs = useQuery(recommendationsQuery(workshopID, "pendiente"));
+	const kmByVehicle = new Map(vlist.map((v) => [v.id, v.last_odometer_km]));
+	const rank = { vencida: 0, proxima: 1, programada: 2 } as const;
+	const pendingRecs = (recs.data ?? [])
+		.map((rec) => ({
+			rec,
+			level: urgency(rec, kmByVehicle.get(rec.vehicle_id)),
+		}))
+		.sort((a, b) => rank[a.level] - rank[b.level]);
 	const firstName = me.user.full_name.split(" ")[0];
 	const today = new Intl.DateTimeFormat("es-SV", {
 		weekday: "long",
@@ -300,47 +319,94 @@ function DashboardPage() {
 					)}
 				</SectionCard>
 
-				<SectionCard
-					title="Clientes por vincular"
-					description="Vehículos provisionales sin propietario con cuenta"
-					bodyClassName="p-0 sm:p-0"
-				>
-					{loading ? (
-						<Skeleton className="m-5 h-32" />
-					) : !provisional.length ? (
-						<EmptyState
-							icon={CheckCircle2}
-							title="Todo vinculado"
-							description="Cada vehículo tiene a su propietario invitado."
-						/>
-					) : (
-						<ul className="divide-y">
-							{provisional.slice(0, 5).map((v) => (
-								<li key={v.id}>
-									<Link
-										to="/taller/vehiculos/$vehicleId"
-										params={{ vehicleId: v.id }}
-										className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 sm:px-5"
-									>
-										<Plate value={v.plate} />
-										<div className="min-w-0 flex-1">
-											<p className="truncate text-[13px] font-medium">
-												{v.make} {v.model} {v.year ?? ""}
-											</p>
-											<p className="truncate text-xs text-ink-3">
-												{v.contact_name || "Sin contacto"}
-											</p>
-										</div>
-										<span className="inline-flex items-center gap-1 text-xs font-semibold text-seal">
-											<Mail className="size-3.5" />
-											Invitar
-										</span>
-									</Link>
-								</li>
-							))}
-						</ul>
-					)}
-				</SectionCard>
+				<div className="space-y-6">
+					<SectionCard
+						title="Recomendaciones por atender"
+						description="Vencidas y próximas primero"
+						actions={
+							!!pendingRecs.length && (
+								<span className="rounded-full bg-secondary px-2 font-mono text-[11px] text-ink-2 tabular-nums">
+									{pendingRecs.length}
+								</span>
+							)
+						}
+						bodyClassName="p-0 sm:p-0"
+					>
+						{recs.isLoading ? (
+							<Skeleton className="m-5 h-24" />
+						) : !pendingRecs.length ? (
+							<EmptyState
+								icon={Lightbulb}
+								title="Nada pendiente"
+								description="Registrá recomendaciones desde la orden o la ficha del vehículo."
+							/>
+						) : (
+							<ul className="divide-y">
+								{pendingRecs.slice(0, 5).map(({ rec, level }) => (
+									<li key={rec.id}>
+										<Link
+											to="/taller/vehiculos/$vehicleId"
+											params={{ vehicleId: rec.vehicle_id }}
+											className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 sm:px-5"
+										>
+											<Plate value={rec.plate} />
+											<div className="min-w-0 flex-1">
+												<p className="truncate text-[13px] font-medium">
+													{rec.description}
+												</p>
+												<p className="truncate font-mono text-xs text-ink-3">
+													{dueText(rec)}
+												</p>
+											</div>
+											<UrgencyBadge value={level} />
+										</Link>
+									</li>
+								))}
+							</ul>
+						)}
+					</SectionCard>
+					<SectionCard
+						title="Clientes por vincular"
+						description="Vehículos provisionales sin propietario con cuenta"
+						bodyClassName="p-0 sm:p-0"
+					>
+						{loading ? (
+							<Skeleton className="m-5 h-32" />
+						) : !provisional.length ? (
+							<EmptyState
+								icon={CheckCircle2}
+								title="Todo vinculado"
+								description="Cada vehículo tiene a su propietario invitado."
+							/>
+						) : (
+							<ul className="divide-y">
+								{provisional.slice(0, 5).map((v) => (
+									<li key={v.id}>
+										<Link
+											to="/taller/vehiculos/$vehicleId"
+											params={{ vehicleId: v.id }}
+											className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 sm:px-5"
+										>
+											<Plate value={v.plate} />
+											<div className="min-w-0 flex-1">
+												<p className="truncate text-[13px] font-medium">
+													{v.make} {v.model} {v.year ?? ""}
+												</p>
+												<p className="truncate text-xs text-ink-3">
+													{v.contact_name || "Sin contacto"}
+												</p>
+											</div>
+											<span className="inline-flex items-center gap-1 text-xs font-semibold text-seal">
+												<Mail className="size-3.5" />
+												Invitar
+											</span>
+										</Link>
+									</li>
+								))}
+							</ul>
+						)}
+					</SectionCard>
+				</div>
 			</div>
 		</PageBody>
 	);

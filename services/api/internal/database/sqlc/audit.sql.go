@@ -85,3 +85,53 @@ func (q *Queries) ListAuditEventsByEntity(ctx context.Context, arg ListAuditEven
 	}
 	return items, nil
 }
+
+const listAuditEventsByWorkshop = `-- name: ListAuditEventsByWorkshop :many
+SELECT a.id, a.entity, a.entity_id, a.action, a.created_at, u.full_name AS actor_name
+FROM audit_event a LEFT JOIN app_user u ON u.id = a.actor_user_id
+WHERE a.workshop_id = $1 AND ($2::bigint IS NULL OR a.id < $2::bigint)
+ORDER BY a.id DESC
+LIMIT $3
+`
+
+type ListAuditEventsByWorkshopParams struct {
+	WorkshopID pgtype.UUID `json:"workshop_id"`
+	Before     *int64      `json:"before"`
+	RowLimit   int32       `json:"row_limit"`
+}
+
+type ListAuditEventsByWorkshopRow struct {
+	ID        int64              `json:"id"`
+	Entity    string             `json:"entity"`
+	EntityID  pgtype.UUID        `json:"entity_id"`
+	Action    string             `json:"action"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ActorName *string            `json:"actor_name"`
+}
+
+func (q *Queries) ListAuditEventsByWorkshop(ctx context.Context, arg ListAuditEventsByWorkshopParams) ([]ListAuditEventsByWorkshopRow, error) {
+	rows, err := q.db.Query(ctx, listAuditEventsByWorkshop, arg.WorkshopID, arg.Before, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListAuditEventsByWorkshopRow{}
+	for rows.Next() {
+		var i ListAuditEventsByWorkshopRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Entity,
+			&i.EntityID,
+			&i.Action,
+			&i.CreatedAt,
+			&i.ActorName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -23,6 +23,7 @@ import { Route as InvitacionTokenRouteImport } from './routes/invitacion/$token'
 import { Route as MisVehiculosIndexRouteImport } from './routes/mis-vehiculos/index'
 import { Route as MisVehiculosVehicleIdRouteImport } from './routes/mis-vehiculos/$vehicleId'
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
+import { Route as TallerActividadRouteImport } from './routes/taller/actividad'
 import { Route as TallerConfiguracionRouteImport } from './routes/taller/configuracion'
 import { Route as TallerOrdenesIndexRouteImport } from './routes/taller/ordenes/index'
 import { Route as TallerOrdenesOrderIdRouteImport } from './routes/taller/ordenes/$orderId'
@@ -101,6 +102,11 @@ const TallerIndexRoute = TallerIndexRouteImport.update({
   path: '/',
   getParentRoute: () => TallerRoute,
 } as any)
+const TallerActividadRoute = TallerActividadRouteImport.update({
+  id: '/actividad',
+  path: '/actividad',
+  getParentRoute: () => TallerRoute,
+} as any)
 const TallerConfiguracionRoute = TallerConfiguracionRouteImport.update({
   id: '/configuracion',
   path: '/configuracion',
@@ -152,6 +158,7 @@ export interface FileRoutesByFullPath {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos': typeof MisVehiculosIndexRoute
   '/taller': typeof TallerIndexRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/taller/actividad'
     | '/taller/configuracion'
     | '/mis-vehiculos/'
     | '/taller/'
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/taller/actividad'
     | '/taller/configuracion'
     | '/mis-vehiculos'
     | '/taller'
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/taller/actividad'
     | '/taller/configuracion'
     | '/mis-vehiculos/'
     | '/taller/'
@@ -391,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TallerIndexRouteImport
       parentRoute: typeof TallerRoute
     }
+    '/taller/actividad': {
+      id: '/taller/actividad'
+      path: '/actividad'
+      fullPath: '/taller/actividad'
+      preLoaderRoute: typeof TallerActividadRouteImport
+      parentRoute: typeof TallerRoute
+    }
     '/taller/configuracion': {
       id: '/taller/configuracion'
       path: '/configuracion'
@@ -458,6 +477,7 @@ const MisVehiculosRouteWithChildren = MisVehiculosRoute._addFileChildren(
 )
 
 interface TallerRouteChildren {
+  TallerActividadRoute: typeof TallerActividadRoute
   TallerConfiguracionRoute: typeof TallerConfiguracionRoute
   TallerIndexRoute: typeof TallerIndexRoute
   TallerOrdenesOrderIdRoute: typeof TallerOrdenesOrderIdRoute
@@ -469,6 +489,7 @@ interface TallerRouteChildren {
 }
 
 const TallerRouteChildren: TallerRouteChildren = {
+  TallerActividadRoute: TallerActividadRoute,
   TallerConfiguracionRoute: TallerConfiguracionRoute,
   TallerIndexRoute: TallerIndexRoute,
   TallerOrdenesOrderIdRoute: TallerOrdenesOrderIdRoute,

@@ -8,6 +8,7 @@ import {
 	LogOut,
 	Menu,
 	Plus,
+	ShieldCheck,
 	UserRound,
 } from "lucide-react";
 import {
@@ -45,10 +46,12 @@ type NavItem = {
 		| "/taller"
 		| "/taller/ordenes"
 		| "/taller/vehiculos"
-		| "/taller/configuracion";
+		| "/taller/configuracion"
+		| "/taller/actividad";
 	label: string;
 	icon: typeof Car;
 	exact?: boolean;
+	adminOnly?: boolean;
 };
 
 const sections: { label: string; items: NavItem[] }[] = [
@@ -64,6 +67,12 @@ const sections: { label: string; items: NavItem[] }[] = [
 		label: "Administración",
 		items: [
 			{ to: "/taller/configuracion", label: "Mi taller", icon: Building2 },
+			{
+				to: "/taller/actividad",
+				label: "Actividad",
+				icon: ShieldCheck,
+				adminOnly: true,
+			},
 		],
 	},
 ];
@@ -151,6 +160,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 			userName={me.user.full_name}
 			userEmail={me.user.email}
 			role={roleLabel[active?.role ?? ""] ?? active?.role ?? ""}
+			isAdmin={me.memberships.some(
+				(m) => m.workshop_id === active?.workshop_id && m.role === "admin",
+			)}
 			onSignOut={signOut}
 			signingOut={logout.isPending}
 		/>
@@ -219,6 +231,7 @@ function SidebarContent({
 	userName,
 	userEmail,
 	role,
+	isAdmin,
 	onSignOut,
 	signingOut,
 }: {
@@ -230,6 +243,7 @@ function SidebarContent({
 	userName: string;
 	userEmail: string;
 	role: string;
+	isAdmin: boolean;
 	onSignOut: () => void;
 	signingOut: boolean;
 }) {
@@ -270,30 +284,32 @@ function SidebarContent({
 							{section.label}
 						</p>
 						<ul className="flex flex-col gap-0.5">
-							{section.items.map((item) => {
-								const on = isActive(item.to, item.exact);
-								const Icon = item.icon;
-								return (
-									<li key={item.to}>
-										<Link
-											to={item.to}
-											aria-current={on ? "page" : undefined}
-											className={cn(
-												"pressable relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] font-medium text-ink-2",
-												"hover:bg-secondary hover:text-foreground",
-												on &&
-													"bg-seal-soft font-semibold text-seal hover:bg-seal-soft hover:text-seal",
-											)}
-										>
-											{on && (
-												<span className="absolute top-2 bottom-2 -left-3 w-[3px] rounded-r bg-seal" />
-											)}
-											<Icon className="size-4" aria-hidden="true" />
-											{item.label}
-										</Link>
-									</li>
-								);
-							})}
+							{section.items
+								.filter((item) => !item.adminOnly || isAdmin)
+								.map((item) => {
+									const on = isActive(item.to, item.exact);
+									const Icon = item.icon;
+									return (
+										<li key={item.to}>
+											<Link
+												to={item.to}
+												aria-current={on ? "page" : undefined}
+												className={cn(
+													"pressable relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] font-medium text-ink-2",
+													"hover:bg-secondary hover:text-foreground",
+													on &&
+														"bg-seal-soft font-semibold text-seal hover:bg-seal-soft hover:text-seal",
+												)}
+											>
+												{on && (
+													<span className="absolute top-2 bottom-2 -left-3 w-[3px] rounded-r bg-seal" />
+												)}
+												<Icon className="size-4" aria-hidden="true" />
+												{item.label}
+											</Link>
+										</li>
+									);
+								})}
 						</ul>
 					</div>
 				))}

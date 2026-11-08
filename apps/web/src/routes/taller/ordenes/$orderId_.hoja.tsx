@@ -8,6 +8,7 @@ import {
 	categoryLabels,
 	lastByCategory,
 } from "@/components/kilora/history-timeline";
+import { dueText, urgency } from "@/components/kilora/recommendations";
 import { PageBody } from "@/components/kilora/workshop-ui";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
 	historyQuery,
 	orderQuery,
 	vehicleQuery,
+	vehicleRecommendationsQuery,
 	workshopQuery,
 } from "@/lib/workshop";
 
@@ -46,6 +48,9 @@ function MechanicSheet() {
 		enabled: !!vehicleID,
 	});
 	const workshop = useQuery(workshopQuery(workshopID));
+	const recommendations = useQuery(
+		vehicleRecommendationsQuery(workshopID, vehicleID),
+	);
 	const [qr, setQr] = useState("");
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -77,6 +82,9 @@ function MechanicSheet() {
 	const o = order.data;
 	const v = vehicle.data;
 	const records = history.data?.records ?? [];
+	const pendingRecs = (recommendations.data ?? []).filter(
+		(r) => r.status === "pendiente",
+	);
 
 	return (
 		<PageBody className="max-w-4xl print:max-w-none print:p-0">
@@ -245,6 +253,28 @@ function MechanicSheet() {
 						)}
 					</section>
 				</div>
+
+				{pendingRecs.length > 0 && (
+					<section className="mt-6">
+						<h2 className="border-b pb-1 text-[11px] font-bold tracking-widest uppercase">
+							Recomendaciones pendientes
+						</h2>
+						<ul className="mt-2 space-y-1.5 text-sm">
+							{pendingRecs.map((r) => (
+								<li key={r.id} className="flex justify-between gap-3">
+									<span className="min-w-0">
+										{urgency(r, o.odometer_km ?? v.last_odometer_km) ===
+											"vencida" && <strong className="mr-1">[VENCIDA]</strong>}
+										{r.description}
+									</span>
+									<span className="shrink-0 font-mono text-xs text-[#3f4a58]">
+										{dueText(r)}
+									</span>
+								</li>
+							))}
+						</ul>
+					</section>
+				)}
 
 				<section className="mt-6">
 					<h2 className="border-b pb-1 text-[11px] font-bold tracking-widest uppercase">

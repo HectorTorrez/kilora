@@ -7,6 +7,7 @@ import {
 	lastByCategory,
 } from "@/components/kilora/history-timeline";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
+import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
 	OrderStatusBadge,
 	PageBody,
@@ -202,6 +203,12 @@ function VehiclePage() {
 				</div>
 
 				<div className="space-y-6">
+					<RecommendationsCard
+						workshopID={workshopID}
+						vehicleID={v.id}
+						currentKm={v.last_odometer_km}
+					/>
+
 					<SectionCard title="Ficha">
 						<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-[13px]">
 							<dt className="text-ink-3">Contacto</dt>

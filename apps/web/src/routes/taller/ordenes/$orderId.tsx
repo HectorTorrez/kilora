@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { useWorkshopId } from "@/components/kilora/app-shell";
 import { categoryLabels } from "@/components/kilora/history-timeline";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
+import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
 	EmptyState,
 	OrderStatusBadge,
@@ -299,6 +300,12 @@ function OrderDetail({
 						</dl>
 					</SectionCard>
 					<OrderDataCard workshopID={workshopID} order={order} />
+					<RecommendationsCard
+						workshopID={workshopID}
+						vehicleID={order.vehicle_id}
+						workOrderID={order.id}
+						currentKm={order.odometer_km ?? vehicle?.last_odometer_km}
+					/>
 					<OwnerInvitation
 						workshopID={workshopID}
 						vehicleID={order.vehicle_id}
