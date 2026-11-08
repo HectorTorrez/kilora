@@ -4,6 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useWorkshopId } from "@/components/kilora/app-shell";
+import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -94,6 +95,12 @@ function OrderDetail({
 	};
 	return (
 		<main className="mx-auto max-w-5xl space-y-5 px-5 py-7">
+			<OwnerInvitation
+				workshopID={workshopID}
+				vehicleID={order.vehicle_id}
+				linked={vehicle?.owner_linked}
+				name={vehicle?.owner_name}
+			/>
 			<header>
 				<p className="text-sm text-ink-3">
 					Orden #{order.number} · {statusLabel(order.status)}

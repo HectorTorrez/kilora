@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MisVehiculosRouteImport } from './routes/mis-vehiculos'
 import { Route as OlvideRouteImport } from './routes/olvide'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as RegistroRouteImport } from './routes/registro'
@@ -18,7 +19,9 @@ import { Route as RestablecerRouteImport } from './routes/restablecer'
 import { Route as TallerRouteImport } from './routes/taller'
 import { Route as VerificarRouteImport } from './routes/verificar'
 import { Route as CTokenRouteImport } from './routes/c/$token'
-import { Route as HPlacaRouteImport } from './routes/h.$placa'
+import { Route as InvitacionTokenRouteImport } from './routes/invitacion/$token'
+import { Route as MisVehiculosIndexRouteImport } from './routes/mis-vehiculos/index'
+import { Route as MisVehiculosVehicleIdRouteImport } from './routes/mis-vehiculos/$vehicleId'
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
 import { Route as TallerOrdenesIndexRouteImport } from './routes/taller/ordenes/index'
 import { Route as TallerOrdenesOrderIdRouteImport } from './routes/taller/ordenes/$orderId'
@@ -32,6 +35,11 @@ const IndexRoute = IndexRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MisVehiculosRoute = MisVehiculosRouteImport.update({
+  id: '/mis-vehiculos',
+  path: '/mis-vehiculos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OlvideRoute = OlvideRouteImport.update({
@@ -69,10 +77,20 @@ const CTokenRoute = CTokenRouteImport.update({
   path: '/c/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
-const HPlacaRoute = HPlacaRouteImport.update({
-  id: '/h/$placa',
-  path: '/h/$placa',
+const InvitacionTokenRoute = InvitacionTokenRouteImport.update({
+  id: '/invitacion/$token',
+  path: '/invitacion/$token',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MisVehiculosIndexRoute = MisVehiculosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => MisVehiculosRoute,
+} as any)
+const MisVehiculosVehicleIdRoute = MisVehiculosVehicleIdRouteImport.update({
+  id: '/$vehicleId',
+  path: '/$vehicleId',
+  getParentRoute: () => MisVehiculosRoute,
 } as any)
 const TallerIndexRoute = TallerIndexRouteImport.update({
   id: '/',
@@ -98,6 +116,7 @@ const TallerOrdenesNuevaRoute = TallerOrdenesNuevaRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/mis-vehiculos': typeof MisVehiculosRouteWithChildren
   '/olvide': typeof OlvideRoute
   '/onboarding': typeof OnboardingRoute
   '/registro': typeof RegistroRoute
@@ -105,7 +124,9 @@ export interface FileRoutesByFullPath {
   '/taller': typeof TallerRouteWithChildren
   '/verificar': typeof VerificarRoute
   '/c/$token': typeof CTokenRoute
-  '/h/$placa': typeof HPlacaRoute
+  '/invitacion/$token': typeof InvitacionTokenRoute
+  '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
@@ -120,7 +141,9 @@ export interface FileRoutesByTo {
   '/restablecer': typeof RestablecerRoute
   '/verificar': typeof VerificarRoute
   '/c/$token': typeof CTokenRoute
-  '/h/$placa': typeof HPlacaRoute
+  '/invitacion/$token': typeof InvitacionTokenRoute
+  '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/mis-vehiculos': typeof MisVehiculosIndexRoute
   '/taller': typeof TallerIndexRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
@@ -130,6 +153,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/mis-vehiculos': typeof MisVehiculosRouteWithChildren
   '/olvide': typeof OlvideRoute
   '/onboarding': typeof OnboardingRoute
   '/registro': typeof RegistroRoute
@@ -137,7 +161,9 @@ export interface FileRoutesById {
   '/taller': typeof TallerRouteWithChildren
   '/verificar': typeof VerificarRoute
   '/c/$token': typeof CTokenRoute
-  '/h/$placa': typeof HPlacaRoute
+  '/invitacion/$token': typeof InvitacionTokenRoute
+  '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
@@ -148,6 +174,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/mis-vehiculos'
     | '/olvide'
     | '/onboarding'
     | '/registro'
@@ -155,7 +182,9 @@ export interface FileRouteTypes {
     | '/taller'
     | '/verificar'
     | '/c/$token'
-    | '/h/$placa'
+    | '/invitacion/$token'
+    | '/mis-vehiculos/$vehicleId'
+    | '/mis-vehiculos/'
     | '/taller/'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
@@ -170,7 +199,9 @@ export interface FileRouteTypes {
     | '/restablecer'
     | '/verificar'
     | '/c/$token'
-    | '/h/$placa'
+    | '/invitacion/$token'
+    | '/mis-vehiculos/$vehicleId'
+    | '/mis-vehiculos'
     | '/taller'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
@@ -179,6 +210,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/mis-vehiculos'
     | '/olvide'
     | '/onboarding'
     | '/registro'
@@ -186,7 +218,9 @@ export interface FileRouteTypes {
     | '/taller'
     | '/verificar'
     | '/c/$token'
-    | '/h/$placa'
+    | '/invitacion/$token'
+    | '/mis-vehiculos/$vehicleId'
+    | '/mis-vehiculos/'
     | '/taller/'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
@@ -196,6 +230,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  MisVehiculosRoute: typeof MisVehiculosRouteWithChildren
   OlvideRoute: typeof OlvideRoute
   OnboardingRoute: typeof OnboardingRoute
   RegistroRoute: typeof RegistroRoute
@@ -203,7 +238,7 @@ export interface RootRouteChildren {
   TallerRoute: typeof TallerRouteWithChildren
   VerificarRoute: typeof VerificarRoute
   CTokenRoute: typeof CTokenRoute
-  HPlacaRoute: typeof HPlacaRoute
+  InvitacionTokenRoute: typeof InvitacionTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -220,6 +255,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-vehiculos': {
+      id: '/mis-vehiculos'
+      path: '/mis-vehiculos'
+      fullPath: '/mis-vehiculos'
+      preLoaderRoute: typeof MisVehiculosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/olvide': {
@@ -271,12 +313,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/h/$placa': {
-      id: '/h/$placa'
-      path: '/h/$placa'
-      fullPath: '/h/$placa'
-      preLoaderRoute: typeof HPlacaRouteImport
+    '/invitacion/$token': {
+      id: '/invitacion/$token'
+      path: '/invitacion/$token'
+      fullPath: '/invitacion/$token'
+      preLoaderRoute: typeof InvitacionTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/mis-vehiculos/': {
+      id: '/mis-vehiculos/'
+      path: '/'
+      fullPath: '/mis-vehiculos/'
+      preLoaderRoute: typeof MisVehiculosIndexRouteImport
+      parentRoute: typeof MisVehiculosRoute
+    }
+    '/mis-vehiculos/$vehicleId': {
+      id: '/mis-vehiculos/$vehicleId'
+      path: '/$vehicleId'
+      fullPath: '/mis-vehiculos/$vehicleId'
+      preLoaderRoute: typeof MisVehiculosVehicleIdRouteImport
+      parentRoute: typeof MisVehiculosRoute
     }
     '/taller/': {
       id: '/taller/'
@@ -309,6 +365,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface MisVehiculosRouteChildren {
+  MisVehiculosVehicleIdRoute: typeof MisVehiculosVehicleIdRoute
+  MisVehiculosIndexRoute: typeof MisVehiculosIndexRoute
+}
+
+const MisVehiculosRouteChildren: MisVehiculosRouteChildren = {
+  MisVehiculosVehicleIdRoute: MisVehiculosVehicleIdRoute,
+  MisVehiculosIndexRoute: MisVehiculosIndexRoute,
+}
+
+const MisVehiculosRouteWithChildren = MisVehiculosRoute._addFileChildren(
+  MisVehiculosRouteChildren,
+)
+
 interface TallerRouteChildren {
   TallerIndexRoute: typeof TallerIndexRoute
   TallerOrdenesOrderIdRoute: typeof TallerOrdenesOrderIdRoute
@@ -329,6 +399,7 @@ const TallerRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  MisVehiculosRoute: MisVehiculosRouteWithChildren,
   OlvideRoute: OlvideRoute,
   OnboardingRoute: OnboardingRoute,
   RegistroRoute: RegistroRoute,
@@ -336,7 +407,7 @@ const rootRouteChildren: RootRouteChildren = {
   TallerRoute: TallerRouteWithChildren,
   VerificarRoute: VerificarRoute,
   CTokenRoute: CTokenRoute,
-  HPlacaRoute: HPlacaRoute,
+  InvitacionTokenRoute: InvitacionTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

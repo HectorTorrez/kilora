@@ -34,14 +34,14 @@ type Mode =
 	| "verificar";
 const details: Record<Mode, [string, string, string]> = {
 	login: [
-		"Acceso del taller",
-		"Ingresá a tu taller",
-		"Tu trabajo y el historial de tus clientes, en un solo lugar.",
+		"Acceso a Kilora",
+		"Ingresá a Kilora",
+		"Tu historial y el trabajo de tu taller, en un solo lugar.",
 	],
 	registro: [
 		"Crear cuenta",
 		"Empezá con Kilora",
-		"Creá tu cuenta para registrar los servicios de tu taller.",
+		"Creá tu cuenta para conservar el historial de tus vehículos.",
 	],
 	onboarding: [
 		"Tu espacio de trabajo",
@@ -133,13 +133,15 @@ export function AuthPage({
 			if (mode === "login") {
 				await login.mutateAsync({ email: v.email, password: v.password });
 				const me = await qc.fetchQuery(meQuery());
-				if (me?.memberships.length) {
-					const safe =
-						redirectTo?.startsWith("/taller") && !redirectTo.startsWith("//")
-							? redirectTo
-							: "/taller";
-					await navigate({ href: safe });
-				} else await navigate({ to: "/onboarding" });
+				const safe =
+					redirectTo?.startsWith("/") &&
+					!redirectTo.startsWith("//") &&
+					!redirectTo.startsWith("/\\")
+						? redirectTo
+						: undefined;
+				await navigate({
+					href: safe || (me?.memberships.length ? "/taller" : "/mis-vehiculos"),
+				});
 			}
 			if (mode === "registro") {
 				await register.mutateAsync({
@@ -147,7 +149,16 @@ export function AuthPage({
 					email: v.email,
 					password: v.password,
 				});
-				await navigate({ to: "/onboarding" });
+				const me = await qc.fetchQuery(meQuery());
+				const safe =
+					redirectTo?.startsWith("/") &&
+					!redirectTo.startsWith("//") &&
+					!redirectTo.startsWith("/\\")
+						? redirectTo
+						: undefined;
+				await navigate({
+					href: safe || (me?.memberships.length ? "/taller" : "/mis-vehiculos"),
+				});
 			}
 			if (mode === "onboarding") {
 				await workshop.mutateAsync({
@@ -309,7 +320,11 @@ export function AuthPage({
 							{mode === "login" ? (
 								<>
 									¿No tenés cuenta?{" "}
-									<Link to="/registro" className="font-semibold text-seal">
+									<Link
+										to="/registro"
+										search={{ redirect: redirectTo }}
+										className="font-semibold text-seal"
+									>
 										Registrate
 									</Link>
 								</>
@@ -318,7 +333,7 @@ export function AuthPage({
 									¿Ya tenés cuenta?{" "}
 									<Link
 										to="/login"
-										search={{ redirect: undefined }}
+										search={{ redirect: redirectTo }}
 										className="font-semibold text-seal"
 									>
 										Ingresá

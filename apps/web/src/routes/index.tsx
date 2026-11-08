@@ -34,7 +34,14 @@ function Landing() {
 						search={{ redirect: undefined }}
 						className={`${buttonVariants()} mt-8`}
 					>
-						Ingresar a mi taller
+						Entrar
+					</Link>
+					<Link
+						to="/registro"
+						search={{ redirect: undefined }}
+						className={`${buttonVariants({ variant: "outline" })} mt-8 ml-3`}
+					>
+						Crear cuenta
 					</Link>
 				</div>
 				<div className="rounded-xl border bg-card p-8 shadow-sm">

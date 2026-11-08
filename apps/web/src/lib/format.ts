@@ -17,3 +17,17 @@ const statusLabels: Record<string, string> = {
 	cancelado: "Cancelado",
 };
 export const statusLabel = (status: string) => statusLabels[status] ?? status;
+// Fechas sin hora (YYYY-MM-DD): se formatean en UTC para no correr el día.
+export const day = (value: string) =>
+	new Intl.DateTimeFormat("es-SV", {
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+		timeZone: "UTC",
+	}).format(new Date(`${value.slice(0, 10)}T00:00:00Z`));
+export const km = (value: number | string | null | undefined) =>
+	value === null || value === undefined || value === ""
+		? "—"
+		: `${new Intl.NumberFormat("es-SV").format(Number(value))} km`;
+export const plural = (n: number, one: string, many: string) =>
+	`${n} ${n === 1 ? one : many}`;

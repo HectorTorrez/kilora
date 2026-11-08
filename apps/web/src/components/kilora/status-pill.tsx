@@ -1,4 +1,10 @@
-import { statusCopy, type VehicleStatus } from "@/lib/demo";
+type VehicleStatus = "ok" | "due" | "shop";
+const statusCopy: Record<VehicleStatus, string> = {
+	ok: "Al día",
+	due: "Pendiente",
+	shop: "En taller",
+};
+
 import { cn } from "@/lib/utils";
 
 const styles: Record<VehicleStatus, string> = {
