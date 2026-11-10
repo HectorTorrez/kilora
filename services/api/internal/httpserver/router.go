@@ -78,6 +78,7 @@ func NewRouter(d Deps) http.Handler {
 			r.Route("/workshops/{workshopID}", func(r chi.Router) {
 				r.Use(s.requireWorkshop)
 				r.Get("/", s.inWorkshop(s.getWorkshop))
+				r.Patch("/", s.inWorkshop(s.updateWorkshop))
 				r.Post("/work-orders", s.inWorkshop(s.createOrder))
 				r.Get("/work-orders", s.inWorkshop(s.listOrders))
 				r.Get("/work-orders/page", s.inWorkshop(s.listOrdersPage))

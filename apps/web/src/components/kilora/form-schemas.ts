@@ -1,3 +1,4 @@
+import { isValidPhoneNumber } from "react-phone-number-input";
 import { z } from "zod";
 import { todayISO } from "@/lib/format";
 
@@ -153,27 +154,25 @@ export function pastDateField() {
 		.refine(isPastDate, "Ingresá una fecha válida que no sea futura");
 }
 
-export function maskSvPhone(value: string) {
-	let digits = value.replace(/[\s-]/g, "");
-	if (digits.startsWith("+503")) digits = digits.slice(4);
-	else if (digits.startsWith("503") && digits.length === 11)
-		digits = digits.slice(3);
-	return digits;
-}
-
 export const optionalPhone = z
 	.string()
 	.trim()
-	.superRefine((value, ctx) => {
-		if (!value) return;
-		if (!/^\d{8}$/.test(maskSvPhone(value)))
-			ctx.addIssue({
-				code: "custom",
-				message: "Ingresá un teléfono de 8 dígitos",
-			});
-	});
+	.refine(
+		(value) => !value || isValidPhoneNumber(value),
+		"Ingresá un teléfono válido para el país elegido",
+	);
 
-export function toSvPhone(value: string) {
-	const digits = maskSvPhone(value);
-	return digits ? `+503${digits}` : null;
-}
+export const workshopName = requiredText("Ingresá el nombre del taller").max(
+	100,
+	"Usá como máximo 100 caracteres",
+);
+
+// NIT de 14 dígitos o DUI homologado de 9, con o sin guiones.
+export const optionalNit = z
+	.string()
+	.trim()
+	.refine((value) => {
+		if (!value) return true;
+		const digits = value.replace(/-/g, "");
+		return /^\d+$/.test(digits) && [9, 14].includes(digits.length);
+	}, "Usá 14 dígitos (o 9 si es tu DUI), con o sin guiones");

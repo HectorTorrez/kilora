@@ -39,6 +39,13 @@ export const auditPageQuery = (workshopID: string, offset = 0) =>
 			),
 	});
 export const adminActions = (workshopID: string) => ({
+	updateWorkshop: async (body: S["WorkshopUpdateInput"]) =>
+		unwrap(
+			await api.PATCH("/api/v1/workshops/{workshopID}/", {
+				params: { path: { workshopID } },
+				body,
+			}),
+		),
 	addMember: async (body: S["MemberInput"]) =>
 		unwrap(
 			await api.POST("/api/v1/workshops/{workshopID}/members", {

@@ -260,7 +260,7 @@ function Page() {
 const manualSchema = z.object({
 	date: pastDateField(),
 	km: kmField(false),
-	summary: requiredText("Ingresá un resumen"),
+	summary: requiredText("Contá qué servicio se hizo"),
 	items: z.array(
 		z.object({
 			description: z.string(),
@@ -296,7 +296,7 @@ function ManualDialog({
 	onSave: (body: ManualBody) => Promise<unknown>;
 }) {
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(manualSchema),
 		defaultValues: {
 			date: "",
@@ -372,7 +372,14 @@ function ManualDialog({
 							step={1}
 							className="sm:max-w-xs"
 						/>
-						<TextField name="summary" label="Resumen" required />
+						<TextField
+							name="summary"
+							label="¿Qué se hizo?"
+							placeholder="Ej. Cambio de aceite y filtro"
+							description="Es el título con el que aparece en el historial."
+							maxLength={200}
+							required
+						/>
 						<div className="grid gap-4">
 							{rows.fields.map((row, index) => (
 								<div
@@ -382,6 +389,7 @@ function ManualDialog({
 									<TextField
 										name={`items.${index}.description`}
 										label="Trabajo o pieza"
+										placeholder="Ej. Filtro de aceite"
 										optional
 									/>
 									<NumberField
@@ -456,7 +464,7 @@ function KmDialog({
 	onSave: (km: number) => Promise<unknown>;
 }) {
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(z.object({ km: kmField(true) })),
 		defaultValues: { km: "" },
 	});
@@ -566,7 +574,7 @@ function CorrectionDialog({
 	onSave: (body: CorrectionBody) => Promise<unknown>;
 }) {
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(correctionSchema),
 		defaultValues: {
 			reason: "",
@@ -632,7 +640,13 @@ function CorrectionDialog({
 							autoFocus
 							required
 						/>
-						<TextField name="summary" label="Nuevo resumen" optional />
+						<TextField
+							name="summary"
+							label="Nuevo título del servicio"
+							placeholder="Ej. Cambio de aceite y filtro"
+							maxLength={200}
+							optional
+						/>
 						<DateField name="date" label="Nueva fecha" optional />
 						<NumberField
 							name="km"

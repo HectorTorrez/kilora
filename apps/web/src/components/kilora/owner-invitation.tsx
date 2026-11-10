@@ -52,7 +52,7 @@ export function OwnerInvitation({
 	);
 	const [qr, setQr] = useState("");
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(schema),
 		defaultValues: { email: "" },
 	});

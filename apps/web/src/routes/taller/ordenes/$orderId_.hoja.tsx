@@ -15,7 +15,7 @@ import { useWorkshopId } from "@/features/taller/session";
 import { workshopQuery } from "@/features/taller/team";
 import { historyQuery, vehicleQuery } from "@/features/taller/vehicles";
 import { categoryLabels } from "@/lib/domain";
-import { date, day, km, statusLabel } from "@/lib/format";
+import { date, day, km, phone, statusLabel } from "@/lib/format";
 import { lastByCategory } from "@/lib/history";
 import { dueText, urgency } from "@/lib/recommendations";
 
@@ -139,7 +139,7 @@ function MechanicSheet() {
 					</Field>
 					<Field label="Contacto">{v.contact_name || "—"}</Field>
 					<Field label="Teléfono">
-						<span className="font-mono">{v.contact_phone || "—"}</span>
+						<span className="font-mono">{phone(v.contact_phone) || "—"}</span>
 					</Field>
 				</dl>
 				{qr && (

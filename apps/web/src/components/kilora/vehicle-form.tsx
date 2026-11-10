@@ -9,18 +9,17 @@ import {
 	applyFormError,
 	FormActions,
 	NumberField,
+	PhoneField,
 	RequiredLegend,
 	RootError,
 	SubmitButton,
 	TextField,
 } from "./form-fields";
 import {
-	maskSvPhone,
 	optionalPersonName,
 	optionalPhone,
 	optionalYearField,
 	plateField,
-	toSvPhone,
 	vehicleText,
 	yearBounds,
 } from "./form-schemas";
@@ -53,7 +52,7 @@ export function VehicleForm({
 		createVehicleAction(workshopID),
 	);
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(schema),
 		defaultValues: {
 			make: "",
@@ -73,7 +72,7 @@ export function VehicleForm({
 				model: values.model,
 				year: values.year ? Number(values.year) : null,
 				contact_name: values.contact_name || null,
-				contact_phone: toSvPhone(values.contact_phone),
+				contact_phone: values.contact_phone || null,
 			});
 			toast.success("Vehículo registrado");
 			onCreated(vehicle);
@@ -109,16 +108,7 @@ export function VehicleForm({
 					label="Nombre de contacto"
 					optional
 				/>
-				<TextField
-					name="contact_phone"
-					label="Teléfono"
-					optional
-					prefix="+503"
-					inputMode="numeric"
-					autoComplete="tel"
-					normalize={maskSvPhone}
-					description="8 dígitos, sin el código de país"
-				/>
+				<PhoneField name="contact_phone" label="Teléfono" optional />
 				<RootError />
 				<FormActions>
 					<SubmitButton pending={create.isPending}>

@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { counterQuoteQuery, storedQuoteShare } from "@/features/taller/quotes";
 import { useWorkshopId } from "@/features/taller/session";
-import { date, day, money, quoteCode } from "@/lib/format";
+import { date, day, money, phone, quoteCode } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 
 export const Route = createFileRoute("/taller/cotizaciones/$quoteId/imprimir")({
@@ -100,7 +100,7 @@ function PrintQuotePage() {
 				<div className="text-sm">
 					<p className="font-semibold">Cliente</p>
 					<p>{data.customer_name}</p>
-					<p>{data.customer_phone || "Sin teléfono"}</p>
+					<p>{phone(data.customer_phone) || "Sin teléfono"}</p>
 					<p className="mt-2 font-semibold">Vehículo</p>
 					<p>{data.vehicle_plate || "Sin placa"}</p>
 					<p>{vehicle}</p>

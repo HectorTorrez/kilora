@@ -31,7 +31,7 @@ import {
 } from "@/features/taller/quotes";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import { quoteOutcomeActions } from "@/lib/domain";
-import { date, day, money, quoteCode } from "@/lib/format";
+import { date, day, money, phone, quoteCode } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 
 export const Route = createFileRoute("/taller/cotizaciones/$quoteId/")({
@@ -204,7 +204,7 @@ function QuoteDetailPage() {
 						<h2 className="font-semibold">Cliente y vehículo</h2>
 						<p>{quote.customer_name}</p>
 						<p className="text-sm text-ink-3">
-							{quote.customer_phone || "Sin teléfono"}
+							{phone(quote.customer_phone) || "Sin teléfono"}
 						</p>
 						<p className="mt-2">{vehicleLine(quote)}</p>
 						<p className="text-sm text-ink-3">{quote.branch_name}</p>

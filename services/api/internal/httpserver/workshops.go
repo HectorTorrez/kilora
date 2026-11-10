@@ -3,10 +3,14 @@ package httpserver
 import (
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/values"
 )
+
+const invalidNIT = "NIT inválido: usá 14 dígitos (o 9 si es tu DUI)"
 
 func (s *server) createWorkshop(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
@@ -21,6 +25,11 @@ func (s *server) createWorkshop(w http.ResponseWriter, r *http.Request) error {
 	if in.Name == "" || in.BranchName == "" {
 		return badRequest("Nombre de taller y sucursal son obligatorios")
 	}
+	nit, ok := values.OptionalNIT(in.NIT)
+	if !ok {
+		return badRequest(invalidNIT)
+	}
+	in.NIT = nit
 	ctx := r.Context()
 	user := currentUser(ctx).ID
 	var id, branchID uuid.UUID
@@ -67,5 +76,38 @@ func (s *server) getWorkshop(w http.ResponseWriter, r *http.Request, wc workshop
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"workshop": map[string]any{"id": wc.workshopID, "name": workshop.Name, "nit": workshop.Nit, "verified_at": nullableTime(workshop.VerifiedAt), "verified_by": workshop.VerifiedBy}, "role": wc.role, "branches": branches})
+	return nil
+}
+
+func (s *server) updateWorkshop(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {
+	if err := wc.requireAdmin(); err != nil {
+		return err
+	}
+	var in struct {
+		Name string  `json:"name"`
+		NIT  *string `json:"nit"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	in.Name = strings.TrimSpace(in.Name)
+	if in.Name == "" || utf8.RuneCountInString(in.Name) > 100 {
+		return badRequest("Ingresá el nombre del taller (máximo 100 caracteres)")
+	}
+	nit, ok := values.OptionalNIT(in.NIT)
+	if !ok {
+		return badRequest(invalidNIT)
+	}
+	ctx := r.Context()
+	var workshop sqlc.Workshop
+	err := s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
+		var err error
+		workshop, err = q.UpdateWorkshop(ctx, sqlc.UpdateWorkshopParams{WorkshopID: wc.workshopID, Name: in.Name, Nit: nit})
+		return wc.event("workshop", wc.workshopID, "workshop.update"), err
+	})
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": workshop.ID, "name": workshop.Name, "nit": workshop.Nit, "verified_at": nullableTime(workshop.VerifiedAt), "verified_by": workshop.VerifiedBy})
 	return nil
 }

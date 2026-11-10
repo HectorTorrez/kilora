@@ -77,7 +77,7 @@ function Page() {
 	const navigate = useNavigate();
 	const bounds = yearBounds();
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(
 			z.object({
 				make: vehicleText,

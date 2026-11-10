@@ -33,6 +33,7 @@ export const Route = createFileRoute("/taller/actividad")({
 
 const actions: Record<string, string> = {
 	"workshop.create": "creó el taller",
+	"workshop.update": "editó los datos del taller",
 	"vehicle.create": "registró un vehículo",
 	"work_order.create": "abrió una orden",
 	"work_order.status": "cambió el estado de una orden",

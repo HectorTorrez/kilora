@@ -1,3 +1,4 @@
+import { formatPhoneNumberIntl } from "react-phone-number-input";
 import { statusLabels } from "./domain";
 
 export const TIME_ZONE = "America/El_Salvador";
@@ -35,3 +36,5 @@ export const km = (value: number | string | null | undefined) =>
 		: `${new Intl.NumberFormat("es-SV").format(Number(value))} km`;
 export const plural = (n: number, one: string, many: string) =>
 	`${n} ${n === 1 ? one : many}`;
+export const phone = (value: string | null | undefined) =>
+	value ? formatPhoneNumberIntl(value) || value : "";

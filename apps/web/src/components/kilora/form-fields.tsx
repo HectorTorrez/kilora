@@ -1,6 +1,12 @@
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Loader2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { useFormContext } from "react-hook-form";
+import PhoneInput, {
+	type Country,
+	getCountryCallingCode,
+} from "react-phone-number-input";
+import flags from "react-phone-number-input/flags";
+import es from "react-phone-number-input/locale/es";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -217,6 +223,119 @@ export function NumberField(props: Omit<TextFieldProps, "type" | "uppercase">) {
 			inputMode={decimal ? "decimal" : "numeric"}
 			inputPattern={decimal ? /^\d*(?:[.,]\d{0,2})?$/ : /^\d*$/}
 			normalize={(value) => value.replace(",", ".")}
+		/>
+	);
+}
+
+const phoneCountryOrder: ("|" | "..." | Country)[] = [
+	"SV",
+	"GT",
+	"HN",
+	"NI",
+	"CR",
+	"PA",
+	"MX",
+	"US",
+	"|",
+	"...",
+];
+
+function PhoneCountrySelect({
+	value,
+	onChange,
+	options,
+	disabled,
+	readOnly,
+	...props
+}: {
+	value?: Country;
+	onChange: (country?: Country) => void;
+	options: { value?: Country; label: string; divider?: boolean }[];
+	disabled?: boolean;
+	readOnly?: boolean;
+} & Omit<React.ComponentProps<"select">, "value" | "onChange">) {
+	const Flag = value ? flags[value] : undefined;
+	return (
+		<div className="relative flex shrink-0 items-center gap-1.5 border-r border-input bg-muted px-3 text-sm text-ink-3 focus-within:text-foreground">
+			{Flag ? (
+				<span className="flex h-3.5 w-5 overflow-hidden rounded-[2px] shadow-[0_0_0_1px_rgb(0_0_0/0.1)] [&_svg]:size-full">
+					<Flag title={value ? (es[value] ?? value) : ""} />
+				</span>
+			) : null}
+			<span className="font-mono">
+				{value ? `+${getCountryCallingCode(value)}` : "+"}
+			</span>
+			<ChevronDown aria-hidden className="size-3.5" />
+			<select
+				{...props}
+				className="absolute inset-0 cursor-pointer opacity-0 disabled:cursor-not-allowed"
+				value={value ?? ""}
+				disabled={disabled || readOnly}
+				onChange={(event) =>
+					onChange((event.target.value || undefined) as Country | undefined)
+				}
+			>
+				{options.map((option) =>
+					option.divider ? (
+						<option key="divider" disabled>
+							──────────
+						</option>
+					) : (
+						<option key={option.value ?? "ZZ"} value={option.value ?? ""}>
+							{option.label}
+							{option.value ? ` (+${getCountryCallingCode(option.value)})` : ""}
+						</option>
+					),
+				)}
+			</select>
+		</div>
+	);
+}
+
+export function PhoneField({
+	name,
+	label,
+	description,
+	optional,
+	required,
+	className,
+	autoFocus,
+	placeholder,
+}: SharedField) {
+	const form = useFormContext();
+	return (
+		<FormField
+			control={form.control}
+			name={name}
+			render={({ field }) => (
+				<FieldShell {...{ className, required, label, optional, description }}>
+					<FormControl>
+						<PhoneInput
+							defaultCountry="SV"
+							labels={es}
+							addInternationalOption={false}
+							countryOptionsOrder={phoneCountryOrder}
+							countrySelectComponent={PhoneCountrySelect}
+							inputComponent={Input}
+							className={cn(
+								"flex h-10 w-full items-stretch overflow-hidden rounded-md border border-input bg-transparent shadow-xs",
+								"focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50",
+								"has-[[aria-invalid=true]]:border-destructive has-[[aria-invalid=true]]:ring-[3px] has-[[aria-invalid=true]]:ring-destructive/20",
+								"dark:bg-input/30 dark:has-[[aria-invalid=true]]:ring-destructive/40",
+								"[&_input]:h-full [&_input]:flex-1 [&_input]:rounded-none [&_input]:border-0 [&_input]:bg-transparent [&_input]:font-mono [&_input]:shadow-none [&_input]:focus-visible:ring-0 dark:[&_input]:bg-transparent",
+							)}
+							autoComplete="tel"
+							autoFocus={autoFocus}
+							placeholder={placeholder}
+							name={field.name}
+							ref={field.ref}
+							onBlur={field.onBlur}
+							value={field.value || undefined}
+							onChange={(value) => field.onChange(value ?? "")}
+						/>
+					</FormControl>
+				</FieldShell>
+			)}
 		/>
 	);
 }

@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/table";
 import { useWorkshopId } from "@/features/taller/session";
 import { vehiclesPageQuery } from "@/features/taller/vehicles";
-import { km } from "@/lib/format";
+import { km, phone } from "@/lib/format";
 import { useListPage } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
@@ -199,7 +199,7 @@ function VehiclesPage() {
 									<TableCell className="hidden md:table-cell">
 										<p className="text-[13px]">{v.contact_name || "—"}</p>
 										<p className="font-mono text-xs text-ink-3">
-											{v.contact_phone}
+											{phone(v.contact_phone)}
 										</p>
 									</TableCell>
 									<TableCell className="text-right font-mono text-[12.5px] tabular-nums">

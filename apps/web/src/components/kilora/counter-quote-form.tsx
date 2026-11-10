@@ -15,6 +15,7 @@ import {
 	applyFormError,
 	FormActions,
 	NumberField,
+	PhoneField,
 	RequiredLegend,
 	RootError,
 	SelectField,
@@ -23,14 +24,12 @@ import {
 	TextField,
 } from "./form-fields";
 import {
-	maskSvPhone,
 	optionalPhone,
 	optionalText,
 	optionalVehicleText,
 	optionalYearField,
 	plateField,
 	requiredText,
-	toSvPhone,
 	vehicleText,
 } from "./form-schemas";
 
@@ -82,9 +81,7 @@ export function counterQuoteFormValues(
 ): CounterQuoteValues {
 	return {
 		customer_name: quote?.customer_name ?? "",
-		customer_phone: quote?.customer_phone
-			? maskSvPhone(quote.customer_phone)
-			: "",
+		customer_phone: quote?.customer_phone ?? "",
 		vehicle_id: quote?.vehicle_id ?? "",
 		vehicle_make: quote?.vehicle_make ?? "",
 		vehicle_model: quote?.vehicle_model ?? "",
@@ -105,7 +102,7 @@ export function toCounterQuoteInput(
 	const plate = values.vehicle_plate.replace(/[\s-]/g, "").toUpperCase();
 	return {
 		customer_name: values.customer_name,
-		customer_phone: toSvPhone(values.customer_phone),
+		customer_phone: values.customer_phone || null,
 		vehicle_id: values.vehicle_id || null,
 		vehicle_make: values.vehicle_make.trim() || null,
 		vehicle_model: values.vehicle_model,
@@ -152,7 +149,7 @@ export function CounterQuoteForm({
 		enabled: openSearch,
 	});
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(schema),
 		defaultValues: initial,
 	});
@@ -193,16 +190,7 @@ export function CounterQuoteForm({
 							required
 							autoFocus
 						/>
-						<TextField
-							name="customer_phone"
-							label="Teléfono"
-							prefix="+503"
-							inputMode="numeric"
-							autoComplete="tel"
-							placeholder="77778888"
-							normalize={maskSvPhone}
-							optional
-						/>
+						<PhoneField name="customer_phone" label="Teléfono" optional />
 					</div>
 				</Card>
 				<Card className="gap-4 rounded-lg p-5 shadow-none">
@@ -266,7 +254,7 @@ export function CounterQuoteForm({
 													if (vehicle.contact_phone)
 														form.setValue(
 															"customer_phone",
-															maskSvPhone(vehicle.contact_phone),
+															vehicle.contact_phone,
 														);
 													setSearch("");
 													setOpenSearch(false);

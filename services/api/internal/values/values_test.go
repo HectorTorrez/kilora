@@ -14,8 +14,15 @@ func TestPhone(t *testing.T) {
 			t.Fatal(input, got)
 		}
 	}
-	if _, ok := Phone("123"); ok {
-		t.Fatal("teléfono inválido aceptado")
+	for input, want := range map[string]string{"+1 (212) 555-0123": "+12125550123", "+52 55 1234 5678": "+525512345678"} {
+		if got, ok := Phone(input); !ok || got != want {
+			t.Fatal(input, got)
+		}
+	}
+	for _, input := range []string{"123", "+503 1234", "+1 000 000 0000", "abc"} {
+		if _, ok := Phone(input); ok {
+			t.Fatal("teléfono inválido aceptado", input)
+		}
 	}
 }
 
@@ -96,6 +103,19 @@ func TestVehicleYearBounds(t *testing.T) {
 	for _, year := range []int32{1885, int32(Today().Year() + 2)} {
 		if ValidYear(&year) {
 			t.Errorf("año inválido aceptado: %d", year)
+		}
+	}
+}
+
+func TestOptionalNIT(t *testing.T) {
+	for _, input := range []string{"0614-010190-101-1", "06140101901011", "01234567-8", " "} {
+		if _, ok := OptionalNIT(&input); !ok {
+			t.Fatal(input)
+		}
+	}
+	for _, input := range []string{"123", "0614-0101", "ABC123456", "0614-010190-101-12"} {
+		if _, ok := OptionalNIT(&input); ok {
+			t.Fatal(input)
 		}
 	}
 }

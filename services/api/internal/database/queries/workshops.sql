@@ -15,3 +15,13 @@ SELECT * FROM branch WHERE workshop_id = sqlc.arg(workshop_id) ORDER BY name;
 
 -- name: GetBranch :one
 SELECT * FROM branch WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id);
+
+-- name: UpdateWorkshop :one
+-- Cambiar el nombre o el NIT invalida la verificación: el sello confirma esos datos.
+UPDATE workshop SET
+  name = sqlc.arg(name),
+  nit = sqlc.narg(nit),
+  verified_at = CASE WHEN name IS DISTINCT FROM sqlc.arg(name) OR nit IS DISTINCT FROM sqlc.narg(nit) THEN NULL ELSE verified_at END,
+  verified_by = CASE WHEN name IS DISTINCT FROM sqlc.arg(name) OR nit IS DISTINCT FROM sqlc.narg(nit) THEN NULL ELSE verified_by END
+WHERE id = sqlc.arg(workshop_id)
+RETURNING *;

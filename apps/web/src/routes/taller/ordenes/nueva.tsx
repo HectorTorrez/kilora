@@ -71,7 +71,7 @@ function NewOrderPage() {
 	const [vehicle, setVehicle] = useState(vehiculo ?? "");
 	const [creating, setCreating] = useState(false);
 	const form = useForm({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(receptionSchema),
 		defaultValues: {
 			branch: branches[0]?.branch_id ?? "",

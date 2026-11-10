@@ -8,6 +8,7 @@ import {
 	EyeOff,
 	FileText,
 	MapPin,
+	Pencil,
 	ShieldCheck,
 	Trash2,
 	UserPlus,
@@ -15,6 +16,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EditWorkshopDialog } from "@/components/kilora/workshop-form";
 import {
 	PageBody,
 	PageHeader,
@@ -91,6 +93,7 @@ function SettingsPage() {
 	const { data, isLoading, error } = useQuery(workshopQuery(workshopID));
 	const isAdmin = data?.role === "admin";
 	const verified = data?.workshop.verified_at;
+	const [editing, setEditing] = useState(false);
 
 	return (
 		<PageBody className="max-w-5xl">
@@ -106,7 +109,21 @@ function SettingsPage() {
 			)}
 
 			<div className="grid items-start gap-6 lg:grid-cols-2">
-				<SectionCard title="Datos del taller">
+				<SectionCard
+					title="Datos del taller"
+					actions={
+						isAdmin && (
+							<Button
+								size="sm"
+								variant="outline"
+								onClick={() => setEditing(true)}
+							>
+								<Pencil className="size-4" />
+								Editar
+							</Button>
+						)
+					}
+				>
 					{isLoading ? (
 						<Skeleton className="h-24" />
 					) : (
@@ -184,6 +201,15 @@ function SettingsPage() {
 					)}
 				</SectionCard>
 			</div>
+
+			{data && isAdmin && (
+				<EditWorkshopDialog
+					workshopID={workshopID}
+					workshop={data.workshop}
+					open={editing}
+					onOpenChange={setEditing}
+				/>
+			)}
 
 			<TeamCard
 				workshopID={workshopID}

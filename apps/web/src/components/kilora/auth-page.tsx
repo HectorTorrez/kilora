@@ -28,7 +28,13 @@ import {
 	TextField,
 } from "./form-fields";
 
-import { emailField, personName, requiredText } from "./form-schemas";
+import {
+	emailField,
+	optionalNit,
+	personName,
+	requiredText,
+	workshopName,
+} from "./form-schemas";
 
 const schema = z.object({
 	full_name: z.string().trim(),
@@ -164,7 +170,7 @@ export function AuthPage({
 		verificar: verify,
 	}[mode];
 	const form = useForm<Values>({
-		mode: "onBlur",
+		mode: "onChange",
 		resolver: zodResolver(
 			schema.superRefine((v, ctx) => {
 				const need = (key: keyof Values, message: string) => {
@@ -199,13 +205,8 @@ export function AuthPage({
 						message: "Usá al menos 8 caracteres",
 					});
 				if (mode === "onboarding") {
-					check(
-						"name",
-						requiredText("Ingresá el nombre del taller").max(
-							100,
-							"Usá como máximo 100 caracteres",
-						),
-					);
+					check("name", workshopName);
+					check("nit", optionalNit);
 					check(
 						"branch_name",
 						requiredText("Ingresá el nombre de la sucursal").max(
@@ -412,7 +413,15 @@ export function AuthPage({
 											autoFocus
 											required
 										/>
-										<TextField name="nit" label="NIT" optional />
+										<TextField
+											name="nit"
+											label="NIT"
+											optional
+											inputMode="numeric"
+											maxLength={20}
+											inputPattern={/^[\d-]*$/}
+											placeholder="0614-010190-101-1"
+										/>
 										<TextField
 											name="branch_name"
 											label="Nombre de la sucursal"

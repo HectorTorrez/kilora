@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ordersQuery } from "@/features/taller/orders";
 import { useWorkshopId } from "@/features/taller/session";
 import { historyQuery, vehicleQuery } from "@/features/taller/vehicles";
-import { date, day, km } from "@/lib/format";
+import { date, day, km, phone } from "@/lib/format";
 import { lastByCategory } from "@/lib/history";
 
 export const Route = createFileRoute("/taller/vehiculos/$vehicleId")({
@@ -70,7 +70,7 @@ function VehiclePage() {
 	const openOrder = vehicleOrders.find(
 		(o) => o.status !== "listo" && o.status !== "cancelado",
 	);
-	const phone = v.contact_phone?.replace(/\D/g, "");
+	const whatsApp = v.contact_phone?.replace(/\D/g, "");
 
 	return (
 		<PageBody>
@@ -99,10 +99,10 @@ function VehiclePage() {
 						</div>
 					</div>
 					<div className="flex flex-wrap gap-2">
-						{phone && (
+						{whatsApp && (
 							<Button asChild variant="outline">
 								<a
-									href={`https://wa.me/${phone}`}
+									href={`https://wa.me/${whatsApp}`}
 									target="_blank"
 									rel="noreferrer"
 								>
@@ -215,7 +215,9 @@ function VehiclePage() {
 								{v.contact_name || "—"}
 							</dd>
 							<dt className="text-ink-3">Teléfono</dt>
-							<dd className="text-right font-mono">{v.contact_phone || "—"}</dd>
+							<dd className="text-right font-mono">
+								{phone(v.contact_phone) || "—"}
+							</dd>
 							<dt className="text-ink-3">VIN</dt>
 							<dd className="truncate text-right font-mono">{v.vin || "—"}</dd>
 							<dt className="text-ink-3">Año</dt>

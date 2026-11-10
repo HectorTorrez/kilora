@@ -60,7 +60,7 @@ import { orderActions, orderQuery } from "@/features/taller/orders";
 import { useWorkshopId } from "@/features/taller/session";
 import { vehicleQuery } from "@/features/taller/vehicles";
 import { categoryLabels } from "@/lib/domain";
-import { date, km as formatKm, money, statusLabel } from "@/lib/format";
+import { date, km as formatKm, money, phone, statusLabel } from "@/lib/format";
 import { amountCents, formatCents, lineCents } from "@/lib/money";
 import { cn } from "@/lib/utils";
 
@@ -290,7 +290,7 @@ function OrderDetail({
 							</dd>
 							<dt className="text-ink-3">Teléfono</dt>
 							<dd className="text-right font-mono">
-								{vehicle?.contact_phone || "—"}
+								{phone(vehicle?.contact_phone) || "—"}
 							</dd>
 							<dt className="text-ink-3">Km de ingreso</dt>
 							<dd className="text-right font-mono">

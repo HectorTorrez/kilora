@@ -138,6 +138,38 @@ func (q *Queries) ListBranchesByWorkshop(ctx context.Context, workshopID uuid.UU
 	return items, nil
 }
 
+const updateWorkshop = `-- name: UpdateWorkshop :one
+UPDATE workshop SET
+  name = $1,
+  nit = $2,
+  verified_at = CASE WHEN name IS DISTINCT FROM $1 OR nit IS DISTINCT FROM $2 THEN NULL ELSE verified_at END,
+  verified_by = CASE WHEN name IS DISTINCT FROM $1 OR nit IS DISTINCT FROM $2 THEN NULL ELSE verified_by END
+WHERE id = $3
+RETURNING id, name, nit, verified_at, verified_by, created_at, updated_at
+`
+
+type UpdateWorkshopParams struct {
+	Name       string    `json:"name"`
+	Nit        *string   `json:"nit"`
+	WorkshopID uuid.UUID `json:"workshop_id"`
+}
+
+// Cambiar el nombre o el NIT invalida la verificación: el sello confirma esos datos.
+func (q *Queries) UpdateWorkshop(ctx context.Context, arg UpdateWorkshopParams) (Workshop, error) {
+	row := q.db.QueryRow(ctx, updateWorkshop, arg.Name, arg.Nit, arg.WorkshopID)
+	var i Workshop
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Nit,
+		&i.VerifiedAt,
+		&i.VerifiedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const verifyWorkshop = `-- name: VerifyWorkshop :execrows
 UPDATE workshop SET verified_at = now(), verified_by = $1 WHERE id = $2
 `

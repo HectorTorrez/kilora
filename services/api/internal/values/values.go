@@ -9,6 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/nyaruka/phonenumbers"
 	"github.com/shopspring/decimal"
 )
 
@@ -55,22 +56,14 @@ func OptionalPlate(p *string) *string {
 	return &v
 }
 
+// Phone valida un teléfono de cualquier país y lo normaliza a E.164.
+// Los números sin código de país se interpretan como de El Salvador.
 func Phone(s string) (string, bool) {
-	s = stripSeparators(s)
-	if strings.HasPrefix(s, "+503") {
-		s = s[4:]
-	} else if strings.HasPrefix(s, "503") && len(s) == 11 {
-		s = s[3:]
-	}
-	if len(s) != 8 {
+	n, err := phonenumbers.Parse(strings.TrimSpace(s), "SV")
+	if err != nil || !phonenumbers.IsValidNumber(n) {
 		return "", false
 	}
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return "", false
-		}
-	}
-	return "+503" + s, true
+	return phonenumbers.Format(n, phonenumbers.E164), true
 }
 
 func OptionalPhone(p *string) (*string, bool) {
@@ -142,4 +135,29 @@ func VehicleText(s string) bool {
 
 func ValidPlate(p *string) bool {
 	return p == nil || Plate(*p) == "" || platePattern.MatchString(Plate(*p))
+}
+
+// OptionalNIT acepta un NIT salvadoreño (14 dígitos) o un DUI homologado
+// como NIT (9 dígitos), con o sin guiones. Lo guarda sin espacios.
+func OptionalNIT(p *string) (*string, bool) {
+	if p == nil {
+		return nil, true
+	}
+	v := strings.Join(strings.Fields(*p), "")
+	if v == "" {
+		return nil, true
+	}
+	digits := 0
+	for _, c := range v {
+		switch {
+		case c >= '0' && c <= '9':
+			digits++
+		case c != '-':
+			return nil, false
+		}
+	}
+	if digits != 9 && digits != 14 {
+		return nil, false
+	}
+	return &v, true
 }
