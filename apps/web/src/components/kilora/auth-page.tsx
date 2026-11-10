@@ -21,6 +21,7 @@ import {
 } from "@/lib/auth";
 import {
 	applyFormError,
+	NitField,
 	PasswordField,
 	RequiredLegend,
 	RootError,
@@ -413,15 +414,7 @@ export function AuthPage({
 											autoFocus
 											required
 										/>
-										<TextField
-											name="nit"
-											label="NIT"
-											optional
-											inputMode="numeric"
-											maxLength={20}
-											inputPattern={/^[\d-]*$/}
-											placeholder="0614-010190-101-1"
-										/>
+										<NitField optional />
 										<TextField
 											name="branch_name"
 											label="Nombre de la sucursal"

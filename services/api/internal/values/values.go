@@ -138,25 +138,32 @@ func ValidPlate(p *string) bool {
 }
 
 // OptionalNIT acepta un NIT salvadoreño (14 dígitos) o un DUI homologado
-// como NIT (9 dígitos), con o sin guiones. Lo guarda sin espacios.
+// como NIT (9 dígitos), con o sin guiones ni espacios. Lo devuelve con el
+// formato oficial: 0000-000000-000-0 o 00000000-0.
 func OptionalNIT(p *string) (*string, bool) {
 	if p == nil {
 		return nil, true
 	}
-	v := strings.Join(strings.Fields(*p), "")
-	if v == "" {
-		return nil, true
-	}
-	digits := 0
-	for _, c := range v {
+	var digits strings.Builder
+	for _, c := range *p {
 		switch {
 		case c >= '0' && c <= '9':
-			digits++
-		case c != '-':
+			digits.WriteRune(c)
+		case c == '-' || unicode.IsSpace(c):
+		default:
 			return nil, false
 		}
 	}
-	if digits != 9 && digits != 14 {
+	d := digits.String()
+	var v string
+	switch len(d) {
+	case 0:
+		return nil, true
+	case 9:
+		v = d[:8] + "-" + d[8:]
+	case 14:
+		v = d[:4] + "-" + d[4:10] + "-" + d[10:13] + "-" + d[13:]
+	default:
 		return nil, false
 	}
 	return &v, true

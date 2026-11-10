@@ -82,8 +82,9 @@ export function useCreateWorkshop() {
 	const qc = useQueryClient();
 	return useMutation({
 		mutationFn: async (body: Schemas["CreateWorkshop"]) => {
-			const { error } = await api.POST("/api/v1/workshops", { body });
+			const { data, error } = await api.POST("/api/v1/workshops", { body });
 			if (error) throw apiError(error);
+			return data;
 		},
 		onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
 	});

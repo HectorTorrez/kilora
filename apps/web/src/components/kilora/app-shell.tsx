@@ -1,7 +1,10 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
 	Building2,
 	Car,
+	Check,
 	ChevronsUpDown,
 	ClipboardList,
 	FileText,
@@ -13,19 +16,35 @@ import {
 	UserRound,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
 import { DemoBanner } from "@/components/kilora/demo";
+import { FormDialog } from "@/components/kilora/form-dialog";
+import {
+	applyFormError,
+	FormActions,
+	NitField,
+	RequiredLegend,
+	RootError,
+	SubmitButton,
+	TextField,
+} from "@/components/kilora/form-fields";
+import {
+	optionalNit,
+	requiredText,
+	workshopName,
+} from "@/components/kilora/form-schemas";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Form } from "@/components/ui/form";
 import {
 	Sheet,
 	SheetContent,
@@ -33,7 +52,7 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { useTallerContext, WorkshopProvider } from "@/features/taller/session";
-import { useLogout } from "@/lib/auth";
+import { useCreateWorkshop, useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
@@ -119,15 +138,38 @@ export function AppShell({ children }: { children: ReactNode }) {
 
 	const active =
 		me.memberships.find((m) => m.workshop_id === selected) ?? me.memberships[0];
+	const rank: Record<string, number> = { admin: 3, recepcion: 2, mecanico: 1 };
 	const workshops = [
-		...new Map(me.memberships.map((m) => [m.workshop_id, m])).values(),
+		...me.memberships
+			.reduce((acc, m) => {
+				const current = acc.get(m.workshop_id);
+				acc.set(m.workshop_id, {
+					id: m.workshop_id,
+					name: m.workshop_name,
+					branches: (current?.branches ?? 0) + 1,
+					role:
+						current && rank[current.role] >= rank[m.role]
+							? current.role
+							: m.role,
+				});
+				return acc;
+			}, new Map<string, WorkshopOption>())
+			.values(),
 	];
+	const activeOption = workshops.find((w) => w.id === active?.workshop_id);
 
 	const selectWorkshop = (id: string) => {
+		if (id === active?.workshop_id) return;
 		setSelected(id);
 		try {
 			localStorage.setItem(`kilora-workshop-${me.user.id}`, id);
 		} catch {}
+		const name = workshops.find((w) => w.id === id)?.name;
+		if (name) toast.success(`Ahora estás en ${name}`);
+		// Un detalle (una orden, un vehículo) es del taller anterior: volvé a la
+		// lista de la misma sección.
+		const section = pathname.split("/").slice(0, 3).join("/");
+		if (section !== pathname) void navigate({ to: section });
 	};
 
 	const signOut = async () => {
@@ -144,11 +186,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 	const sidebar = (
 		<SidebarContent
 			workshopName={active?.workshop_name ?? ""}
-			branchName={active?.branch_name ?? ""}
-			workshops={workshops.map((w) => ({
-				id: w.workshop_id,
-				name: w.workshop_name,
-			}))}
+			branchName={
+				activeOption && activeOption.branches > 1
+					? `${activeOption.branches} sucursales`
+					: (active?.branch_name ?? "")
+			}
+			workshops={workshops}
 			activeWorkshop={active?.workshop_id ?? ""}
 			onSelectWorkshop={selectWorkshop}
 			userName={me.user.full_name}
@@ -234,7 +277,7 @@ function SidebarContent({
 }: {
 	workshopName: string;
 	branchName: string;
-	workshops: { id: string; name: string }[];
+	workshops: WorkshopOption[];
 	activeWorkshop: string;
 	onSelectWorkshop: (id: string) => void;
 	userName: string;
@@ -360,6 +403,13 @@ function SidebarContent({
 	);
 }
 
+type WorkshopOption = {
+	id: string;
+	name: string;
+	role: string;
+	branches: number;
+};
+
 function WorkshopSwitcher({
 	name,
 	branch,
@@ -369,53 +419,163 @@ function WorkshopSwitcher({
 }: {
 	name: string;
 	branch: string;
-	workshops: { id: string; name: string }[];
+	workshops: WorkshopOption[];
 	active: string;
 	onSelect: (id: string) => void;
 }) {
-	const card = (
+	const [creating, setCreating] = useState(false);
+	return (
 		<>
-			<span className="grid size-8 shrink-0 place-items-center rounded-md bg-seal text-[11px] font-bold text-white">
-				{initials(name)}
-			</span>
-			<span className="min-w-0 flex-1 leading-tight">
-				<span className="block truncate text-[13px] font-semibold">{name}</span>
-				<span className="block truncate text-[11.5px] text-ink-3">
-					{branch}
-				</span>
-			</span>
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<button
+						type="button"
+						aria-label={`Taller actual: ${name}. Cambiar de taller`}
+						className="pressable flex w-full items-center gap-2.5 rounded-lg border bg-background/60 p-2 text-left hover:bg-secondary"
+					>
+						<span className="grid size-8 shrink-0 place-items-center rounded-md bg-seal text-[11px] font-bold text-white">
+							{initials(name)}
+						</span>
+						<span className="min-w-0 flex-1 leading-tight">
+							<span className="block truncate text-[13px] font-semibold">
+								{name}
+							</span>
+							<span className="block truncate text-[11.5px] text-ink-3">
+								{branch}
+							</span>
+						</span>
+						<ChevronsUpDown className="size-4 shrink-0 text-ink-3" />
+					</button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="start" className="w-64">
+					<DropdownMenuLabel className="text-xs font-medium text-ink-3">
+						{workshops.length > 1 ? "Tus talleres" : "Tu taller"}
+					</DropdownMenuLabel>
+					{workshops.map((w) => (
+						<DropdownMenuItem
+							key={w.id}
+							onSelect={() => onSelect(w.id)}
+							className="gap-2.5 py-2"
+						>
+							<span className="grid size-7 shrink-0 place-items-center rounded-md bg-secondary text-[10px] font-bold text-ink-2">
+								{initials(w.name)}
+							</span>
+							<span className="min-w-0 flex-1 leading-tight">
+								<span className="block truncate text-[13px] font-medium">
+									{w.name}
+								</span>
+								<span className="block truncate text-[11.5px] text-ink-3">
+									{roleLabel[w.role] ?? w.role}
+									{w.branches > 1 ? ` · ${w.branches} sucursales` : ""}
+								</span>
+							</span>
+							{w.id === active && (
+								<Check
+									className="size-4 shrink-0 text-seal"
+									aria-label="Actual"
+								/>
+							)}
+						</DropdownMenuItem>
+					))}
+					<DropdownMenuSeparator />
+					<DropdownMenuItem onSelect={() => setCreating(true)}>
+						<Plus />
+						Registrar otro taller
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+			<FormDialog
+				open={creating}
+				onOpenChange={setCreating}
+				title="Registrar otro taller"
+				description="Quedás como administrador. Podés cambiar entre tus talleres desde este menú cuando quieras."
+			>
+				<NewWorkshopForm
+					onCancel={() => setCreating(false)}
+					onCreated={(id) => {
+						setCreating(false);
+						onSelect(id);
+					}}
+				/>
+			</FormDialog>
 		</>
 	);
-	if (workshops.length < 2)
-		return (
-			<div className="flex items-center gap-2.5 rounded-lg border bg-background/60 p-2">
-				{card}
-			</div>
-		);
+}
+
+const newWorkshopSchema = z.object({
+	name: workshopName,
+	nit: optionalNit,
+	branch_name: requiredText("Ingresá el nombre de la sucursal").max(
+		100,
+		"Usá como máximo 100 caracteres",
+	),
+});
+
+function NewWorkshopForm({
+	onCancel,
+	onCreated,
+}: {
+	onCancel: () => void;
+	onCreated: (id: string) => void;
+}) {
+	const create = useCreateWorkshop();
+	const qc = useQueryClient();
+	const form = useForm({
+		mode: "onChange",
+		resolver: zodResolver(newWorkshopSchema),
+		defaultValues: { name: "", nit: "", branch_name: "Principal" },
+	});
+	const submit = form.handleSubmit(async (values) => {
+		form.clearErrors("root");
+		try {
+			const created = await create.mutateAsync({
+				name: values.name,
+				branch_name: values.branch_name,
+				nit: values.nit || null,
+			});
+			await qc.refetchQueries({ queryKey: ["me"] });
+			toast.success(`${values.name} registrado. Ya estás trabajando en él.`);
+			if (created?.id) onCreated(created.id);
+		} catch (error) {
+			applyFormError(form, error);
+		}
+	});
 	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<button
-					type="button"
-					aria-label="Cambiar de taller"
-					className="pressable flex w-full items-center gap-2.5 rounded-lg border bg-background/60 p-2 text-left hover:bg-secondary"
-				>
-					{card}
-					<ChevronsUpDown className="size-4 text-ink-3" />
-				</button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="w-56">
-				<DropdownMenuLabel className="text-xs text-ink-3">
-					Talleres
-				</DropdownMenuLabel>
-				<DropdownMenuRadioGroup value={active} onValueChange={onSelect}>
-					{workshops.map((w) => (
-						<DropdownMenuRadioItem key={w.id} value={w.id}>
-							{w.name}
-						</DropdownMenuRadioItem>
-					))}
-				</DropdownMenuRadioGroup>
-			</DropdownMenuContent>
-		</DropdownMenu>
+		<Form {...form}>
+			<form onSubmit={submit} className="grid gap-5" noValidate>
+				<RequiredLegend />
+				<TextField
+					name="name"
+					label="Nombre del taller"
+					maxLength={100}
+					autoFocus
+					required
+				/>
+				<div className="grid gap-5 sm:grid-cols-2">
+					<TextField
+						name="branch_name"
+						label="Primera sucursal"
+						maxLength={100}
+						description="Después podés tener más."
+						required
+					/>
+					<NitField optional />
+				</div>
+				<RootError />
+				<FormActions>
+					<Button
+						type="button"
+						variant="outline"
+						className="w-full sm:w-auto"
+						onClick={onCancel}
+					>
+						Cancelar
+					</Button>
+					<SubmitButton pending={create.isPending} pendingLabel="Registrando…">
+						Registrar taller
+					</SubmitButton>
+				</FormActions>
+			</form>
+		</Form>
 	);
 }

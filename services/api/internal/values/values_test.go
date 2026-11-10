@@ -108,12 +108,23 @@ func TestVehicleYearBounds(t *testing.T) {
 }
 
 func TestOptionalNIT(t *testing.T) {
-	for _, input := range []string{"0614-010190-101-1", "06140101901011", "01234567-8", " "} {
-		if _, ok := OptionalNIT(&input); !ok {
-			t.Fatal(input)
+	for input, want := range map[string]string{
+		"0614-010190-101-1":  "0614-010190-101-1",
+		"06140101901011":     "0614-010190-101-1",
+		" 0614 010190 101 1": "0614-010190-101-1",
+		"012345678":          "01234567-8",
+		"01234567-8":         "01234567-8",
+	} {
+		if got, ok := OptionalNIT(&input); !ok || got == nil || *got != want {
+			t.Fatal(input, got)
 		}
 	}
-	for _, input := range []string{"123", "0614-0101", "ABC123456", "0614-010190-101-12"} {
+	for _, input := range []string{"", "  ", "--"} {
+		if got, ok := OptionalNIT(&input); !ok || got != nil {
+			t.Fatal(input, got)
+		}
+	}
+	for _, input := range []string{"123", "0614-0101", "ABC123456", "0614-010190-101-12", "0614.010190.101.1"} {
 		if _, ok := OptionalNIT(&input); ok {
 			t.Fatal(input)
 		}

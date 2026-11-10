@@ -10,6 +10,7 @@ import {
 import { ClearFilters, FacetFilter } from "@/components/kilora/facet-filter";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
+import { SortableHead, useTableSort } from "@/components/kilora/sortable-table";
 import {
 	EmptyState,
 	ListToolbar,
@@ -26,7 +27,6 @@ import {
 	Table,
 	TableBody,
 	TableCell,
-	TableHead,
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
@@ -102,7 +102,13 @@ function OrdersPage() {
 				? initial
 				: undefined,
 	});
-	const rows = data?.items ?? [];
+	const { rows, sort, toggle } = useTableSort(data?.items ?? [], {
+		number: (o) => o.number,
+		vehicle: (o) => o.plate ?? `${o.make} ${o.model}`,
+		reason: (o) => o.reason,
+		status: (o) => statusValues.indexOf(o.status),
+		received: (o) => o.received_at,
+	});
 	const setStatuses = (values: Status[]) =>
 		navigate({
 			search: (prev) => ({
@@ -119,6 +125,11 @@ function OrdersPage() {
 	const filtering =
 		!!q || statuses.length > 0 || !!branch || !!desde || !!hasta;
 
+	const clearFilters = () => {
+		setQuery("");
+		setBranch("");
+		navigate({ search: {}, replace: true });
+	};
 	return (
 		<PageBody>
 			<PageHeader
@@ -144,17 +155,6 @@ function OrdersPage() {
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 					/>
-					<FacetFilter
-						label="Estado"
-						selected={statuses}
-						onChange={setStatuses}
-						options={statusValues.map((value) => ({
-							value,
-							label: statusLabel(value),
-							dot: orderDot(value),
-							count: data?.counts[value] ?? 0,
-						}))}
-					/>
 					<DateRangeFilter label="Recibida" value={range} onChange={setRange} />
 					{branches.length > 1 && (
 						<FacetFilter
@@ -168,14 +168,7 @@ function OrdersPage() {
 							}))}
 						/>
 					)}
-					<ClearFilters
-						show={filtering}
-						onClear={() => {
-							setQuery("");
-							setBranch("");
-							navigate({ search: {}, replace: true });
-						}}
-					/>
+					<ClearFilters show={filtering} onClear={clearFilters} />
 				</ListToolbar>
 				<QueryContent
 					pending={isLoading}
@@ -193,19 +186,69 @@ function OrdersPage() {
 									? "Probá con otra búsqueda o quitá algún filtro."
 									: "Registrá la primera orden para empezar el historial."
 							}
+							action={
+								filtering && (
+									<Button variant="outline" onClick={clearFilters}>
+										Quitar filtros
+									</Button>
+								)
+							}
 						/>
 					}
 				>
 					<Table>
 						<TableHeader>
 							<TableRow className="bg-secondary/40 hover:bg-secondary/40">
-								<TableHead className="w-20 pl-4">Orden</TableHead>
-								<TableHead>Vehículo</TableHead>
-								<TableHead className="hidden md:table-cell">Motivo</TableHead>
-								<TableHead className="pr-4 sm:pr-2">Estado</TableHead>
-								<TableHead className="hidden pr-4 text-right sm:table-cell">
+								<SortableHead
+									sortKey="number"
+									sort={sort}
+									onSort={toggle}
+									className="w-20 pl-4"
+								>
+									Orden
+								</SortableHead>
+								<SortableHead sortKey="vehicle" sort={sort} onSort={toggle}>
+									Vehículo
+								</SortableHead>
+								<SortableHead
+									sortKey="reason"
+									sort={sort}
+									onSort={toggle}
+									className="hidden md:table-cell"
+								>
+									Motivo
+								</SortableHead>
+								<SortableHead
+									sortKey="received"
+									sort={sort}
+									onSort={toggle}
+									className="hidden text-right sm:table-cell"
+									align="right"
+								>
 									Recibida
-								</TableHead>
+								</SortableHead>
+								<SortableHead
+									sortKey="status"
+									sort={sort}
+									onSort={toggle}
+									className="pr-4"
+									filter={
+										<FacetFilter
+											compact
+											label="Estado"
+											selected={statuses}
+											onChange={setStatuses}
+											options={statusValues.map((value) => ({
+												value,
+												label: statusLabel(value),
+												dot: orderDot(value),
+												count: data?.counts[value] ?? 0,
+											}))}
+										/>
+									}
+								>
+									Estado
+								</SortableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -234,14 +277,14 @@ function OrdersPage() {
 									<TableCell className="hidden max-w-[280px] truncate text-[13px] md:table-cell">
 										{o.reason}
 									</TableCell>
-									<TableCell className="pr-4 sm:pr-2">
-										<OrderStatusBadge status={o.status} />
-									</TableCell>
 									<TableCell
-										className="hidden pr-4 text-right text-[12.5px] text-ink-3 sm:table-cell"
+										className="hidden text-right text-[12.5px] text-ink-3 sm:table-cell"
 										title={date(o.received_at)}
 									>
 										{shortDate(o.received_at)}
+									</TableCell>
+									<TableCell className="pr-4">
+										<OrderStatusBadge status={o.status} />
 									</TableCell>
 								</TableRow>
 							))}

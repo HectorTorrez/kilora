@@ -208,12 +208,11 @@ export function OrderStatusBadge({
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap",
+				"inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap",
 				orderTone[status].pill,
 				className,
 			)}
 		>
-			<span className={cn("size-1.5 rounded-full", orderTone[status].dot)} />
 			{statusLabel(status)}
 		</span>
 	);
@@ -229,7 +228,7 @@ export function VehicleStatusBadge({ status }: { status: S["VehicleStatus"] }) {
 	return (
 		<span
 			className={cn(
-				"inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap",
+				"inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap",
 				status === "vinculado"
 					? "bg-seal-soft text-seal"
 					: status === "provisional"

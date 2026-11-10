@@ -19,6 +19,7 @@ import {
 	QuoteOutcomeBadge,
 	QuoteOutcomePicker,
 } from "@/components/kilora/quote-outcome";
+import { SortableHead, useTableSort } from "@/components/kilora/sortable-table";
 import {
 	BackLink,
 	CopyField,
@@ -43,7 +44,6 @@ import {
 	Table,
 	TableBody,
 	TableCell,
-	TableHead,
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
@@ -83,6 +83,13 @@ function QuoteDetailPage() {
 	const outcome = useWorkshopMutation(workshopID, actions.outcome);
 	const share = useWorkshopMutation(workshopID, actions.share);
 	const convert = useWorkshopMutation(workshopID, actions.convert);
+	const items = useTableSort(data?.items ?? [], {
+		description: (item) => item.description,
+		kind: (item) => item.kind,
+		quantity: (item) => Number(item.quantity),
+		price: (item) => Number(item.unit_price),
+		subtotal: (item) => Number(item.quantity) * Number(item.unit_price),
+	});
 	const [editing, setEditing] = useState(false);
 	const [confirm, setConfirm] = useState(false);
 	const [url, setUrl] = useState("");
@@ -233,17 +240,53 @@ function QuoteDetailPage() {
 					<Table>
 						<TableHeader>
 							<TableRow className="bg-secondary/40 hover:bg-secondary/40">
-								<TableHead className="pl-4 sm:pl-5">Descripción</TableHead>
-								<TableHead className="hidden sm:table-cell">Tipo</TableHead>
-								<TableHead className="text-right">Cant.</TableHead>
-								<TableHead className="text-right">Precio unit.</TableHead>
-								<TableHead className="pr-4 text-right sm:pr-5">
+								<SortableHead
+									sortKey="description"
+									sort={items.sort}
+									onSort={items.toggle}
+									className="pl-4 sm:pl-5"
+								>
+									Descripción
+								</SortableHead>
+								<SortableHead
+									sortKey="kind"
+									sort={items.sort}
+									onSort={items.toggle}
+									className="hidden sm:table-cell"
+								>
+									Tipo
+								</SortableHead>
+								<SortableHead
+									sortKey="quantity"
+									sort={items.sort}
+									onSort={items.toggle}
+									className="text-right"
+									align="right"
+								>
+									Cant.
+								</SortableHead>
+								<SortableHead
+									sortKey="price"
+									sort={items.sort}
+									onSort={items.toggle}
+									className="text-right"
+									align="right"
+								>
+									Precio unit.
+								</SortableHead>
+								<SortableHead
+									sortKey="subtotal"
+									sort={items.sort}
+									onSort={items.toggle}
+									className="pr-4 text-right sm:pr-5"
+									align="right"
+								>
 									Subtotal
-								</TableHead>
+								</SortableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{quote.items.map((item, index) => (
+							{items.rows.map((item, index) => (
 								<TableRow
 									// biome-ignore lint/suspicious/noArrayIndexKey: Los ítems no tienen id.
 									key={`${item.description}-${index}`}

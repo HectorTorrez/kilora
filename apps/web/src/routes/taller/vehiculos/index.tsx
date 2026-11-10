@@ -10,6 +10,7 @@ import {
 import { ClearFilters, FacetFilter } from "@/components/kilora/facet-filter";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
+import { SortableHead, useTableSort } from "@/components/kilora/sortable-table";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
 import {
 	EmptyState,
@@ -35,7 +36,6 @@ import {
 	Table,
 	TableBody,
 	TableCell,
-	TableHead,
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
@@ -70,9 +70,21 @@ function VehiclesPage() {
 		...vehiclesPageQuery(workshopID, q, statuses, offset, range),
 		enabled: !!workshopID,
 	});
-	const rows = data?.items ?? [];
+	const { rows, sort, toggle } = useTableSort(data?.items ?? [], {
+		plate: (v) => v.plate,
+		vehicle: (v) => `${v.make} ${v.model} ${v.year ?? ""}`,
+		contact: (v) => v.contact_name,
+		km: (v) => v.last_odometer_km,
+		status: (v) => v.status,
+		activity: (v) => v.last_activity_at,
+	});
 	const filtering = !!q || statuses.length > 0 || !!range.from || !!range.to;
 
+	const clearFilters = () => {
+		setQuery("");
+		setStatuses([]);
+		setRange({});
+	};
 	return (
 		<PageBody>
 			<PageHeader
@@ -96,28 +108,12 @@ function VehiclesPage() {
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 					/>
-					<FacetFilter
-						label="Estado"
-						selected={statuses}
-						onChange={setStatuses}
-						options={statusOptions.map((o) => ({
-							...o,
-							count: data?.counts[o.value] ?? 0,
-						}))}
-					/>
 					<DateRangeFilter
 						label="Última actividad"
 						value={range}
 						onChange={setRange}
 					/>
-					<ClearFilters
-						show={filtering}
-						onClear={() => {
-							setQuery("");
-							setStatuses([]);
-							setRange({});
-						}}
-					/>
+					<ClearFilters show={filtering} onClear={clearFilters} />
 				</ListToolbar>
 				<QueryContent
 					pending={isLoading}
@@ -145,7 +141,11 @@ function VehiclesPage() {
 									: "Registrá un vehículo provisional; no hace falta que el cliente tenga cuenta."
 							}
 							action={
-								!filtering && (
+								filtering ? (
+									<Button variant="outline" onClick={clearFilters}>
+										Quitar filtros
+									</Button>
+								) : (
 									<Button onClick={() => setOpen(true)}>
 										Registrar vehículo
 									</Button>
@@ -157,16 +157,63 @@ function VehiclesPage() {
 					<Table>
 						<TableHeader>
 							<TableRow className="bg-secondary/40 hover:bg-secondary/40">
-								<TableHead className="pl-4">Placa</TableHead>
-								<TableHead>Vehículo</TableHead>
-								<TableHead className="hidden md:table-cell">Contacto</TableHead>
-								<TableHead className="hidden text-right sm:table-cell">
+								<SortableHead
+									sortKey="plate"
+									sort={sort}
+									onSort={toggle}
+									className="pl-4"
+								>
+									Placa
+								</SortableHead>
+								<SortableHead sortKey="vehicle" sort={sort} onSort={toggle}>
+									Vehículo
+								</SortableHead>
+								<SortableHead
+									sortKey="contact"
+									sort={sort}
+									onSort={toggle}
+									className="hidden md:table-cell"
+								>
+									Contacto
+								</SortableHead>
+								<SortableHead
+									sortKey="km"
+									sort={sort}
+									onSort={toggle}
+									className="hidden text-right sm:table-cell"
+									align="right"
+								>
 									Kilometraje
-								</TableHead>
-								<TableHead className="pr-4 lg:pr-2">Estado</TableHead>
-								<TableHead className="hidden pr-4 text-right lg:table-cell">
+								</SortableHead>
+								<SortableHead
+									sortKey="activity"
+									sort={sort}
+									onSort={toggle}
+									className="hidden text-right lg:table-cell"
+									align="right"
+								>
 									Última actividad
-								</TableHead>
+								</SortableHead>
+								<SortableHead
+									sortKey="status"
+									sort={sort}
+									onSort={toggle}
+									className="pr-4"
+									filter={
+										<FacetFilter
+											compact
+											label="Estado"
+											selected={statuses}
+											onChange={setStatuses}
+											options={statusOptions.map((o) => ({
+												...o,
+												count: data?.counts[o.value] ?? 0,
+											}))}
+										/>
+									}
+								>
+									Estado
+								</SortableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -214,11 +261,11 @@ function VehiclesPage() {
 											<Missing />
 										)}
 									</TableCell>
-									<TableCell className="pr-4 lg:pr-2">
-										<VehicleStatusBadge status={v.status} />
-									</TableCell>
-									<TableCell className="hidden pr-4 text-right text-[12.5px] text-ink-3 lg:table-cell">
+									<TableCell className="hidden text-right text-[12.5px] text-ink-3 lg:table-cell">
 										{shortDate(v.last_activity_at)}
+									</TableCell>
+									<TableCell className="pr-4">
+										<VehicleStatusBadge status={v.status} />
 									</TableCell>
 								</TableRow>
 							))}

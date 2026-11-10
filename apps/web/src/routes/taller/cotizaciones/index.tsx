@@ -14,6 +14,7 @@ import {
 	outcomeDot,
 	QuoteOutcomeBadge,
 } from "@/components/kilora/quote-outcome";
+import { SortableHead, useTableSort } from "@/components/kilora/sortable-table";
 import {
 	EmptyState,
 	ListToolbar,
@@ -30,7 +31,6 @@ import {
 	Table,
 	TableBody,
 	TableCell,
-	TableHead,
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
@@ -79,9 +79,21 @@ function QuotesPage() {
 				? initial
 				: undefined,
 	});
-	const rows = data?.items ?? [];
+	const { rows, sort, toggle } = useTableSort(data?.items ?? [], {
+		number: (r) => r.number,
+		customer: (r) => r.customer_name,
+		vehicle: (r) => vehicleName(r) || r.vehicle_plate,
+		status: (r) => quoteOutcomeLabels[r.outcome],
+		total: (r) => Number(r.total),
+		created: (r) => r.created_at,
+	});
 	const filtering =
 		q.trim() !== "" || outcomes.length > 0 || !!range.from || !!range.to;
+	const clearFilters = () => {
+		setQ("");
+		setOutcomes([]);
+		setRange({});
+	};
 	return (
 		<PageBody>
 			<PageHeader
@@ -106,28 +118,8 @@ function QuotesPage() {
 						value={q}
 						onChange={(event) => setQ(event.target.value)}
 					/>
-					<FacetFilter
-						label="Estado"
-						selected={outcomes}
-						onChange={setOutcomes}
-						options={(
-							["pendiente", "acepto", "rechazo", "no_respondio"] as const
-						).map((value) => ({
-							value,
-							label: quoteOutcomeLabels[value],
-							dot: outcomeDot(value),
-							count: data?.counts[value] ?? 0,
-						}))}
-					/>
 					<DateRangeFilter label="Fecha" value={range} onChange={setRange} />
-					<ClearFilters
-						show={filtering}
-						onClear={() => {
-							setQ("");
-							setOutcomes([]);
-							setRange({});
-						}}
-					/>
+					<ClearFilters show={filtering} onClear={clearFilters} />
 				</ListToolbar>
 				<QueryContent
 					pending={isLoading}
@@ -155,7 +147,11 @@ function QuotesPage() {
 									: "Armá un presupuesto de mostrador y entregalo impreso en menos de dos minutos."
 							}
 							action={
-								filtering ? null : (
+								filtering ? (
+									<Button variant="outline" onClick={clearFilters}>
+										Quitar filtros
+									</Button>
+								) : (
 									<Button asChild>
 										<Link to="/taller/cotizaciones/nueva">
 											<Plus className="size-4" />
@@ -170,14 +166,72 @@ function QuotesPage() {
 					<Table>
 						<TableHeader>
 							<TableRow className="bg-secondary/40 hover:bg-secondary/40">
-								<TableHead className="w-28 pl-4">Número</TableHead>
-								<TableHead>Cliente</TableHead>
-								<TableHead className="hidden md:table-cell">Vehículo</TableHead>
-								<TableHead className="hidden sm:table-cell">Estado</TableHead>
-								<TableHead className="pr-4 text-right lg:pr-2">Total</TableHead>
-								<TableHead className="hidden pr-4 text-right lg:table-cell">
+								<SortableHead
+									sortKey="number"
+									sort={sort}
+									onSort={toggle}
+									className="w-28 pl-4"
+								>
+									Número
+								</SortableHead>
+								<SortableHead sortKey="customer" sort={sort} onSort={toggle}>
+									Cliente
+								</SortableHead>
+								<SortableHead
+									sortKey="vehicle"
+									sort={sort}
+									onSort={toggle}
+									className="hidden md:table-cell"
+								>
+									Vehículo
+								</SortableHead>
+								<SortableHead
+									sortKey="total"
+									sort={sort}
+									onSort={toggle}
+									className="text-right"
+									align="right"
+								>
+									Total
+								</SortableHead>
+								<SortableHead
+									sortKey="created"
+									sort={sort}
+									onSort={toggle}
+									className="hidden text-right lg:table-cell"
+									align="right"
+								>
 									Fecha
-								</TableHead>
+								</SortableHead>
+								<SortableHead
+									sortKey="status"
+									sort={sort}
+									onSort={toggle}
+									className="pr-4"
+									filter={
+										<FacetFilter
+											compact
+											label="Estado"
+											selected={outcomes}
+											onChange={setOutcomes}
+											options={(
+												[
+													"pendiente",
+													"acepto",
+													"rechazo",
+													"no_respondio",
+												] as const
+											).map((value) => ({
+												value,
+												label: quoteOutcomeLabels[value],
+												dot: outcomeDot(value),
+												count: data?.counts[value] ?? 0,
+											}))}
+										/>
+									}
+								>
+									Estado
+								</SortableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
@@ -194,9 +248,6 @@ function QuotesPage() {
 									</TableCell>
 									<TableCell className="text-[13px] font-medium">
 										{row.customer_name || <Missing>Sin nombre</Missing>}
-										<span className="mt-1 block sm:hidden">
-											<QuoteOutcomeBadge outcome={row.outcome} />
-										</span>
 									</TableCell>
 									<TableCell className="hidden md:table-cell">
 										<div className="flex items-center gap-2.5">
@@ -206,17 +257,17 @@ function QuotesPage() {
 											</span>
 										</div>
 									</TableCell>
-									<TableCell className="hidden sm:table-cell">
-										<QuoteOutcomeBadge outcome={row.outcome} />
-									</TableCell>
-									<TableCell className="pr-4 text-right font-mono text-[13px] tabular-nums lg:pr-2">
+									<TableCell className="text-right font-mono text-[13px] tabular-nums">
 										{money(row.total)}
 									</TableCell>
 									<TableCell
-										className="hidden pr-4 text-right text-[12.5px] text-ink-3 lg:table-cell"
+										className="hidden text-right text-[12.5px] text-ink-3 lg:table-cell"
 										title={date(row.created_at)}
 									>
 										{shortDate(row.created_at)}
+									</TableCell>
+									<TableCell className="pr-4">
+										<QuoteOutcomeBadge outcome={row.outcome} />
 									</TableCell>
 								</TableRow>
 							))}

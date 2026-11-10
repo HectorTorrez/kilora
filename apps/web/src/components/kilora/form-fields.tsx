@@ -30,6 +30,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { formatNit } from "./form-schemas";
 
 const groupedInputClass =
 	"h-full rounded-none border-0 bg-transparent shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent";
@@ -605,4 +606,34 @@ export function applyFormError(
 	const message = errorMessage(error);
 	form.setError("root", { message });
 	if (options?.toast) toast.error(message);
+}
+
+/** NIT de El Salvador: se formatea solo como NIT o como DUI homologado. */
+export function NitField({
+	name = "nit",
+	label = "NIT",
+	...props
+}: Partial<Pick<SharedField, "name" | "label">> &
+	Omit<SharedField, "name" | "label" | "description" | "placeholder">) {
+	const form = useFormContext();
+	const digits = String(form.watch(name) ?? "").replace(/\D/g, "").length;
+	return (
+		<TextField
+			{...props}
+			name={name}
+			label={label}
+			inputMode="numeric"
+			autoComplete="off"
+			maxLength={17}
+			normalize={formatNit}
+			placeholder="0614-010190-101-1"
+			description={
+				digits === 0
+					? "NIT de 14 dígitos, o tu DUI si lo tenés homologado."
+					: digits <= 9
+						? `DUI homologado · ${digits} de 9 dígitos`
+						: `NIT · ${digits} de 14 dígitos`
+			}
+		/>
+	);
 }

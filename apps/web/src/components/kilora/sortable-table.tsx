@@ -58,9 +58,12 @@ export function SortableHead<K extends string>({
 	sort,
 	onSort,
 	align = "left",
+	filter,
 	className,
 }: {
 	children: ReactNode;
+	/** Filtro de la columna (por ejemplo, el de estado), junto al título. */
+	filter?: ReactNode;
 	sortKey: K;
 	sort: SortState<K>;
 	onSort: (key: K) => void;
@@ -77,28 +80,39 @@ export function SortableHead<K extends string>({
 				dir === "asc" ? "ascending" : dir === "desc" ? "descending" : "none"
 			}
 		>
-			<button
-				type="button"
-				onClick={() => onSort(sortKey)}
-				title={
-					dir === "asc"
-						? "Orden ascendente. Clic para descendente"
-						: dir === "desc"
-							? "Orden descendente. Clic para quitar el orden"
-							: "Ordenar"
-				}
+			<span
 				className={cn(
-					"-mx-1.5 inline-flex items-center gap-1 rounded px-1.5 py-1 font-medium hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+					"inline-flex items-center gap-0.5",
 					align === "right" && "flex-row-reverse",
-					dir ? "text-foreground" : "text-inherit",
 				)}
 			>
-				{children}
-				<Icon
-					className={cn("size-3.5 shrink-0", dir ? "text-seal" : "text-ink-3")}
-					aria-hidden="true"
-				/>
-			</button>
+				<button
+					type="button"
+					onClick={() => onSort(sortKey)}
+					title={
+						dir === "asc"
+							? "Orden ascendente. Clic para descendente"
+							: dir === "desc"
+								? "Orden descendente. Clic para quitar el orden"
+								: "Ordenar"
+					}
+					className={cn(
+						"-mx-1.5 inline-flex items-center gap-1 rounded px-1.5 py-1 font-medium hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+						align === "right" && "flex-row-reverse",
+						dir ? "text-foreground" : "text-inherit",
+					)}
+				>
+					{children}
+					<Icon
+						className={cn(
+							"size-3.5 shrink-0",
+							dir ? "text-seal" : "text-ink-3",
+						)}
+						aria-hidden="true"
+					/>
+				</button>
+				{filter}
+			</span>
 		</TableHead>
 	);
 }

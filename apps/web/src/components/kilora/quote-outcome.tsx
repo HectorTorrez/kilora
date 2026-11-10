@@ -31,12 +31,11 @@ export function QuoteOutcomeBadge({
 		<Badge
 			variant="secondary"
 			className={cn(
-				"inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-semibold whitespace-nowrap",
+				"inline-flex items-center rounded-full px-2 py-0.5 text-[11.5px] font-semibold whitespace-nowrap",
 				item.className,
 				className,
 			)}
 		>
-			<span className={cn("size-1.5 rounded-full", item.dot)} />
 			{quoteOutcomeLabels[outcome]}
 		</Badge>
 	);

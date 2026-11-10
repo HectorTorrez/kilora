@@ -167,6 +167,27 @@ export const workshopName = requiredText("Ingresá el nombre del taller").max(
 	"Usá como máximo 100 caracteres",
 );
 
+/**
+ * Da formato a un NIT salvadoreño mientras se escribe. Con hasta 9 dígitos
+ * se trata como DUI homologado (00000000-0); con más, como NIT de 14 dígitos
+ * (0000-000000-000-0).
+ */
+export function formatNit(value: string) {
+	const digits = value.replace(/\D/g, "").slice(0, 14);
+	if (digits.length <= 9)
+		return digits.length === 9
+			? `${digits.slice(0, 8)}-${digits.slice(8)}`
+			: digits;
+	return [
+		digits.slice(0, 4),
+		digits.slice(4, 10),
+		digits.slice(10, 13),
+		digits.slice(13),
+	]
+		.filter(Boolean)
+		.join("-");
+}
+
 // NIT de 14 dígitos o DUI homologado de 9, con o sin guiones.
 export const optionalNit = z
 	.string()

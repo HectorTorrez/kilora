@@ -18,11 +18,12 @@ import { adminActions } from "@/features/taller/team";
 import {
 	applyFormError,
 	FormActions,
+	NitField,
 	RootError,
 	SubmitButton,
 	TextField,
 } from "./form-fields";
-import { optionalNit, workshopName } from "./form-schemas";
+import { formatNit, optionalNit, workshopName } from "./form-schemas";
 
 const schema = z.object({ name: workshopName, nit: optionalNit });
 
@@ -83,12 +84,13 @@ function WorkshopForm({
 	const form = useForm({
 		mode: "onChange",
 		resolver: zodResolver(schema),
-		defaultValues: { name: workshop.name, nit: workshop.nit ?? "" },
+		defaultValues: { name: workshop.name, nit: formatNit(workshop.nit ?? "") },
 	});
 	const [name, nit] = form.watch(["name", "nit"]);
 	const losesVerification =
 		!!workshop.verified_at &&
-		(name.trim() !== workshop.name || nit.trim() !== (workshop.nit ?? ""));
+		(name.trim() !== workshop.name ||
+			nit.trim() !== formatNit(workshop.nit ?? ""));
 
 	const submit = form.handleSubmit(async (values) => {
 		form.clearErrors("root");
@@ -112,16 +114,7 @@ function WorkshopForm({
 					autoFocus
 					required
 				/>
-				<TextField
-					name="nit"
-					label="NIT"
-					optional
-					inputMode="numeric"
-					maxLength={20}
-					inputPattern={/^[\d-]*$/}
-					placeholder="0614-010190-101-1"
-					description="14 dígitos, o 9 si usás tu DUI"
-				/>
+				<NitField optional />
 				{losesVerification && (
 					<Alert>
 						<AlertDescription>
