@@ -349,7 +349,8 @@ export function DateField({
 	className,
 	autoFocus,
 	placeholder = "Elegí una fecha",
-}: SharedField) {
+	disableFuture = true,
+}: SharedField & { disableFuture?: boolean }) {
 	const form = useFormContext();
 	return (
 		<FormField
@@ -363,7 +364,7 @@ export function DateField({
 							ref={field.ref}
 							autoFocus={autoFocus}
 							placeholder={placeholder}
-							disableFuture
+							disableFuture={disableFuture}
 							value={field.value ?? ""}
 							onBlur={field.onBlur}
 							onChange={field.onChange}

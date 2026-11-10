@@ -68,8 +68,12 @@ func TestCounterQuotes(t *testing.T) {
 		t.Fatal(second)
 	}
 	pending := req(a, "GET", pa+"/quotes?outcome=pendiente", "", 200).(map[string]any)
-	if len(pending["items"].([]any)) != 1 {
+	if len(pending["items"].([]any)) != 1 || pending["total"].(float64) != 1 {
 		t.Fatal(pending)
+	}
+	several := req(a, "GET", pa+"/quotes?outcome=pendiente&outcome=rechazo", "", 200).(map[string]any)
+	if counts := several["counts"].(map[string]any); several["total"].(float64) != 2 || counts[""].(float64) != 2 || counts["pendiente"].(float64) != 1 {
+		t.Fatal(several)
 	}
 	converted := req(a, "POST", pa+"/quotes/"+secondID+"/convert", "", 200).(map[string]any)
 	orderID, _ := converted["order_id"].(string)

@@ -1,10 +1,11 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeft, Check, Lock, Plus, X } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Lock, Plus } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { FormDialog } from "@/components/kilora/form-dialog";
 import {
 	applyFormError,
 	FormError,
@@ -21,10 +22,13 @@ import {
 } from "@/components/kilora/form-schemas";
 import { VehicleForm } from "@/components/kilora/vehicle-form";
 import {
+	BackLink,
+	DetailList,
 	PageBody,
 	PageHeader,
 	Plate,
 	SectionCard,
+	StepTitle,
 } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -121,30 +125,20 @@ function NewOrderPage() {
 	});
 
 	return (
-		<PageBody className="max-w-5xl">
-			<div>
-				<Link
-					to="/taller/ordenes"
-					className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-foreground"
-				>
-					<ArrowLeft className="size-3.5" />
-					Órdenes
-				</Link>
-				<PageHeader
-					className="mt-3"
-					title="Nueva orden"
-					description="Elegí el vehículo, escribí el motivo y listo. Trabajos, piezas y cotización se agregan después."
-				/>
-			</div>
+		<PageBody>
+			<PageHeader
+				back={<BackLink to="/taller/ordenes">Órdenes</BackLink>}
+				title="Nueva orden"
+				description="Elegí el vehículo y escribí el motivo de ingreso. Trabajos, piezas y cotización se agregan después, desde la orden."
+			/>
 
-			<div className="grid items-start gap-6 lg:grid-cols-[1fr_300px]">
-				<div className="space-y-6">
+			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+				<div className="min-w-0 space-y-6">
 					<SectionCard
 						title={
-							<span className="flex items-center gap-2">
-								<Step n={1} done={!!chosen} />
+							<StepTitle n={1} done={!!chosen}>
 								Vehículo
-							</span>
+							</StepTitle>
 						}
 						actions={
 							!chosen && (
@@ -152,17 +146,10 @@ function NewOrderPage() {
 									type="button"
 									variant="ghost"
 									size="sm"
-									onClick={() => setCreating(!creating)}
+									onClick={() => setCreating(true)}
 								>
-									{creating ? (
-										<>
-											<X className="size-4" /> Cancelar
-										</>
-									) : (
-										<>
-											<Plus className="size-4" /> Vehículo nuevo
-										</>
-									)}
+									<Plus className="size-4" />
+									Registrar vehículo
 								</Button>
 							)
 						}
@@ -188,15 +175,6 @@ function NewOrderPage() {
 									Cambiar
 								</Button>
 							</div>
-						) : creating ? (
-							<VehicleForm
-								workshopID={workshopID}
-								onCreated={(created) => {
-									setVehicle(created.id);
-									setCreating(false);
-									setSearch("");
-								}}
-							/>
 						) : (
 							<div className="space-y-3">
 								<SearchInput
@@ -253,13 +231,12 @@ function NewOrderPage() {
 						<form id="new-order" onSubmit={submit} noValidate>
 							<SectionCard
 								title={
-									<span className="flex items-center gap-2">
-										<Step n={2} done={!!reason} />
+									<StepTitle n={2} done={!!reason}>
 										Recepción
-									</span>
+									</StepTitle>
 								}
 							>
-								<div className="grid gap-4">
+								<div className="grid gap-5">
 									<div className="grid gap-2">
 										<TextField
 											name="reason"
@@ -286,26 +263,28 @@ function NewOrderPage() {
 											))}
 										</div>
 									</div>
-									<div className="grid gap-4 sm:grid-cols-2">
+									<div className="grid gap-5 sm:grid-cols-2">
 										<NumberField
 											name="km"
 											label="Kilometraje actual"
+											suffix="km"
+											optional
 											min="0"
 											placeholder={
 												lastKm != null ? String(lastKm) : "Ej. 85000"
 											}
 											description={
-												<span
-													className={
-														kmBelow ? "font-medium text-warn" : undefined
-													}
-												>
-													{kmBelow
-														? `Es menor que la última lectura (${formatKm(lastKm)}).`
-														: lastKm != null
-															? `Última lectura: ${formatKm(lastKm)}`
-															: "Opcional"}
-												</span>
+												lastKm != null ? (
+													<span
+														className={
+															kmBelow ? "font-medium text-warn" : undefined
+														}
+													>
+														{kmBelow
+															? `Es menor que la última lectura (${formatKm(lastKm)}).`
+															: `Última lectura: ${formatKm(lastKm)}`}
+													</span>
+												) : undefined
 											}
 										/>
 										<SelectField
@@ -321,14 +300,17 @@ function NewOrderPage() {
 									<TextareaField
 										name="notes"
 										label={
-											<>
-												<Lock className="size-3.5 text-ink-3" /> Notas internas{" "}
-												<span className="font-normal text-ink-3">
-													· privadas del taller
-												</span>
-											</>
+											<span className="inline-flex items-center gap-1.5">
+												<Lock
+													className="size-3.5 text-ink-3"
+													aria-hidden="true"
+												/>
+												Notas internas
+											</span>
 										}
-										placeholder="Nunca se muestran al propietario ni a otros talleres"
+										optional
+										placeholder="Ej. El cliente pide que lo llamen antes de cambiar piezas"
+										description="Solo las ve tu taller. Nunca se muestran al propietario ni a otros talleres."
 									/>
 									<RootError />
 								</div>
@@ -337,38 +319,44 @@ function NewOrderPage() {
 					</Form>
 				</div>
 
-				<aside className="space-y-3 lg:sticky lg:top-6">
+				<FormDialog
+					open={creating}
+					onOpenChange={setCreating}
+					title="Registrar vehículo"
+					description="Queda como provisional hasta que el propietario acepte la invitación. Solo marca y modelo son obligatorios."
+				>
+					<VehicleForm
+						workshopID={workshopID}
+						onCreated={(created) => {
+							setVehicle(created.id);
+							setCreating(false);
+							setSearch("");
+						}}
+					/>
+				</FormDialog>
+
+				<aside className="lg:sticky lg:top-6">
 					<SectionCard title="Resumen">
-						<dl className="space-y-2.5 text-[13px]">
-							<div className="flex justify-between gap-3">
-								<dt className="text-ink-3">Vehículo</dt>
-								<dd className="text-right font-medium">
-									{chosen ? (
-										<Plate value={chosen.plate} />
-									) : (
-										<span className="text-ink-3">Sin elegir</span>
-									)}
-								</dd>
-							</div>
-							<div className="flex justify-between gap-3">
-								<dt className="text-ink-3">Motivo</dt>
-								<dd className="truncate text-right font-medium">
-									{reason || <span className="text-ink-3">—</span>}
-								</dd>
-							</div>
-							<div className="flex justify-between gap-3">
-								<dt className="text-ink-3">Kilometraje</dt>
-								<dd className="text-right font-mono">
-									{km ? formatKm(km) : "—"}
-								</dd>
-							</div>
-							<div className="flex justify-between gap-3">
-								<dt className="text-ink-3">Sucursal</dt>
-								<dd className="truncate text-right">
-									{branches.find((b) => b.branch_id === branchID)?.branch_name}
-								</dd>
-							</div>
-						</dl>
+						<DetailList
+							items={[
+								{
+									label: "Vehículo",
+									value: chosen && <Plate value={chosen.plate} />,
+									empty: "Sin elegir",
+								},
+								{ label: "Motivo", value: reason },
+								{
+									label: "Kilometraje",
+									value: km && formatKm(km),
+									mono: true,
+								},
+								{
+									label: "Sucursal",
+									value: branches.find((b) => b.branch_id === branchID)
+										?.branch_name,
+								},
+							]}
+						/>
 						<Button
 							type="submit"
 							form="new-order"
@@ -384,18 +372,5 @@ function NewOrderPage() {
 				</aside>
 			</div>
 		</PageBody>
-	);
-}
-
-function Step({ n, done }: { n: number; done: boolean }) {
-	return (
-		<span
-			className={cn(
-				"grid size-5 place-items-center rounded-full font-mono text-[11px] font-semibold",
-				done ? "bg-seal text-white" : "bg-secondary text-ink-2",
-			)}
-		>
-			{done ? <Check className="size-3" /> : n}
-		</span>
 	);
 }

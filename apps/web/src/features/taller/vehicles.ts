@@ -1,5 +1,6 @@
 import type { components } from "@kilora/contracts";
 import { queryOptions } from "@tanstack/react-query";
+import type { DateRange } from "@/components/kilora/date-range-filter";
 import { api, unwrap } from "@/lib/api";
 import { LIST_PAGE_SIZE } from "@/lib/pagination";
 
@@ -84,17 +85,34 @@ export const inviteOwnerAction =
 export const vehiclesPageQuery = (
 	workshopID: string,
 	q = "",
-	status?: Exclude<S["VehicleStatus"], "archivado">,
+	statuses: Exclude<S["VehicleStatus"], "archivado">[] = [],
 	offset = 0,
+	range: DateRange = {},
 ) =>
 	queryOptions({
-		queryKey: ["workshop", workshopID, "vehicles", "page", q, status, offset],
+		queryKey: [
+			"workshop",
+			workshopID,
+			"vehicles",
+			"page",
+			q,
+			statuses,
+			offset,
+			range,
+		],
 		queryFn: async () =>
 			unwrap(
 				await api.GET("/api/v1/workshops/{workshopID}/vehicles/page", {
 					params: {
 						path: { workshopID },
-						query: { q: q || undefined, status, limit: LIST_PAGE_SIZE, offset },
+						query: {
+							q: q || undefined,
+							status: statuses.length ? statuses : undefined,
+							limit: LIST_PAGE_SIZE,
+							offset,
+							from: range.from,
+							to: range.to,
+						},
 					},
 				}),
 			),

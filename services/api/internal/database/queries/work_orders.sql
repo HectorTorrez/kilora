@@ -33,7 +33,9 @@ WHERE wo.workshop_id = sqlc.arg(workshop_id)
   AND wo.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
   AND (sqlc.narg(branch_id)::uuid IS NULL OR wo.branch_id = sqlc.narg(branch_id))
   AND (sqlc.narg(search)::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE sqlc.narg(search) ESCAPE '\')
-  AND (sqlc.narg(status)::work_order_status IS NULL OR wo.status = sqlc.narg(status))
+  AND (cardinality(sqlc.arg(statuses)::text[]) = 0 OR wo.status::text = ANY(sqlc.arg(statuses)::text[]))
+  AND (sqlc.narg(date_from)::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
+  AND (sqlc.narg(date_to)::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
 ORDER BY wo.received_at DESC, wo.id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -44,4 +46,6 @@ WHERE wo.workshop_id = sqlc.arg(workshop_id)
   AND wo.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
   AND (sqlc.narg(branch_id)::uuid IS NULL OR wo.branch_id = sqlc.narg(branch_id))
   AND (sqlc.narg(search)::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE sqlc.narg(search) ESCAPE '\')
+  AND (sqlc.narg(date_from)::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
+  AND (sqlc.narg(date_to)::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
 GROUP BY wo.status;

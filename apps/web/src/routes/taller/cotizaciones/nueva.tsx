@@ -4,6 +4,11 @@ import {
 	CounterQuoteForm,
 	counterQuoteFormValues,
 } from "@/components/kilora/counter-quote-form";
+import {
+	BackLink,
+	PageBody,
+	PageHeader,
+} from "@/components/kilora/workshop-ui";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { createCounterQuoteAction } from "@/features/taller/quotes";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
@@ -24,11 +29,12 @@ function NewQuotePage() {
 		createCounterQuoteAction(workshopID),
 	);
 	return (
-		<main className="mx-auto max-w-3xl space-y-5 px-5 py-7">
-			<div>
-				<p className="text-xs text-ink-3">MOSTRADOR</p>
-				<h1 className="font-display text-3xl font-bold">Nueva cotización</h1>
-			</div>
+		<PageBody>
+			<PageHeader
+				back={<BackLink to="/taller/cotizaciones">Cotizaciones</BackLink>}
+				title="Nueva cotización"
+				description="Presupuesto de mostrador: no hace falta que el vehículo esté registrado ni que el cliente tenga cuenta."
+			/>
 			<CounterQuoteForm
 				workshopID={workshopID}
 				branches={branches}
@@ -49,6 +55,6 @@ function NewQuotePage() {
 					});
 				}}
 			/>
-		</main>
+		</PageBody>
 	);
 }

@@ -19,6 +19,8 @@ WHERE wo.workshop_id = $1
   AND wo.branch_id = ANY($2::uuid[])
   AND ($3::uuid IS NULL OR wo.branch_id = $3)
   AND ($4::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE $4 ESCAPE '\')
+  AND ($5::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date >= $5::date)
+  AND ($6::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date <= $6::date)
 GROUP BY wo.status
 `
 
@@ -27,6 +29,8 @@ type CountWorkOrdersByStatusParams struct {
 	BranchIds  []uuid.UUID `json:"branch_ids"`
 	BranchID   *uuid.UUID  `json:"branch_id"`
 	Search     *string     `json:"search"`
+	DateFrom   pgtype.Date `json:"date_from"`
+	DateTo     pgtype.Date `json:"date_to"`
 }
 
 type CountWorkOrdersByStatusRow struct {
@@ -40,6 +44,8 @@ func (q *Queries) CountWorkOrdersByStatus(ctx context.Context, arg CountWorkOrde
 		arg.BranchIds,
 		arg.BranchID,
 		arg.Search,
+		arg.DateFrom,
+		arg.DateTo,
 	)
 	if err != nil {
 		return nil, err
@@ -288,19 +294,23 @@ WHERE wo.workshop_id = $1
   AND wo.branch_id = ANY($2::uuid[])
   AND ($3::uuid IS NULL OR wo.branch_id = $3)
   AND ($4::text IS NULL OR concat_ws(' ', v.plate, wo.reason, v.make, v.model, '#' || wo.number::text) ILIKE $4 ESCAPE '\')
-  AND ($5::work_order_status IS NULL OR wo.status = $5)
+  AND (cardinality($5::text[]) = 0 OR wo.status::text = ANY($5::text[]))
+  AND ($6::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date >= $6::date)
+  AND ($7::date IS NULL OR (wo.received_at AT TIME ZONE 'America/El_Salvador')::date <= $7::date)
 ORDER BY wo.received_at DESC, wo.id DESC
-LIMIT $7 OFFSET $6
+LIMIT $9 OFFSET $8
 `
 
 type ListWorkOrdersPageParams struct {
-	WorkshopID uuid.UUID        `json:"workshop_id"`
-	BranchIds  []uuid.UUID      `json:"branch_ids"`
-	BranchID   *uuid.UUID       `json:"branch_id"`
-	Search     *string          `json:"search"`
-	Status     *WorkOrderStatus `json:"status"`
-	RowOffset  int32            `json:"row_offset"`
-	RowLimit   int32            `json:"row_limit"`
+	WorkshopID uuid.UUID   `json:"workshop_id"`
+	BranchIds  []uuid.UUID `json:"branch_ids"`
+	BranchID   *uuid.UUID  `json:"branch_id"`
+	Search     *string     `json:"search"`
+	Statuses   []string    `json:"statuses"`
+	DateFrom   pgtype.Date `json:"date_from"`
+	DateTo     pgtype.Date `json:"date_to"`
+	RowOffset  int32       `json:"row_offset"`
+	RowLimit   int32       `json:"row_limit"`
 }
 
 type ListWorkOrdersPageRow struct {
@@ -316,7 +326,9 @@ func (q *Queries) ListWorkOrdersPage(ctx context.Context, arg ListWorkOrdersPage
 		arg.BranchIds,
 		arg.BranchID,
 		arg.Search,
-		arg.Status,
+		arg.Statuses,
+		arg.DateFrom,
+		arg.DateTo,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

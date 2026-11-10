@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, Copy, MessageCircle, Send } from "lucide-react";
+import { BadgeCheck, MessageCircle, Send } from "lucide-react";
 import QRCode from "qrcode";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -13,10 +13,9 @@ import {
 	TextField,
 } from "@/components/kilora/form-fields";
 import { emailField } from "@/components/kilora/form-schemas";
-import { SectionCard } from "@/components/kilora/workshop-ui";
+import { CopyField, SectionCard } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import {
 	invitationsQuery,
@@ -117,25 +116,7 @@ export function OwnerInvitation({
 						<p className="text-xs font-medium text-ok">
 							Invitación creada. Compartila por WhatsApp o mostrá el QR.
 						</p>
-						<div className="flex gap-2">
-							<Input
-								readOnly
-								value={invite.data.url}
-								aria-label="Enlace de invitación"
-								className="font-mono text-xs"
-							/>
-							<Button
-								variant="outline"
-								size="icon"
-								aria-label="Copiar enlace"
-								onClick={async () => {
-									await navigator.clipboard.writeText(invite.data.url);
-									toast.success("Enlace copiado");
-								}}
-							>
-								<Copy className="size-4" />
-							</Button>
-						</div>
+						<CopyField value={invite.data.url} label="Enlace de invitación" />
 						<Button asChild variant="outline" className="w-full">
 							<a
 								href={invite.data.whatsapp_url}

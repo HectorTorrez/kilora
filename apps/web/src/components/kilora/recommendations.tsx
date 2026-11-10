@@ -1,20 +1,14 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Lightbulb, Plus, X } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 import { SectionCard } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import {
 	recommendationActions,
@@ -23,6 +17,18 @@ import {
 import { categoryLabels } from "@/lib/domain";
 import { dueText, type Urgency, urgency } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
+import { FormDialog } from "./form-dialog";
+import {
+	applyFormError,
+	DateField,
+	FormActions,
+	NumberField,
+	RequiredLegend,
+	RootError,
+	SelectField,
+	SubmitButton,
+	TextField,
+} from "./form-fields";
 import { kmField, requiredText } from "./form-schemas";
 
 const urgencyStyle: Record<Urgency, string> = {
@@ -49,6 +55,137 @@ export function UrgencyBadge({ value }: { value: Urgency }) {
 	);
 }
 
+const recommendationSchema = z
+	.object({
+		description: requiredText("Contá qué trabajo recomendás").max(
+			200,
+			"Usá como máximo 200 caracteres",
+		),
+		category: z.string(),
+		due_date: z.string(),
+		due_km: kmField(),
+	})
+	.refine((value) => value.due_date || value.due_km, {
+		path: ["due_km"],
+		message: "Indicá una fecha, un kilometraje o ambos",
+	});
+
+const categoryOptions = [
+	{ value: "none", label: "Sin categoría" },
+	...Object.entries(categoryLabels).map(([value, label]) => ({ value, label })),
+];
+
+function RecommendationForm({
+	workshopID,
+	vehicleID,
+	workOrderID,
+	currentKm,
+	onDone,
+}: {
+	workshopID: string;
+	vehicleID: string;
+	workOrderID?: string;
+	currentKm?: number | null;
+	onDone: () => void;
+}) {
+	const create = useWorkshopMutation(
+		workshopID,
+		recommendationActions(workshopID).recommend,
+		{ inlineErrors: true },
+	);
+	const form = useForm({
+		mode: "onChange",
+		resolver: zodResolver(recommendationSchema),
+		defaultValues: {
+			description: "",
+			category: "none",
+			due_date: "",
+			due_km: "",
+		},
+	});
+	const submit = form.handleSubmit(async (values) => {
+		form.clearErrors("root");
+		try {
+			await create.mutateAsync({
+				vehicleID,
+				body: {
+					description: values.description,
+					category:
+						values.category === "none"
+							? null
+							: (values.category as components["schemas"]["PartCategory"]),
+					due_date: values.due_date || null,
+					due_km: values.due_km ? Number(values.due_km) : null,
+					work_order_id: workOrderID ?? null,
+				},
+			});
+			toast.success("Recomendación registrada");
+			onDone();
+		} catch (error) {
+			applyFormError(form, error);
+		}
+	});
+	return (
+		<Form {...form}>
+			<form onSubmit={submit} className="grid gap-5" noValidate>
+				<RequiredLegend />
+				<TextField
+					name="description"
+					label="Trabajo recomendado"
+					placeholder="Ej. Cambiar pastillas de freno delanteras"
+					maxLength={200}
+					autoFocus
+					required
+				/>
+				<div className="grid gap-5 sm:grid-cols-2">
+					<DateField
+						name="due_date"
+						label="Hacerlo antes del"
+						disableFuture={false}
+						optional
+					/>
+					<NumberField
+						name="due_km"
+						label="O al llegar a"
+						suffix="km"
+						min={0}
+						step={1}
+						placeholder={
+							currentKm != null ? String(currentKm + 5000) : "Ej. 90000"
+						}
+						optional
+					/>
+				</div>
+				<p className="-mt-2 text-xs text-ink-3">
+					Indicá una fecha, un kilometraje o ambos. Lo que llegue primero marca
+					la recomendación como próxima o vencida.
+				</p>
+				<SelectField
+					name="category"
+					label="Categoría"
+					options={categoryOptions}
+					optional
+					className="sm:max-w-60"
+				/>
+				<RootError />
+				<FormActions>
+					<Button
+						type="button"
+						variant="outline"
+						className="w-full sm:w-auto"
+						onClick={onDone}
+					>
+						Cancelar
+					</Button>
+					<SubmitButton pending={create.isPending}>
+						Guardar recomendación
+					</SubmitButton>
+				</FormActions>
+			</form>
+		</Form>
+	);
+}
+
 export function RecommendationsCard({
 	workshopID,
 	vehicleID,
@@ -63,163 +200,39 @@ export function RecommendationsCard({
 	const { data = [], isLoading } = useQuery(
 		vehicleRecommendationsQuery(workshopID, vehicleID),
 	);
-	const a = recommendationActions(workshopID);
-	const create = useWorkshopMutation(workshopID, a.recommend);
-	const resolve = useWorkshopMutation(workshopID, a.resolve);
+	const resolve = useWorkshopMutation(
+		workshopID,
+		recommendationActions(workshopID).resolve,
+	);
 	const [open, setOpen] = useState(false);
-	const [description, setDescription] = useState("");
-	const [category, setCategory] = useState("none");
-	const [dueDate, setDueDate] = useState("");
-	const [dueKm, setDueKm] = useState("");
 	const pending = data.filter((r) => r.status === "pendiente");
 	const resolved = data.filter((r) => r.status !== "pendiente").slice(0, 3);
 
 	return (
 		<SectionCard
 			title="Recomendaciones"
-			description="Trabajos sugeridos con fecha o kilometraje objetivo"
+			description="Trabajos a futuro para avisarle al cliente."
 			actions={
-				!open && (
-					<Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-						<Plus className="size-4" />
-						Agregar
-					</Button>
-				)
+				<Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+					<Plus className="size-3.5" />
+					Agregar
+				</Button>
 			}
 			bodyClassName="p-0 sm:p-0"
 		>
-			{open && (
-				<form
-					className="grid gap-3 border-b bg-secondary/30 p-4 sm:p-5"
-					onSubmit={(e) => {
-						e.preventDefault();
-						const validation = z
-							.object({
-								description: requiredText("Ingresá la recomendación"),
-								km: kmField(),
-							})
-							.safeParse({ description, km: dueKm });
-						if (!validation.success) {
-							toast.error(validation.error.issues[0].message);
-							return;
-						}
-						create.mutate(
-							{
-								vehicleID,
-								body: {
-									description: description.trim(),
-									category:
-										category === "none"
-											? null
-											: (category as components["schemas"]["PartCategory"]),
-									due_date: dueDate || null,
-									due_km: dueKm ? Number(dueKm) : null,
-									work_order_id: workOrderID ?? null,
-								},
-							},
-							{
-								onSuccess: () => {
-									toast.success("Recomendación registrada");
-									setDescription("");
-									setCategory("none");
-									setDueDate("");
-									setDueKm("");
-									setOpen(false);
-								},
-							},
-						);
-					}}
-				>
-					<Label className="grid gap-1.5" htmlFor="rec-description">
-						Qué recomendás
-						<Input
-							id="rec-description"
-							autoFocus
-							required
-							placeholder="Ej. Cambiar pastillas de freno delanteras"
-							value={description}
-							onChange={(e) => setDescription(e.target.value)}
-							className="bg-card"
-						/>
-					</Label>
-					<div className="grid grid-cols-2 gap-3">
-						<Label className="grid gap-1.5" htmlFor="rec-date">
-							Para la fecha
-							<Input
-								id="rec-date"
-								type="date"
-								value={dueDate}
-								onChange={(e) => setDueDate(e.target.value)}
-								className="bg-card"
-							/>
-						</Label>
-						<Label className="grid gap-1.5" htmlFor="rec-km">
-							O a los km
-							<Input
-								id="rec-km"
-								type="number"
-								min="0"
-								placeholder={
-									currentKm != null ? String(currentKm + 5000) : "Ej. 90000"
-								}
-								value={dueKm}
-								onChange={(e) => setDueKm(e.target.value)}
-								className="bg-card"
-							/>
-						</Label>
-					</div>
-					<Select value={category} onValueChange={setCategory}>
-						<SelectTrigger aria-label="Categoría" className="w-full bg-card">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="none">Sin categoría</SelectItem>
-							{Object.entries(categoryLabels).map(([value, label]) => (
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<div className="flex gap-2">
-						<Button
-							disabled={
-								create.isPending || !description.trim() || (!dueDate && !dueKm)
-							}
-						>
-							Guardar
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							onClick={() => setOpen(false)}
-						>
-							Cancelar
-						</Button>
-					</div>
-					{!dueDate && !dueKm && (
-						<p className="-mt-1 text-xs text-ink-3">
-							Indicá una fecha, un kilometraje o ambos.
-						</p>
-					)}
-				</form>
-			)}
 			{isLoading ? null : !pending.length && !resolved.length ? (
-				<div className="flex flex-col items-center px-6 py-8 text-center">
-					<Lightbulb className="size-5 text-ink-3" />
-					<p className="mt-2 text-sm text-ink-3">
-						Sin recomendaciones pendientes.
-					</p>
-				</div>
+				<p className="px-4 py-6 text-center text-[13px] text-ink-3 sm:px-5">
+					Sin recomendaciones pendientes.
+				</p>
 			) : (
 				<ul className="divide-y">
 					{pending.map((r) => (
 						<li key={r.id} className="flex items-start gap-3 px-4 py-3 sm:px-5">
 							<div className="min-w-0 flex-1">
 								<p className="text-[13px] font-medium">{r.description}</p>
-								<p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
+								<p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
 									<UrgencyBadge value={urgency(r, currentKm)} />
-									<span className="font-mono">{dueText(r)}</span>
+									<span>{dueText(r)}</span>
 									{r.category && <span>· {categoryLabels[r.category]}</span>}
 								</p>
 							</div>
@@ -264,6 +277,20 @@ export function RecommendationsCard({
 					))}
 				</ul>
 			)}
+			<FormDialog
+				open={open}
+				onOpenChange={setOpen}
+				title="Nueva recomendación"
+				description="Un trabajo que el vehículo va a necesitar. Aparece en la ficha y en el resumen del taller cuando se acerca la fecha."
+			>
+				<RecommendationForm
+					workshopID={workshopID}
+					vehicleID={vehicleID}
+					workOrderID={workOrderID}
+					currentKm={currentKm}
+					onDone={() => setOpen(false)}
+				/>
+			</FormDialog>
 		</SectionCard>
 	);
 }

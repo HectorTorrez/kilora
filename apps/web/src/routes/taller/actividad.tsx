@@ -2,7 +2,9 @@ import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
+	Building2,
 	Car,
+	ChevronRight,
 	ClipboardList,
 	FileText,
 	History,
@@ -10,6 +12,7 @@ import {
 	Mail,
 	ShieldCheck,
 	Users,
+	Wrench,
 } from "lucide-react";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
@@ -17,12 +20,11 @@ import {
 	EmptyState,
 	PageBody,
 	PageHeader,
-	relative,
 } from "@/components/kilora/workshop-ui";
 import { Card } from "@/components/ui/card";
 import { useWorkshopId } from "@/features/taller/session";
 import { auditPageQuery } from "@/features/taller/team";
-import { TIME_ZONE } from "@/lib/format";
+import { date, TIME_ZONE } from "@/lib/format";
 import { useListPage } from "@/lib/pagination";
 
 type Event = components["schemas"]["AuditEvent"];
@@ -68,6 +70,9 @@ const icons: Record<string, typeof Car> = {
 	invitation: Mail,
 	recommendation: Lightbulb,
 	membership: Users,
+	workshop: Building2,
+	job: Wrench,
+	part: Wrench,
 };
 
 const dayKey = (value: string) =>
@@ -92,11 +97,11 @@ function ActivityPage() {
 		auditPageQuery(workshopID, offset),
 	);
 	return (
-		<PageBody className="max-w-4xl">
+		<PageBody>
 			<PageHeader
 				eyebrow="Administración"
 				title="Actividad"
-				description="Bitácora de auditoría del taller. Es de solo lectura: ningún registro se puede editar ni borrar."
+				description="Todo lo que hizo tu equipo, con autor y hora. Es un registro permanente: no se puede editar ni borrar."
 			/>
 			<Card className="gap-0 overflow-hidden py-0 shadow-none">
 				<QueryContent
@@ -147,13 +152,10 @@ function AuditEvents({ events }: { events: Event[] }) {
 					<ul className="divide-y">
 						{items.map((ev) => {
 							const Icon = icons[ev.entity] ?? ShieldCheck;
-							return (
-								<li
-									key={ev.id}
-									className="flex items-center gap-3 px-4 py-2.5 sm:px-5"
-								>
+							const content = (
+								<>
 									<span className="grid size-7 shrink-0 place-items-center rounded-md bg-secondary text-ink-2">
-										<Icon className="size-3.5" />
+										<Icon className="size-3.5" aria-hidden="true" />
 									</span>
 									<p className="min-w-0 flex-1 text-[13px]">
 										<span className="font-semibold">
@@ -162,37 +164,47 @@ function AuditEvents({ events }: { events: Event[] }) {
 										<span className="text-ink-2">
 											{actions[ev.action] ?? ev.action}
 										</span>
-										{ev.entity === "work_order" && ev.entity_id && (
-											<>
-												{" · "}
-												<Link
-													to="/taller/ordenes/$orderId"
-													params={{ orderId: ev.entity_id }}
-													className="font-medium text-seal hover:underline"
-												>
-													ver orden
-												</Link>
-											</>
-										)}
-										{ev.entity === "vehicle" && ev.entity_id && (
-											<>
-												{" · "}
-												<Link
-													to="/taller/vehiculos/$vehicleId"
-													params={{ vehicleId: ev.entity_id }}
-													className="font-medium text-seal hover:underline"
-												>
-													ver vehículo
-												</Link>
-											</>
-										)}
 									</p>
-									<span
-										className="shrink-0 font-mono text-[11.5px] text-ink-3"
-										title={relative(ev.created_at)}
+									<time
+										dateTime={ev.created_at}
+										className="shrink-0 text-xs text-ink-3 tabular-nums"
+										title={date(ev.created_at)}
 									>
 										{time(ev.created_at)}
-									</span>
+									</time>
+									{ev.entity_id &&
+									(ev.entity === "work_order" || ev.entity === "vehicle") ? (
+										<ChevronRight
+											className="size-4 shrink-0 text-ink-3"
+											aria-hidden="true"
+										/>
+									) : (
+										<span className="w-4 shrink-0" />
+									)}
+								</>
+							);
+							const row = "flex items-center gap-3 px-4 py-2.5 sm:px-5";
+							return (
+								<li key={ev.id}>
+									{ev.entity === "work_order" && ev.entity_id ? (
+										<Link
+											to="/taller/ordenes/$orderId"
+											params={{ orderId: ev.entity_id }}
+											className={`${row} hover:bg-secondary/60`}
+										>
+											{content}
+										</Link>
+									) : ev.entity === "vehicle" && ev.entity_id ? (
+										<Link
+											to="/taller/vehiculos/$vehicleId"
+											params={{ vehicleId: ev.entity_id }}
+											className={`${row} hover:bg-secondary/60`}
+										>
+											{content}
+										</Link>
+									) : (
+										<div className={row}>{content}</div>
+									)}
 								</li>
 							);
 						})}

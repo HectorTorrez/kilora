@@ -1,14 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ClipboardList, MessageCircle, Plus } from "lucide-react";
+import { ClipboardList, MessageCircle, Plus } from "lucide-react";
 import { HistoryTimeline } from "@/components/kilora/history-timeline";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
+	BackLink,
+	DetailList,
 	OrderStatusBadge,
 	PageBody,
+	PageHeader,
 	Plate,
-	relative,
 	SectionCard,
 	VehicleStatusBadge,
 } from "@/components/kilora/workshop-ui";
@@ -18,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ordersQuery } from "@/features/taller/orders";
 import { useWorkshopId } from "@/features/taller/session";
 import { historyQuery, vehicleQuery } from "@/features/taller/vehicles";
-import { date, day, km, phone } from "@/lib/format";
+import { date, day, km, phone, shortDate } from "@/lib/format";
 import { lastByCategory } from "@/lib/history";
 
 export const Route = createFileRoute("/taller/vehiculos/$vehicleId")({
@@ -74,31 +76,23 @@ function VehiclePage() {
 
 	return (
 		<PageBody>
-			<div>
-				<Link
-					to="/taller/vehiculos"
-					className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-foreground"
-				>
-					<ArrowLeft className="size-3.5" />
-					Vehículos
-				</Link>
-				<div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-					<div className="flex flex-wrap items-center gap-4">
-						<Plate value={v.plate} className="px-3 py-1.5 text-xl" />
-						<div>
-							<h1 className="font-display text-[26px] leading-tight font-bold">
-								{v.make} {v.model}
-								{v.year && (
-									<span className="ml-2 font-normal text-ink-3">{v.year}</span>
-								)}
-							</h1>
-							<div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-3">
-								<VehicleStatusBadge status={v.status} />
-								<span>Registrado el {date(v.created_at)}</span>
-							</div>
-						</div>
-					</div>
-					<div className="flex flex-wrap gap-2">
+			<PageHeader
+				back={<BackLink to="/taller/vehiculos">Vehículos</BackLink>}
+				eyebrow={`Registrado el ${date(v.created_at)}`}
+				title={
+					<>
+						<Plate value={v.plate} className="text-base" />
+						<span>
+							{v.make} {v.model}
+							{v.year && (
+								<span className="ml-2 font-normal text-ink-3">{v.year}</span>
+							)}
+						</span>
+					</>
+				}
+				badges={<VehicleStatusBadge status={v.status} />}
+				actions={
+					<>
 						{whatsApp && (
 							<Button asChild variant="outline">
 								<a
@@ -129,16 +123,16 @@ function VehiclePage() {
 								</Link>
 							</Button>
 						)}
-					</div>
-				</div>
-			</div>
+					</>
+				}
+			/>
 
 			<dl className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border bg-line md:grid-cols-4">
 				{[
-					["Kilometraje", km(v.last_odometer_km)],
+					["Último kilometraje", km(v.last_odometer_km)],
 					["Servicios publicados", String(records.length)],
 					["Órdenes en el taller", String(vehicleOrders.length)],
-					["Última actividad", relative(v.last_activity_at)],
+					["Última actividad", shortDate(v.last_activity_at)],
 				].map(([label, value]) => (
 					<div key={label} className="bg-card px-4 py-3">
 						<dt className="text-xs text-ink-3">{label}</dt>
@@ -149,11 +143,11 @@ function VehiclePage() {
 				))}
 			</dl>
 
-			<div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
-				<div className="space-y-6">
+			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+				<div className="min-w-0 space-y-6">
 					<SectionCard
 						title="Historial del vehículo"
-						description="Proyección para tu taller: ves tus costos y notas; de otros talleres, solo trabajo, fecha y kilometraje."
+						description="De tus servicios ves todo. De otros talleres, solo el trabajo, la fecha y el kilometraje."
 					>
 						{history.isLoading ? (
 							<Skeleton className="h-40" />
@@ -191,7 +185,7 @@ function VehiclePage() {
 											</span>
 											<OrderStatusBadge status={o.status} />
 											<span className="hidden w-28 text-right text-xs text-ink-3 sm:block">
-												{relative(o.received_at)}
+												{shortDate(o.received_at)}
 											</span>
 										</Link>
 									</li>
@@ -202,32 +196,30 @@ function VehiclePage() {
 				</div>
 
 				<div className="space-y-6">
+					<SectionCard title="Datos del vehículo">
+						<DetailList
+							items={[
+								{ label: "Contacto", value: v.contact_name },
+								{
+									label: "Teléfono",
+									value: phone(v.contact_phone),
+									mono: true,
+								},
+								{ label: "VIN", value: v.vin, mono: true },
+								{ label: "Año", value: v.year },
+							]}
+						/>
+					</SectionCard>
+
 					<RecommendationsCard
 						workshopID={workshopID}
 						vehicleID={v.id}
 						currentKm={v.last_odometer_km}
 					/>
 
-					<SectionCard title="Ficha">
-						<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2.5 text-[13px]">
-							<dt className="text-ink-3">Contacto</dt>
-							<dd className="text-right font-medium">
-								{v.contact_name || "—"}
-							</dd>
-							<dt className="text-ink-3">Teléfono</dt>
-							<dd className="text-right font-mono">
-								{phone(v.contact_phone) || "—"}
-							</dd>
-							<dt className="text-ink-3">VIN</dt>
-							<dd className="truncate text-right font-mono">{v.vin || "—"}</dd>
-							<dt className="text-ink-3">Año</dt>
-							<dd className="text-right">{v.year ?? "—"}</dd>
-						</dl>
-					</SectionCard>
-
 					<SectionCard
 						title="Último cambio por pieza"
-						description="Útil para la hoja del mecánico"
+						description="Según los servicios publicados en el historial."
 						bodyClassName="p-0 sm:p-0"
 					>
 						<ul className="divide-y text-[13px]">

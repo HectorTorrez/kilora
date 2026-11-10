@@ -2346,9 +2346,14 @@ export interface paths {
             parameters: {
                 query?: {
                     q?: string;
-                    outcome?: "pendiente" | "acepto" | "rechazo" | "no_respondio";
+                    /** @description Uno o varios valores; sin valor, se listan todos. */
+                    outcome?: ("pendiente" | "acepto" | "rechazo" | "no_respondio")[];
                     limit?: number;
                     offset?: number;
+                    /** @description Fecha de creación desde (inclusive), en hora de El Salvador. */
+                    from?: string;
+                    /** @description Fecha de creación hasta (inclusive), en hora de El Salvador. */
+                    to?: string;
                 };
                 header?: never;
                 path: {
@@ -3803,10 +3808,15 @@ export interface paths {
             parameters: {
                 query?: {
                     q?: string;
-                    status?: components["schemas"]["WorkOrderStatus"];
+                    /** @description Uno o varios valores; sin valor, se listan todos. */
+                    status?: components["schemas"]["WorkOrderStatus"][];
                     limit?: number;
                     offset?: number;
                     branch_id?: string;
+                    /** @description Fecha de recepción desde (inclusive), en hora de El Salvador. */
+                    from?: string;
+                    /** @description Fecha de recepción hasta (inclusive), en hora de El Salvador. */
+                    to?: string;
                 };
                 header?: never;
                 path: {
@@ -3900,9 +3910,14 @@ export interface paths {
             parameters: {
                 query?: {
                     q?: string;
-                    status?: "provisional" | "vinculado";
+                    /** @description Uno o varios valores; sin valor, se listan todos. */
+                    status?: ("provisional" | "vinculado")[];
                     limit?: number;
                     offset?: number;
+                    /** @description Fecha de última actividad desde (inclusive), en hora de El Salvador. */
+                    from?: string;
+                    /** @description Fecha de última actividad hasta (inclusive), en hora de El Salvador. */
+                    to?: string;
                 };
                 header?: never;
                 path: {
@@ -4474,6 +4489,10 @@ export interface components {
         CounterQuoteList: {
             items: components["schemas"]["CounterQuoteSummary"][];
             total: number;
+            /** @description Cantidad por respuesta del cliente, sin aplicar ese filtro. La clave vacía es el total. */
+            counts: {
+                [key: string]: number;
+            };
         };
         CounterQuote: {
             /** Format: uuid */

@@ -40,17 +40,20 @@ export function quoteItemValues(
 	};
 }
 
+// El editor vive en tarjetas de distinto ancho, así que se adapta a su
+// contenedor: en tarjetas anchas es una tabla; en angostas, cada ítem es
+// una ficha con la descripción arriba.
+const table =
+	"@2xl:grid-cols-[150px_minmax(0,1fr)_84px_120px_96px_36px] @2xl:items-start";
+
 export function QuoteItemsFields({
-	layout = "cards",
 	initialUnitPrice = "",
 }: {
-	layout?: "cards" | "compact";
 	initialUnitPrice?: string;
 }) {
 	const { control, formState } = useFormContext<{ items: QuoteItemValues[] }>();
 	const rows = useFieldArray({ control, name: "items" });
 	const watched = useWatch({ control, name: "items" });
-	const compact = layout === "compact";
 	let parts = 0;
 	let labor = 0;
 	for (const item of watched ?? []) {
@@ -59,147 +62,122 @@ export function QuoteItemsFields({
 		else parts += cents;
 	}
 	const add = () => rows.append(blankQuoteItem(initialUnitPrice));
-	const fieldClass = compact ? "[&>[data-slot=form-label]]:sr-only" : undefined;
+	const hiddenLabel = "@2xl:[&>[data-slot=form-label]]:sr-only";
+	const error =
+		formState.errors.items?.root?.message ?? formState.errors.items?.message;
 	return (
-		<>
-			{compact ? (
-				<div className="hidden grid-cols-[140px_1fr_80px_110px_36px] gap-2 px-0.5 text-[11.5px] font-medium text-ink-3 sm:grid">
-					<span>Tipo</span>
-					<span>Descripción</span>
-					<span>Cant.</span>
-					<span>Precio unit.</span>
-					<span />
-				</div>
-			) : (
-				<div className="flex items-center justify-between gap-3">
-					<h2 className="font-semibold">Ítems</h2>
-					<Button type="button" variant="outline" size="sm" onClick={add}>
-						Agregar ítem
-					</Button>
-				</div>
-			)}
+		<div className="@container space-y-3">
+			<div
+				className={cn(
+					"hidden gap-2 px-0.5 text-[11.5px] font-medium text-ink-3 @2xl:grid",
+					table,
+				)}
+				aria-hidden="true"
+			>
+				<span>Tipo</span>
+				<span>Descripción</span>
+				<span>Cantidad</span>
+				<span>Precio unit.</span>
+				<span className="text-right">Subtotal</span>
+				<span />
+			</div>
 			{rows.fields.map((row, index) => (
 				<div
 					key={row.id}
-					className={
-						compact
-							? "grid grid-cols-[1fr_1fr_auto] gap-2 sm:grid-cols-[140px_1fr_80px_110px_36px]"
-							: "grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
-					}
+					className={cn(
+						"grid grid-cols-2 gap-3 rounded-md border p-3 @md:grid-cols-[minmax(0,1fr)_84px_120px_88px_40px] @2xl:gap-2 @2xl:rounded-none @2xl:border-0 @2xl:p-0",
+						table,
+					)}
 				>
 					<SelectField
 						name={`items.${index}.kind`}
 						label="Tipo"
-						className={fieldClass}
+						className={hiddenLabel}
 						options={[
 							{ value: "repuesto", label: "Repuesto" },
 							{ value: "mano_de_obra", label: "Mano de obra" },
 						]}
-						required
 					/>
 					<TextField
 						name={`items.${index}.description`}
 						label="Descripción"
-						placeholder={compact ? "Descripción" : undefined}
-						className={cn(fieldClass, compact && "col-span-2 sm:col-span-1")}
-						required
+						placeholder="Ej. Pastillas de freno delanteras"
+						className={cn(
+							hiddenLabel,
+							"order-first col-span-full @2xl:order-none @2xl:col-span-1",
+						)}
 					/>
 					<NumberField
 						name={`items.${index}.quantity`}
 						label="Cantidad"
 						min={0.01}
 						step="0.01"
-						className={fieldClass}
-						required
+						className={hiddenLabel}
 					/>
 					<NumberField
 						name={`items.${index}.unit_price`}
-						label="Precio unitario"
-						prefix={compact ? undefined : "$"}
+						label="Precio unit."
+						prefix="$"
 						min={0}
 						step="0.01"
-						className={fieldClass}
-						required
+						className={hiddenLabel}
 					/>
-					{compact ? (
-						<Button
-							type="button"
-							variant="ghost"
-							size="icon"
-							aria-label="Quitar ítem"
-							className="text-ink-3 hover:text-destructive"
-							onClick={() => rows.remove(index)}
-						>
-							<Trash2 className="size-4" />
-						</Button>
-					) : (
-						<div className="flex items-center justify-between gap-3 sm:col-span-2">
-							<p className="text-sm tabular-nums">
-								Subtotal{" "}
-								{money(
-									formatCents(
-										lineCents(
-											watched?.[index]?.quantity,
-											watched?.[index]?.unit_price,
-										),
+					<div className="self-end text-right">
+						<p className="mb-2 text-sm leading-none font-medium @2xl:hidden">
+							Subtotal
+						</p>
+						<p className="flex h-10 items-center justify-end font-mono text-[13px] tabular-nums">
+							{money(
+								formatCents(
+									lineCents(
+										watched?.[index]?.quantity,
+										watched?.[index]?.unit_price,
 									),
-								)}
-							</p>
-							<Button
-								type="button"
-								variant="outline"
-								size="sm"
-								disabled={rows.fields.length === 1}
-								onClick={() => rows.remove(index)}
-							>
-								Quitar
-							</Button>
-						</div>
-					)}
+								),
+							)}
+						</p>
+					</div>
+					<Button
+						type="button"
+						variant="ghost"
+						size="icon"
+						aria-label={`Quitar ítem ${index + 1}`}
+						title="Quitar ítem"
+						className="size-10 self-end justify-self-end text-ink-3 hover:text-destructive"
+						disabled={rows.fields.length === 1}
+						onClick={() => rows.remove(index)}
+					>
+						<Trash2 className="size-4" />
+					</Button>
 				</div>
 			))}
-			{formState.errors.items?.root?.message ||
-			formState.errors.items?.message ? (
-				<p className="text-sm text-destructive">
-					{formState.errors.items.root?.message ??
-						formState.errors.items.message}
-				</p>
-			) : null}
-			{compact ? (
-				<div className="flex flex-wrap items-center justify-between gap-3 border-t pt-3">
-					<button
-						type="button"
-						className="inline-flex items-center gap-1 text-xs font-semibold text-seal hover:underline"
-						onClick={add}
-					>
-						<Plus className="size-3.5" />
-						Agregar ítem
-					</button>
-					<p className="text-[13px] text-ink-3">
-						Total cotizado{" "}
-						<strong className="ml-1 font-display text-lg text-foreground tabular-nums">
-							{money(formatCents(parts + labor))}
-						</strong>
-					</p>
-				</div>
-			) : (
-				<dl className="grid gap-1 border-t pt-3 text-sm">
-					<div className="flex justify-between gap-4">
-						<dt>Subtotal repuestos</dt>
-						<dd className="tabular-nums">{money(formatCents(parts))}</dd>
+			{error ? <p className="text-sm text-destructive">{error}</p> : null}
+			<div className="flex flex-wrap items-start justify-between gap-4 border-t pt-3">
+				<Button type="button" variant="outline" size="sm" onClick={add}>
+					<Plus className="size-4" />
+					Agregar ítem
+				</Button>
+				<dl className="grid min-w-56 gap-1 text-[13px]">
+					<div className="flex justify-between gap-6 text-ink-3">
+						<dt>Repuestos</dt>
+						<dd className="font-mono tabular-nums">
+							{money(formatCents(parts))}
+						</dd>
 					</div>
-					<div className="flex justify-between gap-4">
-						<dt>Subtotal mano de obra</dt>
-						<dd className="tabular-nums">{money(formatCents(labor))}</dd>
+					<div className="flex justify-between gap-6 text-ink-3">
+						<dt>Mano de obra</dt>
+						<dd className="font-mono tabular-nums">
+							{money(formatCents(labor))}
+						</dd>
 					</div>
-					<div className="flex justify-between gap-4 text-base font-bold">
-						<dt>Total</dt>
-						<dd className="tabular-nums">
+					<div className="mt-1 flex items-baseline justify-between gap-6 border-t pt-2">
+						<dt className="font-semibold">Total</dt>
+						<dd className="font-display text-lg font-bold tabular-nums">
 							{money(formatCents(parts + labor))}
 						</dd>
 					</div>
 				</dl>
-			)}
-		</>
+			</div>
+		</div>
 	);
 }

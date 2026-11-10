@@ -1,48 +1,81 @@
 import type { components } from "@kilora/contracts";
-import type { LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Check, Copy, type LucideIcon } from "lucide-react";
+import { Fragment, type ReactNode } from "react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { statusLabel } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type S = components["schemas"];
 
+/** Link de "volver" que va arriba del título de una página de detalle. */
+export function BackLink({
+	children,
+	className,
+	...props
+}: Omit<React.ComponentProps<typeof Link>, "children"> & {
+	children: ReactNode;
+}) {
+	return (
+		<Link
+			{...props}
+			className={cn(
+				"inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-foreground print:hidden",
+				className as string,
+			)}
+		>
+			<ArrowLeft className="size-3.5" aria-hidden="true" />
+			{children}
+		</Link>
+	);
+}
+
 export function PageHeader({
+	back,
 	eyebrow,
 	title,
+	badges,
 	description,
 	actions,
 	className,
 }: {
+	back?: ReactNode;
 	eyebrow?: ReactNode;
 	title: ReactNode;
+	badges?: ReactNode;
 	description?: ReactNode;
 	actions?: ReactNode;
 	className?: string;
 }) {
 	return (
-		<header
-			className={cn(
-				"flex flex-wrap items-end justify-between gap-x-6 gap-y-4",
-				className,
-			)}
-		>
-			<div className="min-w-0">
-				{eyebrow && (
-					<p className="font-mono text-[11px] tracking-widest text-ink-3 uppercase">
-						{eyebrow}
-					</p>
-				)}
-				<h1 className="mt-1 font-display text-[28px] leading-tight font-bold tracking-[-0.01em] text-balance">
-					{title}
-				</h1>
-				{description && (
-					<p className="mt-1.5 max-w-2xl text-sm text-pretty text-ink-3">
-						{description}
-					</p>
+		<header className={cn("space-y-3", className)}>
+			{back}
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+				<div className="min-w-0 flex-1">
+					{eyebrow && (
+						<p className="mb-1 font-mono text-[11px] tracking-widest text-ink-3 uppercase">
+							{eyebrow}
+						</p>
+					)}
+					<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+						<h1 className="flex min-w-0 flex-wrap items-center gap-3 font-display text-[28px] leading-tight font-bold tracking-[-0.01em] text-balance">
+							{title}
+						</h1>
+						{badges}
+					</div>
+					{description && (
+						<div className="mt-1.5 max-w-2xl text-sm text-pretty text-ink-3">
+							{description}
+						</div>
+					)}
+				</div>
+				{actions && (
+					<div className="flex shrink-0 flex-wrap gap-2">{actions}</div>
 				)}
 			</div>
-			{actions && <div className="flex flex-wrap gap-2">{actions}</div>}
 		</header>
 	);
 }
@@ -63,6 +96,92 @@ export function PageBody({
 		>
 			{children}
 		</main>
+	);
+}
+
+/** Barra de una lista: búsqueda y filtros por columna. */
+export function ListToolbar({ children }: { children: ReactNode }) {
+	return (
+		<div className="flex flex-wrap items-center gap-2 border-b px-3 py-3 sm:px-4">
+			{children}
+		</div>
+	);
+}
+
+/** Valor vacío uniforme: siempre "—" gris, nunca en monoespaciada. */
+export function Missing({ children = "—" }: { children?: ReactNode }) {
+	return <span className="font-sans font-normal text-ink-3">{children}</span>;
+}
+
+const isBlank = (value: ReactNode) =>
+	value === null ||
+	value === undefined ||
+	value === false ||
+	value === "" ||
+	value === "—";
+
+export function DetailList({
+	items,
+	className,
+}: {
+	items: {
+		label: ReactNode;
+		value: ReactNode;
+		mono?: boolean;
+		empty?: ReactNode;
+	}[];
+	className?: string;
+}) {
+	return (
+		<dl
+			className={cn(
+				"grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-[13px]",
+				className,
+			)}
+		>
+			{items.map((item, index) => (
+				<Fragment
+					// biome-ignore lint/suspicious/noArrayIndexKey: lista estática.
+					key={index}
+				>
+					<dt className="text-ink-3">{item.label}</dt>
+					<dd
+						className={cn(
+							"min-w-0 truncate text-right font-medium",
+							item.mono && "font-mono font-normal tabular-nums",
+						)}
+					>
+						{isBlank(item.value) ? <Missing>{item.empty}</Missing> : item.value}
+					</dd>
+				</Fragment>
+			))}
+		</dl>
+	);
+}
+
+/** Enlace para compartir con botón de copiar. */
+export function CopyField({ value, label }: { value: string; label: string }) {
+	return (
+		<div className="flex gap-2">
+			<Input
+				readOnly
+				value={value}
+				aria-label={label}
+				className="font-mono text-xs"
+				onFocus={(event) => event.currentTarget.select()}
+			/>
+			<Button
+				type="button"
+				variant="outline"
+				onClick={async () => {
+					await navigator.clipboard.writeText(value);
+					toast.success("Enlace copiado");
+				}}
+			>
+				<Copy className="size-4" />
+				Copiar
+			</Button>
+		</div>
 	);
 }
 
@@ -176,15 +295,24 @@ export function StatCard({
 	hint,
 	icon: Icon,
 	tone = "default",
+	interactive = false,
 }: {
 	label: string;
 	value: ReactNode;
 	hint?: ReactNode;
 	icon: LucideIcon;
 	tone?: "default" | "warn" | "ok" | "seal";
+	/** Si va envuelta en un link: muestra el hover. */
+	interactive?: boolean;
 }) {
 	return (
-		<Card className="gap-0 p-4 shadow-none sm:p-5">
+		<Card
+			className={cn(
+				"h-full gap-0 p-4 shadow-none sm:p-5",
+				interactive &&
+					"transition-colors group-hover:border-seal/40 group-hover:bg-seal-soft/30 group-focus-visible:ring-2 group-focus-visible:ring-ring",
+			)}
+		>
 			<div className="flex items-center justify-between gap-2">
 				<p className="text-[12.5px] font-medium text-ink-3">{label}</p>
 				<span
@@ -208,6 +336,7 @@ export function StatCard({
 }
 
 export function SectionCard({
+	id,
 	title,
 	description,
 	actions,
@@ -215,6 +344,7 @@ export function SectionCard({
 	className,
 	bodyClassName,
 }: {
+	id?: string;
 	title: ReactNode;
 	description?: ReactNode;
 	actions?: ReactNode;
@@ -223,31 +353,47 @@ export function SectionCard({
 	bodyClassName?: string;
 }) {
 	return (
-		<Card className={cn("gap-0 overflow-hidden py-0 shadow-none", className)}>
-			<div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
-				<div className="min-w-0">
+		<Card
+			id={id}
+			className={cn("gap-0 overflow-hidden py-0 shadow-none", className)}
+		>
+			<div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
+				<div className="min-w-0 flex-1">
 					<h2 className="text-[14px] font-semibold">{title}</h2>
 					{description && (
-						<p className="mt-0.5 text-xs text-ink-3">{description}</p>
+						<p className="mt-0.5 text-xs text-pretty text-ink-3">
+							{description}
+						</p>
 					)}
 				</div>
-				{actions && <div className="flex gap-2">{actions}</div>}
+				{actions && <div className="flex shrink-0 gap-2">{actions}</div>}
 			</div>
 			<div className={cn("p-4 sm:p-5", bodyClassName)}>{children}</div>
 		</Card>
 	);
 }
 
-export const relative = (value: string) => {
-	const diff = Date.now() - new Date(value).getTime();
-	const minutes = Math.round(diff / 60000);
-	const rtf = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
-	if (Math.abs(minutes) < 60) return rtf.format(-minutes, "minute");
-	const hours = Math.round(minutes / 60);
-	if (Math.abs(hours) < 24) return rtf.format(-hours, "hour");
-	const days = Math.round(hours / 24);
-	if (Math.abs(days) < 30) return rtf.format(-days, "day");
-	const months = Math.round(days / 30);
-	if (Math.abs(months) < 12) return rtf.format(-months, "month");
-	return rtf.format(-Math.round(months / 12), "year");
-};
+/** Título de sección numerada para formularios largos (Nueva orden, Nueva cotización). */
+export function StepTitle({
+	n,
+	done = false,
+	children,
+}: {
+	n: number;
+	done?: boolean;
+	children: ReactNode;
+}) {
+	return (
+		<span className="flex items-center gap-2">
+			<span
+				className={cn(
+					"grid size-5 place-items-center rounded-full font-mono text-[11px] font-semibold",
+					done ? "bg-seal text-white" : "bg-secondary text-ink-2",
+				)}
+			>
+				{done ? <Check className="size-3" /> : n}
+			</span>
+			{children}
+		</span>
+	);
+}

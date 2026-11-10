@@ -38,3 +38,13 @@ export const plural = (n: number, one: string, many: string) =>
 	`${n} ${n === 1 ? one : many}`;
 export const phone = (value: string | null | undefined) =>
 	value ? formatPhoneNumberIntl(value) || value : "";
+/** Fecha corta con año, en hora de El Salvador: "7 nov 2026". */
+export const shortDate = (value: string) =>
+	new Intl.DateTimeFormat("es-SV", {
+		day: "numeric",
+		month: "short",
+		year: "numeric",
+		timeZone: TIME_ZONE,
+	})
+		.format(new Date(value))
+		.replace(/\./g, "");

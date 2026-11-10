@@ -2,12 +2,13 @@ import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-	ArrowLeft,
 	ArrowRight,
 	BadgeCheck,
 	Ban,
 	Check,
 	Lock,
+	MoreHorizontal,
+	Pencil,
 	Plus,
 	Printer,
 	Trash2,
@@ -16,21 +17,23 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
 import {
-	kmField,
-	moneyField,
-	optionalText,
-	quantityField,
-	requiredText,
-} from "@/components/kilora/form-schemas";
+	CancelOrderDialog,
+	EditOrderDialog,
+	JobDialog,
+	PartDialog,
+} from "@/components/kilora/order-dialogs";
 import { OrderQuoteCard } from "@/components/kilora/order-quote-card";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
+	BackLink,
+	DetailList,
 	EmptyState,
+	Missing,
 	OrderStatusBadge,
 	PageBody,
+	PageHeader,
 	Plate,
 	SectionCard,
 } from "@/components/kilora/workshop-ui";
@@ -44,17 +47,13 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Textarea } from "@/components/ui/textarea";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { orderActions, orderQuery } from "@/features/taller/orders";
 import { useWorkshopId } from "@/features/taller/session";
@@ -133,48 +132,40 @@ function OrderDetail({
 	const a = orderActions(workshopID, order.id);
 	const status = useWorkshopMutation(workshopID, a.status);
 	const [cancelOpen, setCancelOpen] = useState(false);
-	const [cancelReason, setCancelReason] = useState("");
+	const [editOpen, setEditOpen] = useState(false);
 	const nextStatus = next[order.status];
 	const closed = order.status === "listo" || order.status === "cancelado";
 	const step = flow.indexOf(order.status);
 
 	return (
 		<PageBody>
-			<div>
-				<Link
-					to="/taller/ordenes"
-					className="inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-foreground print:hidden"
-				>
-					<ArrowLeft className="size-3.5" />
-					Órdenes
-				</Link>
-				<div className="mt-3 flex flex-wrap items-end justify-between gap-4">
-					<div className="min-w-0">
-						<div className="flex flex-wrap items-center gap-2">
-							<span className="font-mono text-[13px] font-semibold text-ink-3">
-								Orden #{order.number}
+			<PageHeader
+				back={<BackLink to="/taller/ordenes">Órdenes</BackLink>}
+				eyebrow={`Orden #${order.number} · recibida el ${date(order.received_at)}`}
+				title={
+					<>
+						<Plate value={vehicle?.plate} className="text-base" />
+						{vehicle ? (
+							`${vehicle.make} ${vehicle.model}`
+						) : (
+							<Skeleton className="h-7 w-48" />
+						)}
+					</>
+				}
+				badges={
+					<>
+						<OrderStatusBadge status={order.status} />
+						{order.history_record_id && (
+							<span className="inline-flex items-center gap-1 rounded-full bg-seal-soft px-2 py-0.5 text-[11.5px] font-semibold text-seal">
+								<BadgeCheck className="size-3.5" />
+								Publicada en el historial
 							</span>
-							<OrderStatusBadge status={order.status} />
-							{order.history_record_id && (
-								<span className="inline-flex items-center gap-1 rounded-full bg-seal-soft px-2 py-0.5 text-[11.5px] font-semibold text-seal">
-									<BadgeCheck className="size-3.5" />
-									Publicada en el historial
-								</span>
-							)}
-						</div>
-						<h1 className="mt-2 flex flex-wrap items-center gap-3 font-display text-[26px] leading-tight font-bold">
-							<Plate value={vehicle?.plate} className="text-base" />
-							{vehicle ? (
-								`${vehicle.make} ${vehicle.model}`
-							) : (
-								<Skeleton className="h-7 w-48" />
-							)}
-						</h1>
-						<p className="mt-1 text-sm text-ink-3">
-							{order.reason} · recibida el {date(order.received_at)}
-						</p>
-					</div>
-					<div className="flex flex-wrap gap-2">
+						)}
+					</>
+				}
+				description={order.reason}
+				actions={
+					<>
 						<Button asChild variant="outline">
 							<Link
 								to="/taller/ordenes/$orderId/hoja"
@@ -185,10 +176,30 @@ function OrderDetail({
 							</Link>
 						</Button>
 						{!closed && (
-							<Button variant="outline" onClick={() => setCancelOpen(true)}>
-								<Ban className="size-4" />
-								Cancelar
-							</Button>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="outline"
+										size="icon"
+										aria-label="Más acciones"
+									>
+										<MoreHorizontal className="size-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									<DropdownMenuItem onSelect={() => setEditOpen(true)}>
+										<Pencil />
+										Editar datos de la orden
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										variant="destructive"
+										onSelect={() => setCancelOpen(true)}
+									>
+										<Ban />
+										Cancelar orden
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
 						)}
 						{nextStatus && (
 							<Button
@@ -217,60 +228,105 @@ function OrderDetail({
 									: `Pasar a ${statusLabel(nextStatus).toLowerCase()}`}
 							</Button>
 						)}
-					</div>
-				</div>
-			</div>
+					</>
+				}
+			/>
 
 			{order.status === "cancelado" ? (
 				<Alert variant="destructive">
+					<Ban />
 					<AlertDescription>
 						Orden cancelada
 						{order.cancelled_at ? ` el ${date(order.cancelled_at)}` : ""}
-						{order.cancel_reason ? ` · ${order.cancel_reason}` : ""}
+						{order.cancel_reason ? `. Motivo: ${order.cancel_reason}` : ""}
 					</AlertDescription>
 				</Alert>
 			) : (
-				<ol
-					className="grid grid-cols-4 gap-2"
-					aria-label="Progreso de la orden"
-				>
-					{flow.map((s, i) => (
-						<li key={s} aria-current={i === step ? "step" : undefined}>
-							<div
-								className={cn(
-									"h-1.5 rounded-full bg-secondary",
-									i <= step && "bg-seal",
-									i === step && s !== "listo" && "bg-seal/60",
-								)}
-							/>
-							<p
-								className={cn(
-									"mt-1.5 text-[11.5px] text-ink-3",
-									i === step && "font-semibold text-foreground",
-								)}
-							>
-								{statusLabel(s)}
-							</p>
-						</li>
-					))}
-				</ol>
-			)}
-			{nextStatus === "listo" && (
-				<p className="-mt-3 text-xs text-ink-3">
-					Al marcarla como lista se publica un registro inmutable en el
-					historial del vehículo. Las correcciones posteriores se agregan, no se
-					reescriben.
-				</p>
+				<div className="space-y-2">
+					<ol
+						className="grid grid-cols-4 gap-2"
+						aria-label="Progreso de la orden"
+					>
+						{flow.map((s, i) => (
+							<li key={s} aria-current={i === step ? "step" : undefined}>
+								<div
+									className={cn(
+										"h-1.5 rounded-full bg-secondary",
+										i < step && "bg-seal",
+										i === step && (s === "listo" ? "bg-ok" : "bg-seal/60"),
+									)}
+								/>
+								<p
+									className={cn(
+										"mt-1.5 text-[11.5px] text-ink-3",
+										i === step && "font-semibold text-foreground",
+									)}
+								>
+									{statusLabel(s)}
+								</p>
+							</li>
+						))}
+					</ol>
+					{nextStatus === "listo" && (
+						<p className="text-xs text-ink-3">
+							Al marcarla como lista se publica en el historial del vehículo y
+							ya no se puede editar. Si algo queda mal, se agrega una
+							corrección.
+						</p>
+					)}
+				</div>
 			)}
 
-			<div className="grid items-start gap-6 lg:grid-cols-[1fr_340px]">
+			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
 				<div className="min-w-0 space-y-6">
 					<JobsCard workshopID={workshopID} order={order} locked={closed} />
 					<OrderQuoteCard workshopID={workshopID} order={order} />
 				</div>
 				<div className="space-y-6">
 					<SectionCard
-						title="Vehículo"
+						title="Datos de la orden"
+						actions={
+							!closed && (
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => setEditOpen(true)}
+								>
+									<Pencil className="size-3.5" />
+									Editar
+								</Button>
+							)
+						}
+					>
+						<div className="space-y-4">
+							<DetailList
+								items={[
+									{ label: "Motivo", value: order.reason },
+									{
+										label: "Km de ingreso",
+										value:
+											order.odometer_km != null && formatKm(order.odometer_km),
+										mono: true,
+									},
+								]}
+							/>
+							<NoteBlock
+								label="Notas para el propietario"
+								value={order.public_notes}
+							/>
+							<NoteBlock
+								label={
+									<span className="inline-flex items-center gap-1">
+										<Lock className="size-3" aria-hidden="true" />
+										Notas internas
+									</span>
+								}
+								value={order.internal_notes}
+							/>
+						</div>
+					</SectionCard>
+					<SectionCard
+						title="Vehículo y contacto"
 						actions={
 							<Button asChild variant="ghost" size="sm">
 								<Link
@@ -283,22 +339,18 @@ function OrderDetail({
 							</Button>
 						}
 					>
-						<dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13px]">
-							<dt className="text-ink-3">Contacto</dt>
-							<dd className="truncate text-right font-medium">
-								{vehicle?.contact_name || "—"}
-							</dd>
-							<dt className="text-ink-3">Teléfono</dt>
-							<dd className="text-right font-mono">
-								{phone(vehicle?.contact_phone) || "—"}
-							</dd>
-							<dt className="text-ink-3">Km de ingreso</dt>
-							<dd className="text-right font-mono">
-								{formatKm(order.odometer_km)}
-							</dd>
-						</dl>
+						<DetailList
+							items={[
+								{ label: "Contacto", value: vehicle?.contact_name },
+								{
+									label: "Teléfono",
+									value: phone(vehicle?.contact_phone),
+									mono: true,
+								},
+								{ label: "Año", value: vehicle?.year },
+							]}
+						/>
 					</SectionCard>
-					<OrderDataCard workshopID={workshopID} order={order} />
 					<RecommendationsCard
 						workshopID={workshopID}
 						vehicleID={order.vehicle_id}
@@ -314,58 +366,36 @@ function OrderDetail({
 				</div>
 			</div>
 
-			<Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Cancelar orden #{order.number}</DialogTitle>
-						<DialogDescription>
-							La orden no se publica en el historial. Dejá constancia del
-							motivo.
-						</DialogDescription>
-					</DialogHeader>
-					<form
-						id="cancel-form"
-						onSubmit={(e) => {
-							e.preventDefault();
-							status.mutate(
-								{ status: "cancelado", cancel_reason: cancelReason },
-								{
-									onSuccess: () => {
-										setCancelOpen(false);
-										toast.success("Orden cancelada");
-									},
-								},
-							);
-						}}
-					>
-						<Label htmlFor="cancel-reason" className="grid gap-2">
-							Motivo de cancelación
-							<Textarea
-								id="cancel-reason"
-								required
-								autoFocus
-								placeholder="Ej. El cliente decidió no hacer la reparación"
-								value={cancelReason}
-								onChange={(e) => setCancelReason(e.target.value)}
-							/>
-						</Label>
-					</form>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setCancelOpen(false)}>
-							Volver
-						</Button>
-						<Button
-							type="submit"
-							form="cancel-form"
-							variant="destructive"
-							disabled={!cancelReason.trim() || status.isPending}
-						>
-							Cancelar orden
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			<EditOrderDialog
+				workshopID={workshopID}
+				order={order}
+				open={editOpen}
+				onOpenChange={setEditOpen}
+			/>
+			<CancelOrderDialog
+				workshopID={workshopID}
+				order={order}
+				open={cancelOpen}
+				onOpenChange={setCancelOpen}
+			/>
 		</PageBody>
+	);
+}
+
+function NoteBlock({
+	label,
+	value,
+}: {
+	label: React.ReactNode;
+	value?: string | null;
+}) {
+	return (
+		<div className="border-t pt-3 text-[13px]">
+			<p className="text-ink-3">{label}</p>
+			<p className="mt-1 whitespace-pre-line">
+				{value || <Missing>Sin notas</Missing>}
+			</p>
+		</div>
 	);
 }
 
@@ -379,17 +409,14 @@ function JobsCard({
 	locked: boolean;
 }) {
 	const a = orderActions(workshopID, order.id);
-	const job = useWorkshopMutation(workshopID, a.job);
 	const deleteJob = useWorkshopMutation(workshopID, a.deleteJob);
-	const part = useWorkshopMutation(workshopID, a.part);
 	const deletePart = useWorkshopMutation(workshopID, a.deletePart);
-	const [jobName, setJobName] = useState("");
-	const [labor, setLabor] = useState("");
-	const [category, setCategory] = useState<string>("none");
-	const [partName, setPartName] = useState("");
-	const [partQty, setPartQty] = useState("1");
-	const [partPrice, setPartPrice] = useState("");
-	const [partJob, setPartJob] = useState("");
+	const [jobOpen, setJobOpen] = useState(false);
+	const [partFor, setPartFor] = useState<{
+		id: string;
+		description: string;
+	} | null>(null);
+	const [removing, setRemoving] = useState<S["JobDetail"] | null>(null);
 	const total = order.jobs.reduce(
 		(sum, j) =>
 			sum +
@@ -401,32 +428,48 @@ function JobsCard({
 	return (
 		<SectionCard
 			title="Trabajos y piezas"
-			description="Lo que se cobra. La categoría alimenta el «último cambio por pieza»."
+			description="Lo que se le cobra al cliente en esta orden."
+			actions={
+				!locked && (
+					<Button size="sm" onClick={() => setJobOpen(true)}>
+						<Plus className="size-4" />
+						Agregar trabajo
+					</Button>
+				)
+			}
 			bodyClassName="p-0 sm:p-0"
 		>
 			{!order.jobs.length ? (
 				<EmptyState
 					icon={Wrench}
 					title="Sin trabajos todavía"
-					description="Agregá el primer trabajo realizado con su mano de obra."
+					description="Agregá cada trabajo con su mano de obra; después le sumás las piezas que usaste."
+					action={
+						!locked && (
+							<Button variant="outline" onClick={() => setJobOpen(true)}>
+								<Plus className="size-4" />
+								Agregar trabajo
+							</Button>
+						)
+					}
 				/>
 			) : (
 				<ul className="divide-y">
 					{order.jobs.map((j) => (
-						<li key={j.id} className="px-4 py-3.5 sm:px-5">
+						<li key={j.id} className="px-4 py-4 sm:px-5">
 							<div className="flex items-start gap-3">
 								<div className="min-w-0 flex-1">
-									<p className="text-[13.5px] font-semibold">
+									<p className="flex flex-wrap items-center gap-2 text-[13.5px] font-semibold">
 										{j.description}
 										{j.category && (
-											<span className="ml-2 rounded bg-secondary px-1.5 py-px align-middle text-[10.5px] font-medium text-ink-2">
+											<span className="rounded bg-secondary px-1.5 py-px text-[10.5px] font-medium text-ink-2">
 												{categoryLabels[j.category]}
 											</span>
 										)}
 									</p>
 									<p className="text-xs text-ink-3">Mano de obra</p>
 								</div>
-								<span className="font-mono text-[13px] tabular-nums">
+								<span className="pt-0.5 font-mono text-[13px] tabular-nums">
 									{money(j.labor_price || 0)}
 								</span>
 								{!locked && (
@@ -435,14 +478,15 @@ function JobsCard({
 										size="icon"
 										className="-my-1 size-8 text-ink-3 hover:text-destructive"
 										aria-label={`Eliminar trabajo ${j.description}`}
-										onClick={() => deleteJob.mutate(j.id)}
+										title="Eliminar trabajo"
+										onClick={() => setRemoving(j)}
 									>
 										<Trash2 className="size-4" />
 									</Button>
 								)}
 							</div>
 							{j.parts.length > 0 && (
-								<ul className="mt-2 space-y-1 border-l-2 pl-3">
+								<ul className="mt-3 space-y-1.5 border-l-2 pl-3">
 									{j.parts.map((p) => (
 										<li
 											key={p.id}
@@ -466,10 +510,17 @@ function JobsCard({
 												<Button
 													variant="ghost"
 													size="icon"
-													className="size-7 text-ink-3 hover:text-destructive"
-													aria-label={`Eliminar pieza ${p.name}`}
+													className="size-8 text-ink-3 hover:text-destructive"
+													aria-label={`Quitar pieza ${p.name}`}
+													title="Quitar pieza"
+													disabled={deletePart.isPending}
 													onClick={() =>
-														deletePart.mutate({ jobID: j.id, partID: p.id })
+														deletePart.mutate(
+															{ jobID: j.id, partID: p.id },
+															{
+																onSuccess: () => toast.success("Pieza quitada"),
+															},
+														)
 													}
 												>
 													<X className="size-3.5" />
@@ -479,284 +530,77 @@ function JobsCard({
 									))}
 								</ul>
 							)}
-							{!locked &&
-								(partJob === j.id ? (
-									<form
-										className="mt-3 flex flex-wrap gap-2 rounded-md bg-secondary/50 p-2"
-										onSubmit={(e) => {
-											e.preventDefault();
-											const validation = z
-												.object({
-													name: requiredText("Ingresá el nombre de la pieza"),
-													quantity: quantityField,
-													price: moneyField(),
-												})
-												.safeParse({
-													name: partName.trim(),
-													quantity: partQty || "1",
-													price: partPrice,
-												});
-											if (!validation.success) {
-												toast.error(validation.error.issues[0].message);
-												return;
-											}
-											part.mutate(
-												{
-													jobID: j.id,
-													body: {
-														name: partName.trim(),
-														quantity: partQty || 1,
-														unit_price: partPrice || "0",
-													},
-												},
-												{
-													onSuccess: () => {
-														setPartName("");
-														setPartPrice("");
-														setPartQty("1");
-														setPartJob("");
-													},
-												},
-											);
-										}}
-									>
-										<Input
-											autoFocus
-											className="min-w-40 flex-1 bg-card"
-											required
-											aria-label="Pieza"
-											placeholder="Pieza"
-											value={partName}
-											onChange={(e) => setPartName(e.target.value)}
-										/>
-										<Input
-											className="w-20 bg-card"
-											type="number"
-											min="0.01"
-											step="0.01"
-											aria-label="Cantidad"
-											value={partQty}
-											onChange={(e) => setPartQty(e.target.value)}
-										/>
-										<Input
-											className="w-28 bg-card"
-											type="number"
-											min="0"
-											step="0.01"
-											aria-label="Precio unitario"
-											placeholder="Precio"
-											value={partPrice}
-											onChange={(e) => setPartPrice(e.target.value)}
-										/>
-										<Button size="sm" className="h-9" disabled={part.isPending}>
-											Agregar
-										</Button>
-										<Button
-											type="button"
-											size="sm"
-											variant="ghost"
-											className="h-9"
-											onClick={() => setPartJob("")}
-										>
-											Cancelar
-										</Button>
-									</form>
-								) : (
-									<button
-										type="button"
-										className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-seal hover:underline"
-										onClick={() => setPartJob(j.id)}
-									>
-										<Plus className="size-3.5" />
-										Agregar pieza
-									</button>
-								))}
+							{!locked && (
+								<Button
+									variant="ghost"
+									size="sm"
+									className="mt-2 -ml-2 text-seal hover:text-seal"
+									onClick={() => setPartFor(j)}
+								>
+									<Plus className="size-3.5" />
+									Agregar pieza
+								</Button>
+							)}
 						</li>
 					))}
 				</ul>
 			)}
-			{!locked && (
-				<form
-					className="flex flex-wrap gap-2 border-t bg-secondary/30 px-4 py-3 sm:px-5"
-					onSubmit={(e) => {
-						e.preventDefault();
-						const validation = z
-							.object({
-								name: requiredText("Ingresá el trabajo realizado"),
-								labor: moneyField(),
-							})
-							.safeParse({ name: jobName.trim(), labor });
-						if (!validation.success) {
-							toast.error(validation.error.issues[0].message);
-							return;
-						}
-						job.mutate(
-							{
-								description: jobName,
-								labor_price: labor || "0",
-								category:
-									category === "none" ? null : (category as S["PartCategory"]),
-							},
-							{
-								onSuccess: () => {
-									setJobName("");
-									setLabor("");
-									setCategory("none");
-								},
-							},
-						);
-					}}
-				>
-					<Input
-						required
-						className="min-w-48 flex-1 bg-card"
-						aria-label="Trabajo realizado"
-						placeholder="Trabajo realizado"
-						value={jobName}
-						onChange={(e) => setJobName(e.target.value)}
-					/>
-					<Select value={category} onValueChange={setCategory}>
-						<SelectTrigger aria-label="Categoría" className="w-40 bg-card">
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="none">Sin categoría</SelectItem>
-							{Object.entries(categoryLabels).map(([value, label]) => (
-								<SelectItem key={value} value={value}>
-									{label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-					<Input
-						className="w-32 bg-card"
-						type="number"
-						min="0"
-						step="0.01"
-						aria-label="Mano de obra"
-						placeholder="Mano de obra"
-						value={labor}
-						onChange={(e) => setLabor(e.target.value)}
-					/>
-					<Button disabled={job.isPending}>
-						<Plus className="size-4" />
-						Agregar trabajo
-					</Button>
-				</form>
-			)}
-			<div className="flex items-center justify-between border-t px-4 py-3 sm:px-5">
-				<span className="text-[13px] text-ink-3">Total a cobrar</span>
+			<div className="flex items-center justify-between border-t bg-secondary/30 px-4 py-3 sm:px-5">
+				<span className="text-[13px] font-medium text-ink-2">
+					Total a cobrar
+				</span>
 				<span className="font-display text-xl font-bold tabular-nums">
 					{money(formatCents(total))}
 				</span>
 			</div>
-		</SectionCard>
-	);
-}
 
-function OrderDataCard({
-	workshopID,
-	order,
-}: {
-	workshopID: string;
-	order: S["WorkOrderDetail"];
-}) {
-	const edit = useWorkshopMutation(
-		workshopID,
-		orderActions(workshopID, order.id).edit,
-	);
-	const [reason, setReason] = useState(order.reason);
-	const [km, setKm] = useState(order.odometer_km?.toString() || "");
-	const [publicNotes, setPublicNotes] = useState(order.public_notes || "");
-	const [internalNotes, setInternalNotes] = useState(
-		order.internal_notes || "",
-	);
-	const dirty =
-		reason !== order.reason ||
-		km !== (order.odometer_km?.toString() || "") ||
-		publicNotes !== (order.public_notes || "") ||
-		internalNotes !== (order.internal_notes || "");
-
-	return (
-		<SectionCard title="Datos de la orden">
-			<form
-				className="grid gap-3.5"
-				onSubmit={(e) => {
-					e.preventDefault();
-					const validation = z
-						.object({
-							reason: requiredText("Ingresá el motivo"),
-							km: kmField(),
-							publicNotes: optionalText,
-							internalNotes: optionalText,
-						})
-						.safeParse({ reason, km, publicNotes, internalNotes });
-					if (!validation.success) {
-						toast.error(validation.error.issues[0].message);
-						return;
-					}
-					edit.mutate(
-						{
-							reason,
-							odometer_km: km ? Number(km) : null,
-							public_notes: publicNotes || null,
-							internal_notes: internalNotes || null,
-						},
-						{ onSuccess: () => toast.success("Cambios guardados") },
-					);
-				}}
+			<JobDialog
+				workshopID={workshopID}
+				orderID={order.id}
+				open={jobOpen}
+				onOpenChange={setJobOpen}
+			/>
+			<PartDialog
+				workshopID={workshopID}
+				orderID={order.id}
+				job={partFor}
+				onOpenChange={(open) => !open && setPartFor(null)}
+			/>
+			<Dialog
+				open={!!removing}
+				onOpenChange={(open) => !open && setRemoving(null)}
 			>
-				<Label className="grid gap-1.5" htmlFor="order-reason">
-					Motivo
-					<Input
-						id="order-reason"
-						required
-						value={reason}
-						onChange={(e) => setReason(e.target.value)}
-					/>
-				</Label>
-				<Label className="grid gap-1.5" htmlFor="order-km">
-					Kilometraje
-					<Input
-						id="order-km"
-						type="number"
-						min="0"
-						value={km}
-						onChange={(e) => setKm(e.target.value)}
-					/>
-				</Label>
-				<Label className="grid gap-1.5" htmlFor="order-public">
-					<span>
-						Notas públicas{" "}
-						<span className="font-normal text-ink-3">
-							· las ve el propietario
-						</span>
-					</span>
-					<Textarea
-						id="order-public"
-						value={publicNotes}
-						onChange={(e) => setPublicNotes(e.target.value)}
-					/>
-				</Label>
-				<Label className="grid gap-1.5" htmlFor="order-internal">
-					<span className="flex items-center gap-1">
-						<Lock className="size-3 text-ink-3" />
-						Notas internas{" "}
-						<span className="font-normal text-ink-3">· solo el taller</span>
-					</span>
-					<Textarea
-						id="order-internal"
-						value={internalNotes}
-						onChange={(e) => setInternalNotes(e.target.value)}
-					/>
-				</Label>
-				<Button
-					variant={dirty ? "default" : "outline"}
-					disabled={!dirty || edit.isPending}
-				>
-					{edit.isPending ? "Guardando…" : "Guardar cambios"}
-				</Button>
-			</form>
+				<DialogContent>
+					<DialogHeader>
+						<DialogTitle>¿Eliminar «{removing?.description}»?</DialogTitle>
+						<DialogDescription>
+							{removing?.parts.length
+								? `También se quitan sus ${removing.parts.length} pieza(s).`
+								: "Se quita de la orden y del total a cobrar."}
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button variant="outline" onClick={() => setRemoving(null)}>
+							Volver
+						</Button>
+						<Button
+							variant="destructive"
+							disabled={deleteJob.isPending}
+							onClick={() =>
+								removing &&
+								deleteJob.mutate(removing.id, {
+									onSuccess: () => {
+										toast.success("Trabajo eliminado");
+										setRemoving(null);
+									},
+								})
+							}
+						>
+							Eliminar trabajo
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</SectionCard>
 	);
 }

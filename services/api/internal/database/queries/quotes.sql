@@ -101,7 +101,7 @@ LEFT JOIN work_order o ON o.id = q.converted_order_id
 WHERE q.workshop_id = sqlc.arg(workshop_id)
   AND q.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
   AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
-  AND (sqlc.narg(outcome)::quote_outcome IS NULL OR q.outcome = sqlc.narg(outcome))
+  AND (cardinality(sqlc.arg(outcomes)::text[]) = 0 OR q.outcome::text = ANY(sqlc.arg(outcomes)::text[]))
   AND (
     sqlc.narg(search)::text IS NULL
     OR q.customer_name ILIKE sqlc.narg(search) ESCAPE '\'
@@ -110,6 +110,8 @@ WHERE q.workshop_id = sqlc.arg(workshop_id)
     OR q.number::text ILIKE sqlc.narg(search) ESCAPE '\'
     OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE sqlc.narg(search) ESCAPE '\'
   )
+  AND (sqlc.narg(date_from)::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
+  AND (sqlc.narg(date_to)::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
 ORDER BY q.created_at DESC, q.number DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -144,14 +146,13 @@ WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id)
   AND (work_order_id IS NULL OR converted_order_id IS NOT NULL)
 RETURNING id, share_expires_at, total::text;
 
--- name: CountCounterQuotes :one
-SELECT count(*)
+-- name: CountCounterQuotesByOutcome :many
+SELECT q.outcome, count(*) AS total
 FROM quote q
 LEFT JOIN work_order o ON o.id = q.converted_order_id
 WHERE q.workshop_id = sqlc.arg(workshop_id)
   AND q.branch_id = ANY(sqlc.arg(branch_ids)::uuid[])
   AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
-  AND (sqlc.narg(outcome)::quote_outcome IS NULL OR q.outcome = sqlc.narg(outcome))
   AND (
     sqlc.narg(search)::text IS NULL
     OR q.customer_name ILIKE sqlc.narg(search) ESCAPE '\'
@@ -159,4 +160,7 @@ WHERE q.workshop_id = sqlc.arg(workshop_id)
     OR COALESCE(q.vehicle_plate, '') ILIKE sqlc.narg(search) ESCAPE '\'
     OR q.number::text ILIKE sqlc.narg(search) ESCAPE '\'
     OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE sqlc.narg(search) ESCAPE '\'
-  );
+  )
+  AND (sqlc.narg(date_from)::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
+  AND (sqlc.narg(date_to)::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
+GROUP BY q.outcome;

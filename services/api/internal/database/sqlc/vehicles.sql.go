@@ -9,6 +9,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const countVehiclesByStatus = `-- name: CountVehiclesByStatus :many
@@ -16,12 +17,16 @@ SELECT v.status, count(*) AS total
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
 WHERE l.workshop_id = $1 AND v.status <> 'archivado'
   AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
+  AND ($3::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= $3::date)
+  AND ($4::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= $4::date)
 GROUP BY v.status
 `
 
 type CountVehiclesByStatusParams struct {
-	WorkshopID uuid.UUID `json:"workshop_id"`
-	Search     *string   `json:"search"`
+	WorkshopID uuid.UUID   `json:"workshop_id"`
+	Search     *string     `json:"search"`
+	DateFrom   pgtype.Date `json:"date_from"`
+	DateTo     pgtype.Date `json:"date_to"`
 }
 
 type CountVehiclesByStatusRow struct {
@@ -30,7 +35,12 @@ type CountVehiclesByStatusRow struct {
 }
 
 func (q *Queries) CountVehiclesByStatus(ctx context.Context, arg CountVehiclesByStatusParams) ([]CountVehiclesByStatusRow, error) {
-	rows, err := q.db.Query(ctx, countVehiclesByStatus, arg.WorkshopID, arg.Search)
+	rows, err := q.db.Query(ctx, countVehiclesByStatus,
+		arg.WorkshopID,
+		arg.Search,
+		arg.DateFrom,
+		arg.DateTo,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -275,24 +285,30 @@ SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.mak
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
 WHERE l.workshop_id = $1 AND v.status <> 'archivado'
   AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
-  AND ($3::vehicle_status IS NULL OR v.status = $3)
+  AND (cardinality($3::text[]) = 0 OR v.status::text = ANY($3::text[]))
+  AND ($4::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= $4::date)
+  AND ($5::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= $5::date)
 ORDER BY v.last_activity_at DESC, v.id DESC
-LIMIT $5 OFFSET $4
+LIMIT $7 OFFSET $6
 `
 
 type ListVehiclesPageParams struct {
-	WorkshopID uuid.UUID      `json:"workshop_id"`
-	Search     *string        `json:"search"`
-	Status     *VehicleStatus `json:"status"`
-	RowOffset  int32          `json:"row_offset"`
-	RowLimit   int32          `json:"row_limit"`
+	WorkshopID uuid.UUID   `json:"workshop_id"`
+	Search     *string     `json:"search"`
+	Statuses   []string    `json:"statuses"`
+	DateFrom   pgtype.Date `json:"date_from"`
+	DateTo     pgtype.Date `json:"date_to"`
+	RowOffset  int32       `json:"row_offset"`
+	RowLimit   int32       `json:"row_limit"`
 }
 
 func (q *Queries) ListVehiclesPage(ctx context.Context, arg ListVehiclesPageParams) ([]Vehicle, error) {
 	rows, err := q.db.Query(ctx, listVehiclesPage,
 		arg.WorkshopID,
 		arg.Search,
-		arg.Status,
+		arg.Statuses,
+		arg.DateFrom,
+		arg.DateTo,
 		arg.RowOffset,
 		arg.RowLimit,
 	)

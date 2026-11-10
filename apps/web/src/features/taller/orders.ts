@@ -1,5 +1,6 @@
 import type { components } from "@kilora/contracts";
 import { queryOptions } from "@tanstack/react-query";
+import type { DateRange } from "@/components/kilora/date-range-filter";
 import { api, unwrap } from "@/lib/api";
 import { LIST_PAGE_SIZE } from "@/lib/pagination";
 
@@ -109,9 +110,10 @@ export const orderActions = (workshopID: string, orderID: string) => {
 export const ordersPageQuery = (
 	workshopID: string,
 	q = "",
-	status?: S["WorkOrderStatus"],
+	statuses: S["WorkOrderStatus"][] = [],
 	offset = 0,
 	branch_id?: string,
+	range: DateRange = {},
 ) =>
 	queryOptions({
 		queryKey: [
@@ -120,9 +122,10 @@ export const ordersPageQuery = (
 			"work-orders",
 			"page",
 			q,
-			status,
+			statuses,
 			offset,
 			branch_id,
+			range,
 		],
 		queryFn: async () =>
 			unwrap(
@@ -131,10 +134,12 @@ export const ordersPageQuery = (
 						path: { workshopID },
 						query: {
 							q: q || undefined,
-							status,
+							status: statuses.length ? statuses : undefined,
 							limit: LIST_PAGE_SIZE,
 							offset,
 							branch_id,
+							from: range.from,
+							to: range.to,
 						},
 					},
 				}),

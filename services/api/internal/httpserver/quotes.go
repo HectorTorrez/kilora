@@ -486,28 +486,31 @@ func (s *server) listCounterQuotes(w http.ResponseWriter, r *http.Request, wc wo
 	if err != nil {
 		return err
 	}
-	var outcome *sqlc.QuoteOutcome
-	if v := r.URL.Query().Get("outcome"); v != "" {
-		x := sqlc.QuoteOutcome(v)
-		if !x.Valid() {
-			return errInvalidOutcome
-		}
-		outcome = &x
+	outcomes, ok := queryValues(r, "outcome", func(v string) bool { return sqlc.QuoteOutcome(v).Valid() })
+	if !ok {
+		return errInvalidOutcome
 	}
-	rows, err := sqlc.New(s.db).ListCounterQuotes(r.Context(), sqlc.ListCounterQuotesParams{WorkshopID: wc.workshopID, BranchIds: wc.branchIDs, Outcome: outcome, Search: searchPattern(r.URL.Query().Get("q")), RowLimit: limit, RowOffset: offset})
+	from, to, err := dateRange(r)
 	if err != nil {
 		return err
 	}
-	var total int64
-	if len(rows) == 0 {
-		total, err = sqlc.New(s.db).CountCounterQuotes(r.Context(), sqlc.CountCounterQuotesParams{WorkshopID: wc.workshopID, BranchIds: wc.branchIDs, Outcome: outcome, Search: searchPattern(r.URL.Query().Get("q"))})
-		if err != nil {
-			return err
-		}
+	q := sqlc.New(s.db)
+	search := searchPattern(r.URL.Query().Get("q"))
+	counts, err := q.CountCounterQuotesByOutcome(r.Context(), sqlc.CountCounterQuotesByOutcomeParams{WorkshopID: wc.workshopID, BranchIds: wc.branchIDs, Search: search, DateFrom: from, DateTo: to})
+	if err != nil {
+		return err
+	}
+	totals := map[string]int64{"": 0}
+	for _, count := range counts {
+		totals[string(count.Outcome)] = count.Total
+		totals[""] += count.Total
+	}
+	rows, err := q.ListCounterQuotes(r.Context(), sqlc.ListCounterQuotesParams{WorkshopID: wc.workshopID, BranchIds: wc.branchIDs, Outcomes: outcomes, Search: search, DateFrom: from, DateTo: to, RowLimit: limit, RowOffset: offset})
+	if err != nil {
+		return err
 	}
 	items := []any{}
 	for _, v := range rows {
-		total = v.TotalCount
 		items = append(items, map[string]any{
 			"id": v.ID, "number": v.Number, "customer_name": v.CustomerName, "customer_phone": v.CustomerPhone,
 			"vehicle_make": v.VehicleMake, "vehicle_model": v.VehicleModel, "vehicle_year": v.VehicleYear, "vehicle_plate": v.VehiclePlate,
@@ -515,7 +518,7 @@ func (s *server) listCounterQuotes(w http.ResponseWriter, r *http.Request, wc wo
 			"converted_order_id": v.ConvertedOrderID, "converted_order_number": v.ConvertedOrderNumber,
 		})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": total})
+	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": selectedTotal(totals, outcomes), "counts": totals})
 	return nil
 }
 

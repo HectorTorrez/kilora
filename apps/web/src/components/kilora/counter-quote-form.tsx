@@ -1,22 +1,21 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
+import { Printer } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { SearchInput } from "@/components/ui/search-input";
 import { matchesVehicle, vehiclesQuery } from "@/features/taller/vehicles";
-import { todayISO } from "@/lib/format";
+import { money, todayISO } from "@/lib/format";
+import { formatCents, lineCents } from "@/lib/money";
 import {
 	applyFormError,
-	FormActions,
 	NumberField,
 	PhoneField,
-	RequiredLegend,
 	RootError,
 	SelectField,
 	SubmitButton,
@@ -39,6 +38,7 @@ import {
 	quoteItemsSchema,
 	quoteItemValues,
 } from "./quote-items-fields";
+import { DetailList, SectionCard, StepTitle } from "./workshop-ui";
 
 type Schemas = components["schemas"];
 
@@ -126,9 +126,11 @@ export function CounterQuoteForm({
 	initial,
 	pending = false,
 	showPrint = false,
+	submitLabel = "Guardar cotización",
 	onCancel,
 	onSubmit,
 }: {
+	submitLabel?: string;
 	workshopID: string;
 	branches: { branch_id: string; branch_name: string }[];
 	initial: CounterQuoteValues;
@@ -176,195 +178,267 @@ export function CounterQuoteForm({
 			applyFormError(form, error);
 		}
 	});
+	const [customer, model, make, year, items, validDays] = form.watch([
+		"customer_name",
+		"vehicle_model",
+		"vehicle_make",
+		"vehicle_year",
+		"items",
+		"valid_days",
+	]);
+	const total = (items ?? []).reduce(
+		(sum, item) => sum + lineCents(item.quantity, item.unit_price),
+		0,
+	);
+	const vehicle = [make, model, year].filter(Boolean).join(" ");
 	return (
 		<Form {...form}>
-			<form onSubmit={submit} className="grid gap-5" noValidate>
-				<RequiredLegend />
-				<Card className="gap-4 rounded-lg p-5 shadow-none">
-					<h2 className="font-semibold">Cliente</h2>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<TextField
-							name="customer_name"
-							label="Nombre"
-							autoComplete="name"
-							required
-							autoFocus
-						/>
-						<PhoneField name="customer_phone" label="Teléfono" optional />
-					</div>
-				</Card>
-				<Card className="gap-4 rounded-lg p-5 shadow-none">
-					<h2 className="font-semibold">Vehículo</h2>
-					<div className="grid gap-2">
-						<Label htmlFor={searchId}>
-							Buscar vehículo del taller{" "}
-							<span className="font-normal text-muted-foreground">
-								(opcional)
-							</span>
-						</Label>
-						<SearchInput
-							containerClassName=""
-							id={searchId}
-							value={search}
-							autoComplete="off"
-							placeholder="Placa, marca o cliente"
-							onFocus={() => setOpenSearch(true)}
-							onChange={(event) => {
-								setSearch(event.target.value);
-								setOpenSearch(true);
-							}}
-						/>
-						{linked ? (
-							<div className="flex items-center justify-between gap-3 rounded-lg border border-seal bg-seal-soft px-3 py-2 text-sm">
-								<p>Vinculado a un vehículo del taller</p>
-								<Button
-									type="button"
-									variant="outline"
-									size="sm"
-									onClick={() => form.setValue("vehicle_id", "")}
-								>
-									Quitar vínculo
-								</Button>
+			<form
+				onSubmit={submit}
+				className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]"
+				noValidate
+			>
+				<div className="min-w-0 space-y-6">
+					<SectionCard
+						title={
+							<StepTitle n={1} done={!!customer.trim()}>
+								Cliente
+							</StepTitle>
+						}
+					>
+						<div className="grid gap-5 sm:grid-cols-2">
+							<TextField
+								name="customer_name"
+								label="Nombre"
+								autoComplete="name"
+								required
+								autoFocus
+							/>
+							<PhoneField name="customer_phone" label="Teléfono" optional />
+						</div>
+					</SectionCard>
+					<SectionCard
+						title={
+							<StepTitle n={2} done={!!model.trim()}>
+								Vehículo
+							</StepTitle>
+						}
+						description="Si ya está registrado en el taller, buscalo y se completan los datos."
+					>
+						<div className="grid gap-5">
+							<div className="grid gap-2">
+								<Label htmlFor={searchId}>
+									Buscar vehículo del taller{" "}
+									<span className="font-normal text-muted-foreground">
+										(opcional)
+									</span>
+								</Label>
+								<SearchInput
+									containerClassName=""
+									id={searchId}
+									value={search}
+									autoComplete="off"
+									placeholder="Placa, marca o cliente"
+									onFocus={() => setOpenSearch(true)}
+									onChange={(event) => {
+										setSearch(event.target.value);
+										setOpenSearch(true);
+									}}
+								/>
+								{linked ? (
+									<div className="flex items-center justify-between gap-3 rounded-lg border border-seal bg-seal-soft px-3 py-2 text-sm">
+										<p>Vinculado a un vehículo del taller</p>
+										<Button
+											type="button"
+											variant="outline"
+											size="sm"
+											onClick={() => form.setValue("vehicle_id", "")}
+										>
+											Quitar vínculo
+										</Button>
+									</div>
+								) : null}
+								{openSearch && query ? (
+									isLoading ? (
+										<p className="text-sm text-ink-3">Buscando vehículos…</p>
+									) : matches.length > 0 ? (
+										<ul
+											aria-label="Vehículos del taller"
+											className="grid gap-2"
+										>
+											{matches.map((vehicle) => (
+												<li key={vehicle.id}>
+													<button
+														type="button"
+														className="w-full rounded-lg border bg-background px-4 py-3 text-left hover:border-seal hover:bg-seal-soft"
+														onClick={() => {
+															form.setValue("vehicle_id", vehicle.id);
+															form.setValue("vehicle_make", vehicle.make);
+															form.setValue("vehicle_model", vehicle.model);
+															form.setValue(
+																"vehicle_year",
+																vehicle.year ? String(vehicle.year) : "",
+															);
+															form.setValue(
+																"vehicle_plate",
+																vehicle.plate ?? "",
+															);
+															if (vehicle.contact_name)
+																form.setValue(
+																	"customer_name",
+																	vehicle.contact_name,
+																);
+															if (vehicle.contact_phone)
+																form.setValue(
+																	"customer_phone",
+																	vehicle.contact_phone,
+																);
+															setSearch("");
+															setOpenSearch(false);
+														}}
+													>
+														<span className="font-mono text-sm">
+															{vehicle.plate || "Sin placa"}
+														</span>
+														<span className="text-ink-3">
+															{" "}
+															· {vehicle.make} {vehicle.model}
+															{vehicle.year ? ` ${vehicle.year}` : ""}
+														</span>
+													</button>
+												</li>
+											))}
+										</ul>
+									) : (
+										<p className="text-sm text-ink-3">
+											Ningún vehículo coincide. Podés completar los datos a
+											mano.
+										</p>
+									)
+								) : null}
 							</div>
-						) : null}
-						{openSearch && query ? (
-							isLoading ? (
-								<p className="text-sm text-ink-3">Buscando vehículos…</p>
-							) : matches.length > 0 ? (
-								<ul aria-label="Vehículos del taller" className="grid gap-2">
-									{matches.map((vehicle) => (
-										<li key={vehicle.id}>
-											<button
-												type="button"
-												className="w-full rounded-lg border bg-background px-4 py-3 text-left hover:border-seal hover:bg-seal-soft"
-												onClick={() => {
-													form.setValue("vehicle_id", vehicle.id);
-													form.setValue("vehicle_make", vehicle.make);
-													form.setValue("vehicle_model", vehicle.model);
-													form.setValue(
-														"vehicle_year",
-														vehicle.year ? String(vehicle.year) : "",
-													);
-													form.setValue("vehicle_plate", vehicle.plate ?? "");
-													if (vehicle.contact_name)
-														form.setValue(
-															"customer_name",
-															vehicle.contact_name,
-														);
-													if (vehicle.contact_phone)
-														form.setValue(
-															"customer_phone",
-															vehicle.contact_phone,
-														);
-													setSearch("");
-													setOpenSearch(false);
-												}}
-											>
-												<span className="font-mono text-sm">
-													{vehicle.plate || "Sin placa"}
-												</span>
-												<span className="text-ink-3">
-													{" "}
-													· {vehicle.make} {vehicle.model}
-													{vehicle.year ? ` ${vehicle.year}` : ""}
-												</span>
-											</button>
-										</li>
-									))}
-								</ul>
-							) : (
-								<p className="text-sm text-ink-3">
-									Ningún vehículo coincide. Podés completar los datos a mano.
-								</p>
-							)
-						) : null}
-					</div>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<TextField name="vehicle_make" label="Marca" optional />
-						<TextField name="vehicle_model" label="Modelo" required />
-						<TextField
-							name="vehicle_year"
-							label="Año"
-							inputMode="numeric"
-							optional
-						/>
-						<TextField
-							name="vehicle_plate"
-							label="Placa"
-							uppercase
-							optional
-							placeholder="P123456"
-						/>
-					</div>
-				</Card>
-				<Card className="gap-4 rounded-lg p-5 shadow-none">
-					<QuoteItemsFields />
-				</Card>
-				<Card className="gap-4 rounded-lg p-5 shadow-none">
-					<h2 className="font-semibold">Condiciones</h2>
-					<div className="grid gap-4 sm:grid-cols-2">
-						<NumberField
-							name="valid_days"
-							label="Vigencia en días"
-							min={1}
-							max={365}
-							step="1"
-							required
-						/>
-						{branches.length !== 1 ? (
-							<SelectField
-								name="branch_id"
-								label="Sucursal"
-								options={branches.map((branch) => ({
-									value: branch.branch_id,
-									label: branch.branch_name,
-								}))}
+							<div className="grid gap-5 sm:grid-cols-2">
+								<TextField name="vehicle_make" label="Marca" optional />
+								<TextField name="vehicle_model" label="Modelo" required />
+								<TextField
+									name="vehicle_year"
+									label="Año"
+									inputMode="numeric"
+									maxLength={4}
+									optional
+								/>
+								<TextField
+									name="vehicle_plate"
+									label="Placa"
+									uppercase
+									optional
+									placeholder="P123456"
+								/>
+							</div>
+						</div>
+					</SectionCard>
+					<SectionCard
+						title={
+							<StepTitle n={3} done={total > 0}>
+								Repuestos y mano de obra
+							</StepTitle>
+						}
+					>
+						<QuoteItemsFields />
+					</SectionCard>
+					<SectionCard title={<StepTitle n={4}>Condiciones</StepTitle>}>
+						<div className="grid gap-5 sm:grid-cols-2">
+							<NumberField
+								name="valid_days"
+								label="Válida por"
+								suffix="días"
+								min={1}
+								max={365}
+								step="1"
+								description="Después de este plazo el precio puede cambiar."
 								required
 							/>
-						) : null}
-						<TextareaField
-							name="notes"
-							label="Notas para el cliente"
-							optional
-							className="sm:col-span-2"
-							placeholder="Lo que el cliente debe saber sobre este presupuesto"
+							{branches.length !== 1 ? (
+								<SelectField
+									name="branch_id"
+									label="Sucursal"
+									options={branches.map((branch) => ({
+										value: branch.branch_id,
+										label: branch.branch_name,
+									}))}
+									required
+								/>
+							) : null}
+							<TextareaField
+								name="notes"
+								label="Notas para el cliente"
+								optional
+								className="sm:col-span-2"
+								placeholder="Ej. Precio de repuestos sujeto a disponibilidad"
+								description="Aparecen en la cotización impresa y en el link que recibe el cliente."
+							/>
+						</div>
+					</SectionCard>
+				</div>
+				<aside className="lg:sticky lg:top-6">
+					<SectionCard title="Resumen">
+						<DetailList
+							items={[
+								{ label: "Cliente", value: customer.trim() },
+								{ label: "Vehículo", value: vehicle },
+								{
+									label: "Válida por",
+									value: validDays ? `${validDays} días` : "",
+								},
+							]}
 						/>
-					</div>
-				</Card>
-				<RootError />
-				<FormActions>
-					{onCancel ? (
-						<Button
-							type="button"
-							variant="outline"
-							className="w-full sm:w-auto"
-							onClick={onCancel}
-						>
-							Cancelar
-						</Button>
-					) : null}
-					{showPrint ? (
-						<Button
-							type="submit"
-							variant="outline"
-							className="w-full sm:w-auto"
-							disabled={pending}
-							onClick={() => {
-								intent.current = true;
-							}}
-						>
-							Guardar e imprimir
-						</Button>
-					) : null}
-					<SubmitButton
-						pending={pending}
-						onClick={() => {
-							intent.current = false;
-						}}
-					>
-						Guardar
-					</SubmitButton>
-				</FormActions>
+						<div className="mt-4 flex items-baseline justify-between border-t pt-3">
+							<span className="text-[13px] font-medium">Total</span>
+							<span className="font-display text-2xl font-bold tabular-nums">
+								{money(formatCents(total))}
+							</span>
+						</div>
+						<RootError className="mt-4" />
+						<div className="mt-4 grid gap-2">
+							<SubmitButton
+								pending={pending}
+								className="w-full sm:w-full"
+								onClick={() => {
+									intent.current = false;
+								}}
+							>
+								{submitLabel}
+							</SubmitButton>
+							{showPrint ? (
+								<Button
+									type="submit"
+									variant="outline"
+									className="w-full"
+									disabled={pending}
+									onClick={() => {
+										intent.current = true;
+									}}
+								>
+									<Printer className="size-4" />
+									Guardar e imprimir
+								</Button>
+							) : null}
+							{onCancel ? (
+								<Button
+									type="button"
+									variant="ghost"
+									className="w-full"
+									onClick={onCancel}
+								>
+									Cancelar
+								</Button>
+							) : null}
+						</div>
+						<p className="mt-3 text-center text-[11.5px] text-ink-3">
+							<span className="text-destructive">*</span> Campo obligatorio
+						</p>
+					</SectionCard>
+				</aside>
 			</form>
 		</Form>
 	);

@@ -1,3 +1,4 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
@@ -5,19 +6,30 @@ import {
 	Archive,
 	BadgeCheck,
 	Building2,
-	EyeOff,
 	FileText,
 	MapPin,
 	Pencil,
 	ShieldCheck,
-	Trash2,
 	UserPlus,
-	Users,
+	X,
 } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { z } from "zod";
+import { FormDialog } from "@/components/kilora/form-dialog";
+import {
+	applyFormError,
+	FormActions,
+	RootError,
+	SelectField,
+	SubmitButton,
+	TextField,
+} from "@/components/kilora/form-fields";
+import { emailField } from "@/components/kilora/form-schemas";
 import { EditWorkshopDialog } from "@/components/kilora/workshop-form";
 import {
+	DetailList,
 	PageBody,
 	PageHeader,
 	SectionCard,
@@ -32,15 +44,7 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { Form } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
@@ -96,7 +100,7 @@ function SettingsPage() {
 	const [editing, setEditing] = useState(false);
 
 	return (
-		<PageBody className="max-w-5xl">
+		<PageBody>
 			<PageHeader
 				eyebrow="Administración"
 				title="Mi taller"
@@ -115,10 +119,10 @@ function SettingsPage() {
 						isAdmin && (
 							<Button
 								size="sm"
-								variant="outline"
+								variant="ghost"
 								onClick={() => setEditing(true)}
 							>
-								<Pencil className="size-4" />
+								<Pencil className="size-3.5" />
 								Editar
 							</Button>
 						)
@@ -132,18 +136,18 @@ function SettingsPage() {
 								<span className="grid size-12 shrink-0 place-items-center rounded-lg bg-seal text-white">
 									<Building2 className="size-5" />
 								</span>
-								<dl className="grid flex-1 grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-[13px]">
-									<dt className="text-ink-3">Nombre comercial</dt>
-									<dd className="text-right font-semibold">
-										{data?.workshop.name}
-									</dd>
-									<dt className="text-ink-3">NIT</dt>
-									<dd className="text-right font-mono">
-										{data?.workshop.nit || "Sin registrar"}
-									</dd>
-									<dt className="text-ink-3">Sucursales</dt>
-									<dd className="text-right">{data?.branches.length ?? 0}</dd>
-								</dl>
+								<DetailList
+									className="flex-1"
+									items={[
+										{ label: "Nombre comercial", value: data?.workshop.name },
+										{
+											label: "NIT",
+											value: data?.workshop.nit,
+											mono: true,
+											empty: "Sin registrar",
+										},
+									]}
+								/>
 							</div>
 							{verified ? (
 								<div className="flex items-center gap-3 rounded-md bg-seal-soft p-3 text-seal">
@@ -228,7 +232,7 @@ function SettingsPage() {
 							<FileText className="mt-0.5 size-4 shrink-0 text-ink-3" />
 							<span>
 								<strong className="font-semibold">
-									Historial append-only.
+									Historial inalterable.
 								</strong>{" "}
 								<span className="text-ink-2">
 									Un servicio publicado no se edita; se agrega una corrección
@@ -259,12 +263,7 @@ function SettingsPage() {
 				</SectionCard>
 
 				<SectionCard
-					title={
-						<span className="flex items-center gap-2">
-							<EyeOff className="size-4 text-ink-3" />
-							Quién ve qué del historial
-						</span>
-					}
+					title="Quién ve qué del historial"
 					description="Tu competencia nunca ve lo que cobrás."
 					bodyClassName="p-0 sm:p-0"
 				>
@@ -289,6 +288,14 @@ function SettingsPage() {
 	);
 }
 
+type Member = components["schemas"]["Member"];
+
+const memberSchema = z.object({
+	email: emailField,
+	branch_id: z.string().min(1, "Elegí una sucursal"),
+	role: z.enum(["recepcion", "mecanico", "admin"]),
+});
+
 function TeamCard({
 	workshopID,
 	isAdmin,
@@ -301,25 +308,23 @@ function TeamCard({
 	branches: components["schemas"]["Branch"][];
 }) {
 	const { data = [], isLoading, error } = useQuery(membersQuery(workshopID));
-	const a = adminActions(workshopID);
-	const add = useWorkshopMutation(workshopID, a.addMember);
-	const remove = useWorkshopMutation(workshopID, a.removeMember);
+	const remove = useWorkshopMutation(
+		workshopID,
+		adminActions(workshopID).removeMember,
+	);
 	const [open, setOpen] = useState(false);
-	const [email, setEmail] = useState("");
-	const [branch, setBranch] = useState("");
-	const [role, setRole] = useState<Role>("recepcion");
-	const [removing, setRemoving] = useState<(typeof data)[number] | null>(null);
-	const branchID = branch || branches[0]?.id || "";
+	const [removing, setRemoving] = useState<Member | null>(null);
+	const people = Object.values(
+		data.reduce<Record<string, Member[]>>((acc, m) => {
+			acc[m.user_id] = [...(acc[m.user_id] ?? []), m];
+			return acc;
+		}, {}),
+	);
 
 	return (
 		<SectionCard
-			title={
-				<span className="flex items-center gap-2">
-					<Users className="size-4 text-ink-3" />
-					Equipo
-				</span>
-			}
-			description="Quién puede entrar al panel y con qué permisos"
+			title="Equipo"
+			description="Quién puede entrar al panel, en qué sucursal y con qué permisos."
 			actions={
 				isAdmin && (
 					<Button size="sm" onClick={() => setOpen(true)}>
@@ -338,139 +343,81 @@ function TeamCard({
 				</Alert>
 			) : (
 				<ul className="divide-y">
-					{data.map((m) => (
-						<li
-							key={m.id}
-							className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5"
-						>
-							<span className="grid size-8 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-ink-2">
-								{m.full_name
-									.split(/\s+/)
-									.slice(0, 2)
-									.map((w) => w[0]?.toUpperCase())
-									.join("")}
-							</span>
-							<div className="min-w-0 flex-1">
-								<p className="truncate text-[13px] font-semibold">
-									{m.full_name}
-									{m.user_id === currentUserID && (
-										<span className="ml-1.5 font-normal text-ink-3">(vos)</span>
-									)}
-								</p>
-								<p className="truncate text-xs text-ink-3">
-									{m.email} · {m.branch_name}
-								</p>
-							</div>
-							<span
-								className={cn(
-									"rounded-full px-2 py-0.5 text-[11.5px] font-semibold",
-									m.role === "admin"
-										? "bg-seal-soft text-seal"
-										: "bg-secondary text-ink-2",
-								)}
+					{people.map((memberships) => {
+						const m = memberships[0];
+						const self = m.user_id === currentUserID;
+						return (
+							<li
+								key={m.user_id}
+								className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-5"
 							>
-								{roleLabel[m.role]}
-							</span>
-							{isAdmin && (
-								<Button
-									variant="ghost"
-									size="icon"
-									className="size-8 text-ink-3 hover:text-destructive"
-									aria-label={`Quitar a ${m.full_name} de ${m.branch_name}`}
-									onClick={() => setRemoving(m)}
-								>
-									<Trash2 className="size-4" />
-								</Button>
-							)}
-						</li>
-					))}
+								<span className="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-[11px] font-semibold text-ink-2">
+									{m.full_name
+										.split(/\s+/)
+										.slice(0, 2)
+										.map((w) => w[0]?.toUpperCase())
+										.join("")}
+								</span>
+								<div className="min-w-0 flex-1">
+									<p className="truncate text-[13px] font-semibold">
+										{m.full_name}
+										{self && (
+											<span className="ml-1.5 font-normal text-ink-3">
+												(vos)
+											</span>
+										)}
+									</p>
+									<p className="truncate text-xs text-ink-3">{m.email}</p>
+								</div>
+								<ul className="flex flex-wrap gap-1.5">
+									{memberships.map((ms) => (
+										<li
+											key={ms.id}
+											className="inline-flex items-center gap-1.5 rounded-full border py-0.5 pr-1 pl-2.5 text-xs"
+										>
+											<span className="text-ink-2">{ms.branch_name}</span>
+											<span
+												className={cn(
+													"rounded-full px-2 py-px text-[11px] font-semibold",
+													ms.role === "admin"
+														? "bg-seal-soft text-seal"
+														: "bg-secondary text-ink-2",
+												)}
+											>
+												{roleLabel[ms.role]}
+											</span>
+											{isAdmin && !self && (
+												<button
+													type="button"
+													className="grid size-5 place-items-center rounded-full text-ink-3 hover:bg-destructive/10 hover:text-destructive"
+													aria-label={`Quitar a ${ms.full_name} de ${ms.branch_name}`}
+													title={`Quitar de ${ms.branch_name}`}
+													onClick={() => setRemoving(ms)}
+												>
+													<X className="size-3" />
+												</button>
+											)}
+										</li>
+									))}
+								</ul>
+							</li>
+						);
+					})}
 				</ul>
 			)}
 
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Agregar miembro</DialogTitle>
-						<DialogDescription>
-							La persona necesita una cuenta de Kilora con ese correo.
-						</DialogDescription>
-					</DialogHeader>
-					<form
-						id="member-form"
-						className="grid gap-4"
-						onSubmit={(e) => {
-							e.preventDefault();
-							add.mutate(
-								{ email, branch_id: branchID, role },
-								{
-									onSuccess: () => {
-										toast.success("Miembro agregado");
-										setEmail("");
-										setOpen(false);
-									},
-								},
-							);
-						}}
-					>
-						<Label className="grid gap-1.5" htmlFor="member-email">
-							Correo
-							<Input
-								id="member-email"
-								type="email"
-								required
-								autoFocus
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-							/>
-						</Label>
-						<div className="grid gap-4 sm:grid-cols-2">
-							<div className="grid gap-1.5">
-								<Label htmlFor="member-branch">Sucursal</Label>
-								<Select value={branchID} onValueChange={setBranch}>
-									<SelectTrigger id="member-branch" className="w-full">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{branches.map((b) => (
-											<SelectItem key={b.id} value={b.id}>
-												{b.name}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="grid gap-1.5">
-								<Label htmlFor="member-role">Rol</Label>
-								<Select value={role} onValueChange={(v) => setRole(v as Role)}>
-									<SelectTrigger id="member-role" className="w-full">
-										<SelectValue />
-									</SelectTrigger>
-									<SelectContent>
-										{(["recepcion", "mecanico", "admin"] as Role[]).map((r) => (
-											<SelectItem key={r} value={r}>
-												{roleLabel[r]}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-						</div>
-						<p className="-mt-2 text-xs text-ink-3">{roleHelp[role]}</p>
-					</form>
-					<DialogFooter>
-						<Button variant="outline" onClick={() => setOpen(false)}>
-							Cancelar
-						</Button>
-						<Button
-							type="submit"
-							form="member-form"
-							disabled={add.isPending || !email}
-						>
-							{add.isPending ? "Agregando…" : "Agregar"}
-						</Button>
-					</DialogFooter>
-				</DialogContent>
-			</Dialog>
+			<FormDialog
+				open={open}
+				onOpenChange={setOpen}
+				title="Agregar miembro"
+				description="La persona necesita una cuenta de Kilora con ese correo. Si trabaja en varias sucursales, agregala una vez por sucursal."
+			>
+				<MemberForm
+					workshopID={workshopID}
+					branches={branches}
+					onDone={() => setOpen(false)}
+				/>
+			</FormDialog>
 
 			<Dialog
 				open={!!removing}
@@ -480,10 +427,12 @@ function TeamCard({
 			>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>¿Quitar a {removing?.full_name}?</DialogTitle>
+						<DialogTitle>
+							¿Quitar a {removing?.full_name} de {removing?.branch_name}?
+						</DialogTitle>
 						<DialogDescription>
-							Pierde el acceso a {removing?.branch_name}. Sus órdenes y
-							registros se conservan.
+							Pierde el acceso a esa sucursal. Sus órdenes y registros se
+							conservan.
 						</DialogDescription>
 					</DialogHeader>
 					<DialogFooter>
@@ -503,11 +452,93 @@ function TeamCard({
 								})
 							}
 						>
-							Quitar
+							Quitar acceso
 						</Button>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
 		</SectionCard>
+	);
+}
+
+function MemberForm({
+	workshopID,
+	branches,
+	onDone,
+}: {
+	workshopID: string;
+	branches: components["schemas"]["Branch"][];
+	onDone: () => void;
+}) {
+	const add = useWorkshopMutation(
+		workshopID,
+		adminActions(workshopID).addMember,
+		{ inlineErrors: true },
+	);
+	const form = useForm({
+		mode: "onChange",
+		resolver: zodResolver(memberSchema),
+		defaultValues: {
+			email: "",
+			branch_id: branches[0]?.id ?? "",
+			role: "recepcion" as Role,
+		},
+	});
+	const role = form.watch("role");
+	const submit = form.handleSubmit(async (values) => {
+		form.clearErrors("root");
+		try {
+			await add.mutateAsync(values);
+			toast.success("Miembro agregado");
+			onDone();
+		} catch (error) {
+			applyFormError(form, error);
+		}
+	});
+	return (
+		<Form {...form}>
+			<form onSubmit={submit} className="grid gap-5" noValidate>
+				<TextField
+					name="email"
+					label="Correo"
+					type="email"
+					autoComplete="off"
+					placeholder="persona@taller.com"
+					autoFocus
+					required
+				/>
+				<div className="grid gap-5 sm:grid-cols-2">
+					<SelectField
+						name="branch_id"
+						label="Sucursal"
+						options={branches.map((b) => ({ value: b.id, label: b.name }))}
+						required
+					/>
+					<SelectField
+						name="role"
+						label="Rol"
+						options={(["recepcion", "mecanico", "admin"] as Role[]).map(
+							(r) => ({ value: r, label: roleLabel[r] }),
+						)}
+						description={roleHelp[role]}
+						required
+					/>
+				</div>
+				<RootError />
+				<FormActions>
+					<Button
+						type="button"
+						variant="outline"
+						className="w-full sm:w-auto"
+						onClick={onDone}
+					>
+						Cancelar
+					</Button>
+					<SubmitButton pending={add.isPending} pendingLabel="Agregando…">
+						Agregar miembro
+					</SubmitButton>
+				</FormActions>
+			</form>
+		</Form>
 	);
 }

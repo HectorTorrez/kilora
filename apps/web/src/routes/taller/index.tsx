@@ -6,20 +6,18 @@ import {
 	Car,
 	CheckCircle2,
 	ClipboardList,
+	FileText,
 	Lightbulb,
 	Mail,
 	Plus,
-	Wrench,
 } from "lucide-react";
 import { UrgencyBadge } from "@/components/kilora/recommendations";
 import {
 	EmptyState,
-	OrderStatusBadge,
 	orderDot,
 	PageBody,
 	PageHeader,
 	Plate,
-	relative,
 	SectionCard,
 	StatCard,
 } from "@/components/kilora/workshop-ui";
@@ -27,10 +25,11 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ordersQuery } from "@/features/taller/orders";
+import { counterQuotesQuery } from "@/features/taller/quotes";
 import { recommendationsQuery } from "@/features/taller/recommendations";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
 import { vehiclesQuery } from "@/features/taller/vehicles";
-import { statusLabel, TIME_ZONE } from "@/lib/format";
+import { shortDate, statusLabel, TIME_ZONE } from "@/lib/format";
 import { dueText, urgency } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
 
@@ -76,12 +75,14 @@ function DashboardPage() {
 		(o) => o.status !== "listo" && o.status !== "cancelado",
 	);
 	const repairing = list.filter((o) => o.status === "en_reparacion");
-	const done = list.filter((o) => o.status === "listo");
 	const vlist = vehicles.data ?? [];
-	const linked = vlist.filter((v) => v.status === "vinculado");
 	const provisional = vlist.filter((v) => v.status === "provisional");
 	const loading = orders.isLoading || vehicles.isLoading;
 	const recs = useQuery(recommendationsQuery(workshopID, "pendiente"));
+	const pendingQuotes = useQuery({
+		...counterQuotesQuery(workshopID, "", ["pendiente"]),
+		enabled: !!workshopID,
+	});
 	const kmByVehicle = new Map(vlist.map((v) => [v.id, v.last_odometer_km]));
 	const rank = { vencida: 0, proxima: 1, programada: 2 } as const;
 	const pendingRecs = (recs.data ?? [])
@@ -90,6 +91,7 @@ function DashboardPage() {
 			level: urgency(rec, kmByVehicle.get(rec.vehicle_id)),
 		}))
 		.sort((a, b) => rank[a.level] - rank[b.level]);
+	const overdue = pendingRecs.filter((r) => r.level === "vencida").length;
 	const firstName = me.user.full_name.split(" ")[0];
 	const today = new Intl.DateTimeFormat("es-SV", {
 		weekday: "long",
@@ -103,13 +105,13 @@ function DashboardPage() {
 			<PageHeader
 				eyebrow={today}
 				title={`${greeting()}, ${firstName}`}
-				description="Así está el taller hoy: órdenes en curso, vehículos y clientes por vincular."
+				description="Así está el taller hoy."
 				actions={
 					<>
 						<Button asChild variant="outline">
-							<Link to="/taller/vehiculos">
-								<Car className="size-4" />
-								Vehículos
+							<Link to="/taller/cotizaciones/nueva">
+								<FileText className="size-4" />
+								Nueva cotización
 							</Link>
 						</Button>
 						<Button asChild>
@@ -144,40 +146,64 @@ function DashboardPage() {
 					))
 				) : (
 					<>
-						<StatCard
-							label="Órdenes abiertas"
-							value={open.length}
-							hint="Recibidas, en diagnóstico o reparación"
-							icon={ClipboardList}
-							tone="seal"
-						/>
-						<StatCard
-							label="En reparación"
-							value={repairing.length}
-							hint="Trabajo activo en el taller"
-							icon={Wrench}
-							tone="warn"
-						/>
-						<StatCard
-							label="Completadas"
-							value={done.length}
-							hint="Publicadas en el historial"
-							icon={CheckCircle2}
-							tone="ok"
-						/>
-						<StatCard
-							label="Vehículos"
-							value={vlist.length}
-							hint={`${linked.length} vinculados · ${provisional.length} provisionales`}
-							icon={Car}
-						/>
+						<Link
+							to="/taller/ordenes"
+							className="group rounded-xl outline-none"
+						>
+							<StatCard
+								interactive
+								label="Órdenes abiertas"
+								value={open.length}
+								hint={`${repairing.length} en reparación`}
+								icon={ClipboardList}
+								tone="seal"
+							/>
+						</Link>
+						<Link
+							to="/taller/cotizaciones"
+							className="group rounded-xl outline-none"
+						>
+							<StatCard
+								interactive
+								label="Cotizaciones pendientes"
+								value={pendingQuotes.data?.total ?? 0}
+								hint="Esperando respuesta del cliente"
+								icon={FileText}
+							/>
+						</Link>
+						<a
+							href="#recomendaciones"
+							className="group rounded-xl outline-none"
+						>
+							<StatCard
+								interactive
+								label="Recomendaciones"
+								value={pendingRecs.length}
+								hint={
+									overdue > 0
+										? `${overdue} vencida${overdue === 1 ? "" : "s"}`
+										: "Ninguna vencida"
+								}
+								icon={Lightbulb}
+								tone={overdue > 0 ? "warn" : "default"}
+							/>
+						</a>
+						<a href="#por-vincular" className="group rounded-xl outline-none">
+							<StatCard
+								interactive
+								label="Clientes por vincular"
+								value={provisional.length}
+								hint={`de ${vlist.length} vehículos registrados`}
+								icon={Car}
+							/>
+						</a>
 					</>
 				)}
 			</section>
 
 			<SectionCard
 				title="Tablero de órdenes"
-				description="Cada columna es un estado. Abrí una tarjeta para avanzarla."
+				description="Las órdenes según su estado. Abrí una para avanzarla."
 				actions={
 					<Button asChild variant="ghost" size="sm">
 						<Link to="/taller/ordenes">
@@ -241,7 +267,7 @@ function DashboardPage() {
 														{o.reason}
 													</p>
 													<p className="mt-0.5 truncate text-xs text-ink-3">
-														{o.make} {o.model} · {relative(o.received_at)}
+														{o.make} {o.model} · {shortDate(o.received_at)}
 													</p>
 												</Link>
 											</li>
@@ -270,137 +296,97 @@ function DashboardPage() {
 				)}
 			</SectionCard>
 
-			<div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+			<div className="grid items-start gap-6 lg:grid-cols-2">
 				<SectionCard
-					title="Actividad reciente"
-					description="Últimas órdenes recibidas"
+					className="scroll-mt-6"
+					id="recomendaciones"
+					title="Recomendaciones por atender"
+					description="Trabajos sugeridos a tus clientes, las vencidas primero."
+					actions={
+						!!pendingRecs.length && (
+							<span className="rounded-full bg-secondary px-2 font-mono text-[11px] text-ink-2 tabular-nums">
+								{pendingRecs.length}
+							</span>
+						)
+					}
 					bodyClassName="p-0 sm:p-0"
 				>
-					{loading ? (
-						<Skeleton className="m-5 h-32" />
-					) : !list.length ? (
-						<p className="p-6 text-center text-sm text-ink-3">
-							Sin actividad todavía.
-						</p>
+					{recs.isLoading ? (
+						<Skeleton className="m-5 h-24" />
+					) : !pendingRecs.length ? (
+						<EmptyState
+							icon={Lightbulb}
+							title="Nada pendiente"
+							description="Registrá recomendaciones desde la orden o la ficha del vehículo."
+						/>
 					) : (
 						<ul className="divide-y">
-							{list.slice(0, 6).map((o) => (
-								<li key={o.id}>
+							{pendingRecs.slice(0, 5).map(({ rec, level }) => (
+								<li key={rec.id}>
 									<Link
-										to="/taller/ordenes/$orderId"
-										params={{ orderId: o.id }}
+										to="/taller/vehiculos/$vehicleId"
+										params={{ vehicleId: rec.vehicle_id }}
 										className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 sm:px-5"
 									>
-										<Plate value={o.plate} />
+										<Plate value={rec.plate} />
 										<div className="min-w-0 flex-1">
 											<p className="truncate text-[13px] font-medium">
-												{o.reason}
+												{rec.description}
 											</p>
-											<p className="truncate text-xs text-ink-3">
-												#{o.number} · {o.make} {o.model}
-											</p>
-										</div>
-										<div className="hidden text-right sm:block">
-											<OrderStatusBadge status={o.status} />
-											<p className="mt-1 text-[11px] text-ink-3">
-												{relative(o.received_at)}
+											<p className="truncate font-mono text-xs text-ink-3">
+												{dueText(rec)}
 											</p>
 										</div>
+										<UrgencyBadge value={level} />
 									</Link>
 								</li>
 							))}
 						</ul>
 					)}
 				</SectionCard>
-
-				<div className="space-y-6">
-					<SectionCard
-						title="Recomendaciones por atender"
-						description="Vencidas y próximas primero"
-						actions={
-							!!pendingRecs.length && (
-								<span className="rounded-full bg-secondary px-2 font-mono text-[11px] text-ink-2 tabular-nums">
-									{pendingRecs.length}
-								</span>
-							)
-						}
-						bodyClassName="p-0 sm:p-0"
-					>
-						{recs.isLoading ? (
-							<Skeleton className="m-5 h-24" />
-						) : !pendingRecs.length ? (
-							<EmptyState
-								icon={Lightbulb}
-								title="Nada pendiente"
-								description="Registrá recomendaciones desde la orden o la ficha del vehículo."
-							/>
-						) : (
-							<ul className="divide-y">
-								{pendingRecs.slice(0, 5).map(({ rec, level }) => (
-									<li key={rec.id}>
-										<Link
-											to="/taller/vehiculos/$vehicleId"
-											params={{ vehicleId: rec.vehicle_id }}
-											className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 sm:px-5"
-										>
-											<Plate value={rec.plate} />
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-[13px] font-medium">
-													{rec.description}
-												</p>
-												<p className="truncate font-mono text-xs text-ink-3">
-													{dueText(rec)}
-												</p>
-											</div>
-											<UrgencyBadge value={level} />
-										</Link>
-									</li>
-								))}
-							</ul>
-						)}
-					</SectionCard>
-					<SectionCard
-						title="Clientes por vincular"
-						description="Vehículos provisionales sin propietario con cuenta"
-						bodyClassName="p-0 sm:p-0"
-					>
-						{loading ? (
-							<Skeleton className="m-5 h-32" />
-						) : !provisional.length ? (
-							<EmptyState
-								icon={CheckCircle2}
-								title="Todo vinculado"
-								description="Cada vehículo tiene a su propietario invitado."
-							/>
-						) : (
-							<ul className="divide-y">
-								{provisional.slice(0, 5).map((v) => (
-									<li key={v.id}>
-										<Link
-											to="/taller/vehiculos/$vehicleId"
-											params={{ vehicleId: v.id }}
-											className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 sm:px-5"
-										>
-											<Plate value={v.plate} />
-											<div className="min-w-0 flex-1">
-												<p className="truncate text-[13px] font-medium">
-													{v.make} {v.model} {v.year ?? ""}
-												</p>
-												<p className="truncate text-xs text-ink-3">
-													{v.contact_name || "Sin contacto"}
-												</p>
-											</div>
-											<span className="inline-flex items-center gap-1 text-xs font-semibold text-seal">
-												<Mail className="size-3.5" />
-												Invitar
-											</span>
-										</Link>
-									</li>
-								))}
-							</ul>
-						)}
-					</SectionCard>
-				</div>
+				<SectionCard
+					className="scroll-mt-6"
+					id="por-vincular"
+					title="Clientes por vincular"
+					description="Invitá al propietario para que vea el historial desde su celular."
+					bodyClassName="p-0 sm:p-0"
+				>
+					{loading ? (
+						<Skeleton className="m-5 h-32" />
+					) : !provisional.length ? (
+						<EmptyState
+							icon={CheckCircle2}
+							title="Todo vinculado"
+							description="Cada vehículo tiene a su propietario invitado."
+						/>
+					) : (
+						<ul className="divide-y">
+							{provisional.slice(0, 5).map((v) => (
+								<li key={v.id}>
+									<Link
+										to="/taller/vehiculos/$vehicleId"
+										params={{ vehicleId: v.id }}
+										className="flex items-center gap-3 px-4 py-3 hover:bg-secondary/60 sm:px-5"
+									>
+										<Plate value={v.plate} />
+										<div className="min-w-0 flex-1">
+											<p className="truncate text-[13px] font-medium">
+												{v.make} {v.model} {v.year ?? ""}
+											</p>
+											<p className="truncate text-xs text-ink-3">
+												{v.contact_name || "Sin contacto"}
+											</p>
+										</div>
+										<span className="inline-flex items-center gap-1 text-xs font-semibold text-seal">
+											<Mail className="size-3.5" />
+											Invitar
+										</span>
+									</Link>
+								</li>
+							))}
+						</ul>
+					)}
+				</SectionCard>
 			</div>
 		</PageBody>
 	);

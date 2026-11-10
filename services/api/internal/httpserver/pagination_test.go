@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"kilora/api/internal/database/sqlc"
 )
@@ -94,6 +95,39 @@ func TestPaginatedLists(t *testing.T) {
 	counts := filtered["counts"].(map[string]any)
 	if filtered["total"].(float64) != 1 || counts["recibido"].(float64) != 26 || counts[""].(float64) != 27 {
 		t.Fatal(filtered)
+	}
+	for _, query := range []string{"status=diagnostico&status=recibido", "status=diagnostico,recibido"} {
+		several := a.obj(c, "GET", path+"/work-orders/page?"+query+"&limit=5", "", 200)
+		if several["total"].(float64) != 27 || len(several["items"].([]any)) != 5 {
+			t.Fatal(query, several)
+		}
+	}
+	if none := a.obj(c, "GET", path+"/work-orders/page?status=listo,cancelado", "", 200); none["total"].(float64) != 0 || len(none["items"].([]any)) != 0 {
+		t.Fatal(none)
+	}
+	a.req(c, "GET", path+"/work-orders/page?status=diagnostico,unknown", "", 400)
+	// Una orden a las 03:00 UTC del 2 de enero sigue siendo 1 de enero en El
+	// Salvador: el filtro tiene que usar la fecha local, no la UTC.
+	if _, err := a.db.Exec(context.Background(), "UPDATE work_order SET received_at = '2026-01-02 03:00:00+00' WHERE id = $1", firstOrder); err != nil {
+		t.Fatal(err)
+	}
+	sv, _ := time.LoadLocation("America/El_Salvador")
+	today := time.Now().In(sv).Format(time.DateOnly)
+	for resource, day := range map[string]string{"/work-orders/page": "2026-01-01", "/vehicles/page": "2026-01-01", "/quotes": today} {
+		inRange := a.obj(c, "GET", path+resource+"?from="+day+"&to="+day, "", 200)
+		all := a.obj(c, "GET", path+resource, "", 200)
+		if inRange["total"] != all["total"] || inRange["total"].(float64) == 0 {
+			t.Fatal(resource, inRange["total"], all["total"])
+		}
+		past := a.obj(c, "GET", path+resource+"?from=2000-01-01&to=2000-12-31", "", 200)
+		if past["total"].(float64) != 0 || past["counts"].(map[string]any)[""].(float64) != 0 {
+			t.Fatal(resource, past)
+		}
+		a.req(c, "GET", path+resource+"?from=2026-02-30", "", 400)
+		a.req(c, "GET", path+resource+"?from=2026-05-02&to=2026-05-01", "", 400)
+	}
+	if next := a.obj(c, "GET", path+"/work-orders/page?from=2026-01-02", "", 200); next["total"].(float64) != 0 {
+		t.Fatal("la fecha se comparó en UTC", next)
 	}
 	searched := a.obj(c, "GET", path+"/work-orders/page?q=Modelo%2000", "", 200)
 	if searched["total"].(float64) != 1 || searched["items"].([]any)[0].(map[string]any)["id"] != firstOrder {

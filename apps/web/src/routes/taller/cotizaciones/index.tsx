@@ -1,22 +1,30 @@
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText } from "lucide-react";
+import { FileText, Plus } from "lucide-react";
 import { useState } from "react";
+import {
+	type DateRange,
+	DateRangeFilter,
+} from "@/components/kilora/date-range-filter";
+import { ClearFilters, FacetFilter } from "@/components/kilora/facet-filter";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
-import { QuoteOutcomeBadge } from "@/components/kilora/quote-outcome";
+import {
+	outcomeDot,
+	QuoteOutcomeBadge,
+} from "@/components/kilora/quote-outcome";
+import {
+	EmptyState,
+	ListToolbar,
+	Missing,
+	PageBody,
+	PageHeader,
+	Plate,
+} from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
+import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Table,
@@ -28,8 +36,8 @@ import {
 } from "@/components/ui/table";
 import { counterQuotesQuery } from "@/features/taller/quotes";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
-import { quoteOutcomeActions, quoteOutcomeLabels } from "@/lib/domain";
-import { date, money, quoteCode } from "@/lib/format";
+import { quoteOutcomeLabels } from "@/lib/domain";
+import { date, money, quoteCode, shortDate } from "@/lib/format";
 import { useListPage } from "@/lib/pagination";
 
 export const Route = createFileRoute("/taller/cotizaciones/")({
@@ -40,21 +48,13 @@ export const Route = createFileRoute("/taller/cotizaciones/")({
 	component: QuotesPage,
 });
 
-const filters = [
-	["", "Todas"],
-	["pendiente", quoteOutcomeLabels.pendiente],
-	...quoteOutcomeActions,
-] as const;
-
 type Outcome = components["schemas"]["CounterQuote"]["outcome"];
 type Row = components["schemas"]["CounterQuoteSummary"];
 
-function vehicleLabel(row: Row) {
-	const name = [row.vehicle_make, row.vehicle_model, row.vehicle_year]
+function vehicleName(row: Row) {
+	return [row.vehicle_make, row.vehicle_model, row.vehicle_year]
 		.filter(Boolean)
 		.join(" ");
-	if (row.vehicle_plate && name) return `${row.vehicle_plate} · ${name}`;
-	return row.vehicle_plate || name || "Sin vehículo";
 }
 
 function QuotesPage() {
@@ -62,171 +62,174 @@ function QuotesPage() {
 	const initial = Route.useLoaderData();
 	const { me } = useTallerContext();
 	const [q, setQ] = useState("");
-	const [outcome, setOutcome] = useState<Outcome | "">("");
+	const [outcomes, setOutcomes] = useState<Outcome[]>([]);
+	const [range, setRange] = useState<DateRange>({});
 	const { page, offset, setPage } = useListPage(
-		JSON.stringify([workshopID, q.trim(), outcome]),
+		JSON.stringify([workshopID, q.trim(), outcomes, range]),
 	);
 	const { data, isLoading, error, isFetching } = useQuery({
-		...counterQuotesQuery(workshopID, q.trim(), outcome || undefined, offset),
+		...counterQuotesQuery(workshopID, q.trim(), outcomes, offset, range),
 		initialData:
 			!q &&
-			!outcome &&
+			!outcomes.length &&
+			!range.from &&
+			!range.to &&
 			page === 1 &&
 			workshopID === me.memberships[0].workshop_id
 				? initial
 				: undefined,
 	});
 	const rows = data?.items ?? [];
-	const filtering = q.trim() !== "" || outcome !== "";
+	const filtering =
+		q.trim() !== "" || outcomes.length > 0 || !!range.from || !!range.to;
 	return (
-		<main className="mx-auto max-w-7xl space-y-5 px-5 py-7">
-			<div className="flex flex-wrap items-end justify-between gap-4">
-				<h1 className="font-display text-3xl font-bold">Cotizaciones</h1>
-				<Button asChild>
-					<Link to="/taller/cotizaciones/nueva">Nueva cotización</Link>
-				</Button>
-			</div>
-			<div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_14rem]">
-				<div className="grid gap-2">
-					<Label htmlFor="quote-search">Buscar</Label>
-					<Input
-						id="quote-search"
+		<PageBody>
+			<PageHeader
+				eyebrow="Operación"
+				title="Cotizaciones"
+				description="Presupuestos de mostrador para clientes que todavía no dejan el vehículo. Si aceptan, se convierten en orden."
+				actions={
+					<Button asChild>
+						<Link to="/taller/cotizaciones/nueva">
+							<Plus className="size-4" />
+							Nueva cotización
+						</Link>
+					</Button>
+				}
+			/>
+			<Card className="gap-0 overflow-hidden py-0 shadow-none">
+				<ListToolbar>
+					<SearchInput
+						containerClassName="min-w-[220px] flex-1 sm:max-w-sm"
+						aria-label="Buscar cotizaciones"
+						placeholder="Buscar por número, cliente, placa o teléfono"
 						value={q}
-						placeholder="Número, cliente, placa o teléfono"
 						onChange={(event) => setQ(event.target.value)}
 					/>
-				</div>
-				<div className="grid gap-2">
-					<Label>Estado</Label>
-					<Select
-						value={outcome || "all"}
-						onValueChange={(value) =>
-							setOutcome(value === "all" ? "" : (value as Outcome))
-						}
-					>
-						<SelectTrigger
-							aria-label="Estado de la cotización"
-							className="w-full"
-						>
-							<SelectValue />
-						</SelectTrigger>
-						<SelectContent>
-							{filters.map(([value, label]) => (
-								<SelectItem key={value || "all"} value={value || "all"}>
-									{label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
-			<QueryContent
-				pending={isLoading}
-				error={error}
-				empty={rows.length === 0}
-				loading={
-					<div className="grid gap-2">
-						<Skeleton className="h-12" aria-label="Cargando cotizaciones…" />
-						<Skeleton className="h-12" />
-						<Skeleton className="h-12" />
-					</div>
-				}
-				emptyState={
-					<Card className="items-center gap-3 px-6 py-16 text-center shadow-none">
-						<FileText className="size-8 text-ink-3" />
-						<p className="font-medium">
-							{filtering
-								? "Ninguna cotización coincide con la búsqueda"
-								: "Todavía no hay cotizaciones"}
-						</p>
-						<p className="max-w-sm text-sm text-ink-3">
-							Armá un presupuesto de mostrador y entregalo impreso en menos de
-							dos minutos.
-						</p>
-						{filtering ? null : (
-							<Button asChild>
-								<Link to="/taller/cotizaciones/nueva">Nueva cotización</Link>
-							</Button>
-						)}
-					</Card>
-				}
-			>
-				<Card className="hidden gap-0 overflow-hidden py-0 shadow-none md:block">
+					<FacetFilter
+						label="Estado"
+						selected={outcomes}
+						onChange={setOutcomes}
+						options={(
+							["pendiente", "acepto", "rechazo", "no_respondio"] as const
+						).map((value) => ({
+							value,
+							label: quoteOutcomeLabels[value],
+							dot: outcomeDot(value),
+							count: data?.counts[value] ?? 0,
+						}))}
+					/>
+					<DateRangeFilter label="Fecha" value={range} onChange={setRange} />
+					<ClearFilters
+						show={filtering}
+						onClear={() => {
+							setQ("");
+							setOutcomes([]);
+							setRange({});
+						}}
+					/>
+				</ListToolbar>
+				<QueryContent
+					pending={isLoading}
+					error={error}
+					empty={rows.length === 0}
+					errorClassName="m-4"
+					loading={
+						<div className="space-y-2 p-4">
+							<Skeleton className="h-11" aria-label="Cargando cotizaciones…" />
+							<Skeleton className="h-11" />
+							<Skeleton className="h-11" />
+						</div>
+					}
+					emptyState={
+						<EmptyState
+							icon={FileText}
+							title={
+								filtering
+									? "Ninguna cotización coincide"
+									: "Todavía no hay cotizaciones"
+							}
+							description={
+								filtering
+									? "Probá con otra búsqueda o cambiá el filtro."
+									: "Armá un presupuesto de mostrador y entregalo impreso en menos de dos minutos."
+							}
+							action={
+								filtering ? null : (
+									<Button asChild>
+										<Link to="/taller/cotizaciones/nueva">
+											<Plus className="size-4" />
+											Nueva cotización
+										</Link>
+									</Button>
+								)
+							}
+						/>
+					}
+				>
 					<Table>
 						<TableHeader>
-							<TableRow>
-								<TableHead>Cotización</TableHead>
+							<TableRow className="bg-secondary/40 hover:bg-secondary/40">
+								<TableHead className="w-28 pl-4">Número</TableHead>
 								<TableHead>Cliente</TableHead>
-								<TableHead>Vehículo</TableHead>
-								<TableHead className="text-right">Total</TableHead>
-								<TableHead>Fecha</TableHead>
-								<TableHead>Estado</TableHead>
+								<TableHead className="hidden md:table-cell">Vehículo</TableHead>
+								<TableHead className="hidden sm:table-cell">Estado</TableHead>
+								<TableHead className="pr-4 text-right lg:pr-2">Total</TableHead>
+								<TableHead className="hidden pr-4 text-right lg:table-cell">
+									Fecha
+								</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{rows.map((row) => (
-								<TableRow key={row.id} className="relative">
-									<TableCell>
+								<TableRow key={row.id} className="relative cursor-pointer">
+									<TableCell className="pl-4">
 										<Link
-											className="font-mono underline after:absolute after:inset-0"
+											className="font-mono text-[13px] font-semibold text-seal after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 											to="/taller/cotizaciones/$quoteId"
 											params={{ quoteId: row.id }}
 										>
 											{quoteCode(row.number)}
 										</Link>
 									</TableCell>
-									<TableCell>{row.customer_name || "Sin nombre"}</TableCell>
-									<TableCell>{vehicleLabel(row)}</TableCell>
-									<TableCell className="text-right tabular-nums">
+									<TableCell className="text-[13px] font-medium">
+										{row.customer_name || <Missing>Sin nombre</Missing>}
+										<span className="mt-1 block sm:hidden">
+											<QuoteOutcomeBadge outcome={row.outcome} />
+										</span>
+									</TableCell>
+									<TableCell className="hidden md:table-cell">
+										<div className="flex items-center gap-2.5">
+											{row.vehicle_plate && <Plate value={row.vehicle_plate} />}
+											<span className="text-[13px] text-ink-2">
+												{vehicleName(row) || <Missing>Sin vehículo</Missing>}
+											</span>
+										</div>
+									</TableCell>
+									<TableCell className="hidden sm:table-cell">
+										<QuoteOutcomeBadge outcome={row.outcome} />
+									</TableCell>
+									<TableCell className="pr-4 text-right font-mono text-[13px] tabular-nums lg:pr-2">
 										{money(row.total)}
 									</TableCell>
-									<TableCell>{date(row.created_at)}</TableCell>
-									<TableCell>
-										<QuoteOutcomeBadge outcome={row.outcome} />
+									<TableCell
+										className="hidden pr-4 text-right text-[12.5px] text-ink-3 lg:table-cell"
+										title={date(row.created_at)}
+									>
+										{shortDate(row.created_at)}
 									</TableCell>
 								</TableRow>
 							))}
 						</TableBody>
 					</Table>
-				</Card>
-				<ul className="grid gap-3 md:hidden">
-					{rows.map((row) => (
-						<li key={row.id}>
-							<Link
-								to="/taller/cotizaciones/$quoteId"
-								params={{ quoteId: row.id }}
-								className="block rounded-lg border bg-card p-4"
-							>
-								<div className="flex items-start justify-between gap-3">
-									<p className="font-mono font-medium">
-										{quoteCode(row.number)}
-									</p>
-									<QuoteOutcomeBadge outcome={row.outcome} />
-								</div>
-								<p className="mt-2 font-medium">
-									{row.customer_name || "Sin nombre"}
-								</p>
-								<p className="text-sm text-ink-3">{vehicleLabel(row)}</p>
-								<div className="mt-3 flex items-center justify-between text-sm">
-									<span className="font-semibold tabular-nums">
-										{money(row.total)}
-									</span>
-									<span className="text-ink-3">{date(row.created_at)}</span>
-								</div>
-							</Link>
-						</li>
-					))}
-				</ul>
-				{isFetching ? (
-					<p className="text-sm text-ink-3">Actualizando…</p>
-				) : null}
-			</QueryContent>
-			<ListPagination
-				page={page}
-				total={data?.total}
-				onPageChange={setPage}
-				pending={isFetching}
-			/>
-		</main>
+				</QueryContent>
+				<ListPagination
+					page={page}
+					total={data?.total}
+					onPageChange={setPage}
+					pending={isFetching}
+				/>
+			</Card>
+		</PageBody>
 	);
 }

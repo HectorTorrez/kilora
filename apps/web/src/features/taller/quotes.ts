@@ -1,5 +1,6 @@
 import type { components } from "@kilora/contracts";
 import { queryOptions } from "@tanstack/react-query";
+import type { DateRange } from "@/components/kilora/date-range-filter";
 import { api, unwrap } from "@/lib/api";
 import { LIST_PAGE_SIZE } from "@/lib/pagination";
 
@@ -8,18 +9,12 @@ type S = components["schemas"];
 export const counterQuotesQuery = (
 	workshopID: string,
 	q = "",
-	outcome?: S["CounterQuote"]["outcome"],
+	outcomes: S["CounterQuote"]["outcome"][] = [],
 	offset = 0,
+	range: DateRange = {},
 ) =>
 	queryOptions({
-		queryKey: [
-			"workshop",
-			workshopID,
-			"counter-quotes",
-			q,
-			outcome ?? "",
-			offset,
-		],
+		queryKey: ["workshop", workshopID, "counter-quotes", q, outcomes, offset],
 		queryFn: async () =>
 			unwrap(
 				await api.GET("/api/v1/workshops/{workshopID}/quotes", {
@@ -27,9 +22,11 @@ export const counterQuotesQuery = (
 						path: { workshopID },
 						query: {
 							q: q || undefined,
-							outcome,
+							outcome: outcomes.length ? outcomes : undefined,
 							limit: LIST_PAGE_SIZE,
 							offset,
+							from: range.from,
+							to: range.to,
 						},
 					},
 				}),

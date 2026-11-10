@@ -30,7 +30,9 @@ SELECT v.*
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
 WHERE l.workshop_id = sqlc.arg(workshop_id) AND v.status <> 'archivado'
   AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
-  AND (sqlc.narg(status)::vehicle_status IS NULL OR v.status = sqlc.narg(status))
+  AND (cardinality(sqlc.arg(statuses)::text[]) = 0 OR v.status::text = ANY(sqlc.arg(statuses)::text[]))
+  AND (sqlc.narg(date_from)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
+  AND (sqlc.narg(date_to)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
 ORDER BY v.last_activity_at DESC, v.id DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
@@ -39,4 +41,6 @@ SELECT v.status, count(*) AS total
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
 WHERE l.workshop_id = sqlc.arg(workshop_id) AND v.status <> 'archivado'
   AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
+  AND (sqlc.narg(date_from)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
+  AND (sqlc.narg(date_to)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
 GROUP BY v.status;

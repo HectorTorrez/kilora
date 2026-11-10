@@ -12,41 +12,63 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countCounterQuotes = `-- name: CountCounterQuotes :one
-SELECT count(*)
+const countCounterQuotesByOutcome = `-- name: CountCounterQuotesByOutcome :many
+SELECT q.outcome, count(*) AS total
 FROM quote q
 LEFT JOIN work_order o ON o.id = q.converted_order_id
 WHERE q.workshop_id = $1
   AND q.branch_id = ANY($2::uuid[])
   AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
-  AND ($3::quote_outcome IS NULL OR q.outcome = $3)
   AND (
-    $4::text IS NULL
-    OR q.customer_name ILIKE $4 ESCAPE '\'
-    OR COALESCE(q.customer_phone, '') ILIKE $4 ESCAPE '\'
-    OR COALESCE(q.vehicle_plate, '') ILIKE $4 ESCAPE '\'
-    OR q.number::text ILIKE $4 ESCAPE '\'
-    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $4 ESCAPE '\'
+    $3::text IS NULL
+    OR q.customer_name ILIKE $3 ESCAPE '\'
+    OR COALESCE(q.customer_phone, '') ILIKE $3 ESCAPE '\'
+    OR COALESCE(q.vehicle_plate, '') ILIKE $3 ESCAPE '\'
+    OR q.number::text ILIKE $3 ESCAPE '\'
+    OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $3 ESCAPE '\'
   )
+  AND ($4::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date >= $4::date)
+  AND ($5::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date <= $5::date)
+GROUP BY q.outcome
 `
 
-type CountCounterQuotesParams struct {
-	WorkshopID uuid.UUID     `json:"workshop_id"`
-	BranchIds  []uuid.UUID   `json:"branch_ids"`
-	Outcome    *QuoteOutcome `json:"outcome"`
-	Search     *string       `json:"search"`
+type CountCounterQuotesByOutcomeParams struct {
+	WorkshopID uuid.UUID   `json:"workshop_id"`
+	BranchIds  []uuid.UUID `json:"branch_ids"`
+	Search     *string     `json:"search"`
+	DateFrom   pgtype.Date `json:"date_from"`
+	DateTo     pgtype.Date `json:"date_to"`
 }
 
-func (q *Queries) CountCounterQuotes(ctx context.Context, arg CountCounterQuotesParams) (int64, error) {
-	row := q.db.QueryRow(ctx, countCounterQuotes,
+type CountCounterQuotesByOutcomeRow struct {
+	Outcome QuoteOutcome `json:"outcome"`
+	Total   int64        `json:"total"`
+}
+
+func (q *Queries) CountCounterQuotesByOutcome(ctx context.Context, arg CountCounterQuotesByOutcomeParams) ([]CountCounterQuotesByOutcomeRow, error) {
+	rows, err := q.db.Query(ctx, countCounterQuotesByOutcome,
 		arg.WorkshopID,
 		arg.BranchIds,
-		arg.Outcome,
 		arg.Search,
+		arg.DateFrom,
+		arg.DateTo,
 	)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CountCounterQuotesByOutcomeRow{}
+	for rows.Next() {
+		var i CountCounterQuotesByOutcomeRow
+		if err := rows.Scan(&i.Outcome, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const createCounterQuote = `-- name: CreateCounterQuote :one
@@ -383,7 +405,7 @@ LEFT JOIN work_order o ON o.id = q.converted_order_id
 WHERE q.workshop_id = $1
   AND q.branch_id = ANY($2::uuid[])
   AND (q.work_order_id IS NULL OR q.converted_order_id IS NOT NULL)
-  AND ($3::quote_outcome IS NULL OR q.outcome = $3)
+  AND (cardinality($3::text[]) = 0 OR q.outcome::text = ANY($3::text[]))
   AND (
     $4::text IS NULL
     OR q.customer_name ILIKE $4 ESCAPE '\'
@@ -392,17 +414,21 @@ WHERE q.workshop_id = $1
     OR q.number::text ILIKE $4 ESCAPE '\'
     OR ('COT-' || lpad(q.number::text, 4, '0')) ILIKE $4 ESCAPE '\'
   )
+  AND ($5::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date >= $5::date)
+  AND ($6::date IS NULL OR (q.created_at AT TIME ZONE 'America/El_Salvador')::date <= $6::date)
 ORDER BY q.created_at DESC, q.number DESC
-LIMIT $6 OFFSET $5
+LIMIT $8 OFFSET $7
 `
 
 type ListCounterQuotesParams struct {
-	WorkshopID uuid.UUID     `json:"workshop_id"`
-	BranchIds  []uuid.UUID   `json:"branch_ids"`
-	Outcome    *QuoteOutcome `json:"outcome"`
-	Search     *string       `json:"search"`
-	RowOffset  int32         `json:"row_offset"`
-	RowLimit   int32         `json:"row_limit"`
+	WorkshopID uuid.UUID   `json:"workshop_id"`
+	BranchIds  []uuid.UUID `json:"branch_ids"`
+	Outcomes   []string    `json:"outcomes"`
+	Search     *string     `json:"search"`
+	DateFrom   pgtype.Date `json:"date_from"`
+	DateTo     pgtype.Date `json:"date_to"`
+	RowOffset  int32       `json:"row_offset"`
+	RowLimit   int32       `json:"row_limit"`
 }
 
 type ListCounterQuotesRow struct {
@@ -428,8 +454,10 @@ func (q *Queries) ListCounterQuotes(ctx context.Context, arg ListCounterQuotesPa
 	rows, err := q.db.Query(ctx, listCounterQuotes,
 		arg.WorkshopID,
 		arg.BranchIds,
-		arg.Outcome,
+		arg.Outcomes,
 		arg.Search,
+		arg.DateFrom,
+		arg.DateTo,
 		arg.RowOffset,
 		arg.RowLimit,
 	)
