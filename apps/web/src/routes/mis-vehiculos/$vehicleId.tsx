@@ -238,16 +238,15 @@ function Page() {
 							</Card>
 						))}
 					</div>
-					{h.total > OWNER_HISTORY_PAGE_SIZE && (
-						<ListPagination
-							page={historyPage}
-							total={h.total}
-							pageSize={OWNER_HISTORY_PAGE_SIZE}
-							pending={history.isPlaceholderData}
-							onPageChange={changeHistoryPage}
-							className="mt-4 rounded-lg border px-4"
-						/>
-					)}
+					<ListPagination
+						page={historyPage}
+						total={h.total}
+						pageSize={OWNER_HISTORY_PAGE_SIZE}
+						pending={history.isPlaceholderData}
+						onPageChange={changeHistoryPage}
+						alwaysVisible
+						className="mt-4 rounded-lg border px-4"
+					/>
 				</section>
 				<aside className="space-y-5">
 					<Card className="gap-0 p-5 shadow-none">
@@ -278,15 +277,14 @@ function Page() {
 						) : (
 							<p className="mt-2 text-sm text-ink-3">Sin lecturas</p>
 						)}
-						{readings.length > READINGS_PAGE_SIZE && (
-							<ListPagination
-								page={readingsPage}
-								total={readings.length}
-								pageSize={READINGS_PAGE_SIZE}
-								onPageChange={setReadingsPage}
-								className="mt-2 px-0 pb-0"
-							/>
-						)}
+						<ListPagination
+							page={readingsPage}
+							total={readings.length}
+							pageSize={READINGS_PAGE_SIZE}
+							onPageChange={setReadingsPage}
+							alwaysVisible
+							className="mt-2 px-0 pb-0"
+						/>
 					</Card>
 				</aside>
 			</div>

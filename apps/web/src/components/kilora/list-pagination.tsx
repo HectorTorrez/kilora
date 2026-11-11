@@ -10,6 +10,7 @@ export function ListPagination({
 	onPageChange,
 	pending = false,
 	pageSize = LIST_PAGE_SIZE,
+	alwaysVisible = false,
 	className,
 }: {
 	page: number;
@@ -17,13 +18,16 @@ export function ListPagination({
 	onPageChange: (page: number) => void;
 	pending?: boolean;
 	pageSize?: number;
+	/** Mostrar la barra aunque no haya resultados. */
+	alwaysVisible?: boolean;
 	className?: string;
 }) {
 	const pages = Math.max(1, Math.ceil((total ?? 0) / pageSize));
 	useEffect(() => {
 		if (!pending && total !== undefined && page > pages) onPageChange(pages);
 	}, [page, pages, total, pending, onPageChange]);
-	if (page === 1 && (total === undefined || total === 0)) return null;
+	if (!alwaysVisible && page === 1 && (total === undefined || total === 0))
+		return null;
 	const first = total === 0 ? 0 : (page - 1) * pageSize + 1;
 	const last = Math.min(page * pageSize, total ?? 0);
 	return (
@@ -38,8 +42,8 @@ export function ListPagination({
 				{total === undefined
 					? pending
 						? "Cargando resultados…"
-						: "Resultados no disponibles"
-					: `${first <= last ? `${first}–${last}` : "0"} de ${total} resultados`}
+						: null
+					:`${first <= last ? `${first}–${last}` : "0"} de ${total} resultados`}
 			</p>
 			<div className="flex flex-wrap items-center gap-2">
 				<Button
