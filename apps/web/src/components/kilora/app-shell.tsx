@@ -10,6 +10,7 @@ import {
 	FileText,
 	LayoutDashboard,
 	LogOut,
+	MapPin,
 	Menu,
 	Plus,
 	ShieldCheck,
@@ -52,7 +53,11 @@ import {
 	SheetDescription,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { useTallerContext, WorkshopProvider } from "@/features/taller/session";
+import {
+	BranchProvider,
+	useTallerContext,
+	WorkshopProvider,
+} from "@/features/taller/session";
 import { useCreateWorkshop, useLogout } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -160,6 +165,42 @@ export function AppShell({ children }: { children: ReactNode }) {
 			.values(),
 	];
 	const activeOption = workshops.find((w) => w.id === active?.workshop_id);
+	const activeWorkshopID = active?.workshop_id ?? "";
+	const branches: BranchOption[] = me.memberships
+		.filter((m) => m.workshop_id === activeWorkshopID)
+		.map((m) => ({ id: m.branch_id, name: m.branch_name }));
+
+	// Sucursal elegida, recordada por taller. Con una sola sucursal no hay nada
+	// que elegir; "" significa todas.
+	const branchKey = `kilora-branch-${me.user.id}-${activeWorkshopID}`;
+	const [storedBranch, setStoredBranch] = useState("");
+	useEffect(() => {
+		try {
+			setStoredBranch(localStorage.getItem(branchKey) ?? "");
+		} catch {
+			setStoredBranch("");
+		}
+	}, [branchKey]);
+	const activeBranchID =
+		branches.length > 1 && branches.some((b) => b.id === storedBranch)
+			? storedBranch
+			: "";
+	const activeBranch = branches.find((b) => b.id === activeBranchID);
+
+	const selectBranch = (id: string) => {
+		if (id === activeBranchID) return;
+		setStoredBranch(id);
+		try {
+			if (id) localStorage.setItem(branchKey, id);
+			else localStorage.removeItem(branchKey);
+		} catch {}
+		const name = branches.find((b) => b.id === id)?.name;
+		toast.success(
+			name
+				? `Ahora estás en la sucursal ${name}`
+				: "Viendo todas las sucursales",
+		);
+	};
 
 	const selectWorkshop = (id: string) => {
 		if (id === active?.workshop_id) return;
@@ -190,10 +231,14 @@ export function AppShell({ children }: { children: ReactNode }) {
 		<SidebarContent
 			workshopName={active?.workshop_name ?? ""}
 			branchName={
-				activeOption && activeOption.branches > 1
-					? `${activeOption.branches} sucursales`
-					: (active?.branch_name ?? "")
+				activeBranch?.name ??
+				(activeOption && activeOption.branches > 1
+					? `Todas las sucursales (${activeOption.branches})`
+					: (active?.branch_name ?? ""))
 			}
+			branches={branches}
+			activeBranch={activeBranchID}
+			onSelectBranch={selectBranch}
 			workshops={workshops}
 			activeWorkshop={active?.workshop_id ?? ""}
 			onSelectWorkshop={selectWorkshop}
@@ -255,10 +300,12 @@ export function AppShell({ children }: { children: ReactNode }) {
 					key={active?.workshop_id}
 					value={active?.workshop_id ?? ""}
 				>
-					<div className="print:hidden">
-						<DemoBanner email={me.user.email} />
-					</div>
-					{children}
+					<BranchProvider value={{ id: activeBranchID, setId: selectBranch }}>
+						<div className="print:hidden">
+							<DemoBanner email={me.user.email} />
+						</div>
+						{children}
+					</BranchProvider>
 				</WorkshopProvider>
 			</div>
 		</div>
@@ -268,6 +315,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 function SidebarContent({
 	workshopName,
 	branchName,
+	branches,
+	activeBranch,
+	onSelectBranch,
 	workshops,
 	activeWorkshop,
 	onSelectWorkshop,
@@ -280,6 +330,9 @@ function SidebarContent({
 }: {
 	workshopName: string;
 	branchName: string;
+	branches: BranchOption[];
+	activeBranch: string;
+	onSelectBranch: (id: string) => void;
 	workshops: WorkshopOption[];
 	activeWorkshop: string;
 	onSelectWorkshop: (id: string) => void;
@@ -308,6 +361,9 @@ function SidebarContent({
 			<WorkshopSwitcher
 				name={workshopName}
 				branch={branchName}
+				branches={branches}
+				activeBranch={activeBranch}
+				onSelectBranch={onSelectBranch}
 				workshops={workshops}
 				active={activeWorkshop}
 				onSelect={onSelectWorkshop}
@@ -413,15 +469,23 @@ type WorkshopOption = {
 	branches: number;
 };
 
+type BranchOption = { id: string; name: string };
+
 function WorkshopSwitcher({
 	name,
 	branch,
+	branches,
+	activeBranch,
+	onSelectBranch,
 	workshops,
 	active,
 	onSelect,
 }: {
 	name: string;
 	branch: string;
+	branches: BranchOption[];
+	activeBranch: string;
+	onSelectBranch: (id: string) => void;
 	workshops: WorkshopOption[];
 	active: string;
 	onSelect: (id: string) => void;
@@ -433,7 +497,7 @@ function WorkshopSwitcher({
 				<DropdownMenuTrigger asChild>
 					<button
 						type="button"
-						aria-label={`Taller actual: ${name}. Cambiar de taller`}
+						aria-label={`Taller actual: ${name}, ${branch}. Cambiar de taller o sucursal`}
 						className="pressable flex w-full items-center gap-2.5 rounded-lg border bg-background/60 p-2 text-left hover:bg-secondary"
 					>
 						<span className="grid size-8 shrink-0 place-items-center rounded-md bg-seal text-[11px] font-bold text-white">
@@ -451,6 +515,43 @@ function WorkshopSwitcher({
 					</button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-64">
+					{branches.length > 1 && (
+						<>
+							<DropdownMenuLabel className="text-xs font-medium text-ink-3">
+								Sucursal
+							</DropdownMenuLabel>
+							<DropdownMenuItem
+								onSelect={() => onSelectBranch("")}
+								className="gap-2.5"
+							>
+								<MapPin className="size-4 text-ink-3" />
+								<span className="flex-1 truncate">Todas las sucursales</span>
+								{activeBranch === "" && (
+									<Check
+										className="size-4 shrink-0 text-seal"
+										aria-label="Actual"
+									/>
+								)}
+							</DropdownMenuItem>
+							{branches.map((b) => (
+								<DropdownMenuItem
+									key={b.id}
+									onSelect={() => onSelectBranch(b.id)}
+									className="gap-2.5"
+								>
+									<MapPin className="size-4 text-ink-3" />
+									<span className="flex-1 truncate">{b.name}</span>
+									{b.id === activeBranch && (
+										<Check
+											className="size-4 shrink-0 text-seal"
+											aria-label="Actual"
+										/>
+									)}
+								</DropdownMenuItem>
+							))}
+							<DropdownMenuSeparator />
+						</>
+					)}
 					<DropdownMenuLabel className="text-xs font-medium text-ink-3">
 						{workshops.length > 1 ? "Tus talleres" : "Tu taller"}
 					</DropdownMenuLabel>

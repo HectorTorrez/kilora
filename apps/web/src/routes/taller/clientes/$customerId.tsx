@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Car, MessageCircle, Pencil, Plus } from "lucide-react";
+import { Car, FileText, MessageCircle, Pencil, Plus } from "lucide-react";
 import { useState } from "react";
 import { CustomerForm } from "@/components/kilora/customer-form";
 import { FormDialog } from "@/components/kilora/form-dialog";
@@ -90,6 +90,12 @@ function CustomerPage() {
 						<Button variant="outline" onClick={() => setEditing(true)}>
 							<Pencil className="size-4" />
 							Editar
+						</Button>
+						<Button asChild variant="outline">
+							<Link to="/taller/cotizaciones/nueva" search={{ cliente: c.id }}>
+								<FileText className="size-4" />
+								Crear cotización
+							</Link>
 						</Button>
 						<Button onClick={() => setAdding(true)}>
 							<Plus className="size-4" />

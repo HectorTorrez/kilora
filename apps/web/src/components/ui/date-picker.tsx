@@ -12,6 +12,8 @@ import {
 import { cn } from "@/lib/utils";
 
 const ISO_DATE = "yyyy-MM-dd";
+/** Años hacia adelante que ofrece el selector cuando se permiten fechas futuras. */
+const FUTURE_YEARS = 20;
 
 function parseFormDate(value: string) {
 	const date = parse(value, ISO_DATE, new Date());
@@ -72,7 +74,10 @@ export function DatePicker({
 								endMonth: new Date(today.getFullYear(), today.getMonth()),
 								disabled: { after: today },
 							}
-						: {})}
+						: {
+								// Sin endMonth, el selector de año se corta en el año actual.
+								endMonth: new Date(today.getFullYear() + FUTURE_YEARS, 11),
+							})}
 					selected={selected}
 					formatters={{
 						formatMonthDropdown: (date) => format(date, "MMM", { locale: es }),

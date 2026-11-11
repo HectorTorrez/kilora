@@ -31,7 +31,11 @@ import {
 	TableRow,
 } from "@/components/ui/table";
 import { ordersPageQuery } from "@/features/taller/orders";
-import { useTallerContext, useWorkshopId } from "@/features/taller/session";
+import {
+	useActiveBranch,
+	useTallerContext,
+	useWorkshopId,
+} from "@/features/taller/session";
 import { date, shortDate, statusLabel } from "@/lib/format";
 import { useListPage } from "@/lib/pagination";
 
@@ -76,7 +80,7 @@ function OrdersPage() {
 	const navigate = useNavigate({ from: "/taller/ordenes/" });
 	const { me } = useTallerContext();
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
-	const [branch, setBranch] = useState("");
+	const { id: branch, setId: setBranch } = useActiveBranch();
 	const [query, setQuery] = useState("");
 	const q = query.trim().toLowerCase();
 	const { page, offset, setPage } = useListPage(
@@ -122,12 +126,10 @@ function OrdersPage() {
 			search: (prev) => ({ ...prev, desde: next.from, hasta: next.to }),
 			replace: true,
 		});
-	const filtering =
-		!!q || statuses.length > 0 || !!branch || !!desde || !!hasta;
+	const filtering = !!q || statuses.length > 0 || !!desde || !!hasta;
 
 	const clearFilters = () => {
 		setQuery("");
-		setBranch("");
 		navigate({ search: {}, replace: true });
 	};
 	return (

@@ -36,7 +36,11 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { createOrderAction } from "@/features/taller/orders";
-import { useTallerContext, useWorkshopId } from "@/features/taller/session";
+import {
+	useActiveBranch,
+	useTallerContext,
+	useWorkshopId,
+} from "@/features/taller/session";
 import { matchesVehicle, vehiclesQuery } from "@/features/taller/vehicles";
 import { km as formatKm } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -69,6 +73,7 @@ function NewOrderPage() {
 	const { vehiculo } = Route.useSearch();
 	const { me } = useTallerContext();
 	const branches = me.memberships.filter((m) => m.workshop_id === workshopID);
+	const activeBranch = useActiveBranch().id;
 	const navigate = useNavigate();
 
 	const [search, setSearch] = useState("");
@@ -78,7 +83,7 @@ function NewOrderPage() {
 		mode: "onChange",
 		resolver: zodResolver(receptionSchema),
 		defaultValues: {
-			branch: branches[0]?.branch_id ?? "",
+			branch: activeBranch || (branches[0]?.branch_id ?? ""),
 			reason: "",
 			km: "",
 			notes: "",
