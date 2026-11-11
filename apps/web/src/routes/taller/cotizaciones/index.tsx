@@ -170,7 +170,7 @@ function QuotesPage() {
 									sortKey="number"
 									sort={sort}
 									onSort={toggle}
-									className="w-28 pl-4"
+									className="pl-3 sm:w-28 sm:pl-4"
 								>
 									Número
 								</SortableHead>
@@ -207,7 +207,7 @@ function QuotesPage() {
 									sortKey="status"
 									sort={sort}
 									onSort={toggle}
-									className="pr-4"
+									className="pr-3 sm:pr-4"
 									filter={
 										<FacetFilter
 											compact
@@ -237,7 +237,7 @@ function QuotesPage() {
 						<TableBody>
 							{rows.map((row) => (
 								<TableRow key={row.id} className="relative cursor-pointer">
-									<TableCell className="pl-4">
+									<TableCell className="pl-3 sm:pl-4">
 										<Link
 											className="font-mono text-[13px] font-semibold text-seal after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 											to="/taller/cotizaciones/$quoteId"
@@ -266,7 +266,7 @@ function QuotesPage() {
 									>
 										{shortDate(row.created_at)}
 									</TableCell>
-									<TableCell className="pr-4">
+									<TableCell className="pr-3 sm:pr-4">
 										<QuoteOutcomeBadge outcome={row.outcome} />
 									</TableCell>
 								</TableRow>

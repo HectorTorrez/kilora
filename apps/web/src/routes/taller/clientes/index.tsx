@@ -125,7 +125,7 @@ function CustomersPage() {
 									sortKey="name"
 									sort={sort}
 									onSort={toggle}
-									className="pl-4"
+									className="pl-3 sm:pl-4"
 								>
 									Cliente
 								</SortableHead>
@@ -150,7 +150,7 @@ function CustomersPage() {
 									sortKey="created"
 									sort={sort}
 									onSort={toggle}
-									className="hidden pr-4 text-right lg:table-cell"
+									className="hidden pr-3 sm:pr-4 text-right lg:table-cell"
 									align="right"
 								>
 									Cliente desde
@@ -164,7 +164,7 @@ function CustomersPage() {
 									className="cursor-pointer"
 									onClick={() => openCustomer(c.id)}
 								>
-									<TableCell className="pl-4">
+									<TableCell className="pl-3 sm:pl-4">
 										<Link
 											to="/taller/clientes/$customerId"
 											params={{ customerId: c.id }}
@@ -194,7 +194,7 @@ function CustomersPage() {
 									<TableCell className="text-right font-mono text-[12.5px] tabular-nums">
 										{c.vehicle_count ?? 0}
 									</TableCell>
-									<TableCell className="hidden pr-4 text-right text-[12.5px] text-ink-3 lg:table-cell">
+									<TableCell className="hidden pr-3 sm:pr-4 text-right text-[12.5px] text-ink-3 lg:table-cell">
 										{shortDate(c.created_at)}
 									</TableCell>
 								</TableRow>

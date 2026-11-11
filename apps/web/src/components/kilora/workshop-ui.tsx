@@ -73,7 +73,11 @@ export function PageHeader({
 					)}
 				</div>
 				{actions && (
-					<div className="flex shrink-0 flex-wrap gap-2">{actions}</div>
+					// En móvil las acciones ocupan el ancho y la principal (la última)
+					// queda arriba; los botones de solo ícono no se estiran.
+					<div className="flex shrink-0 flex-wrap-reverse gap-2 *:grow sm:flex-wrap sm:*:grow-0 [&>[data-size=icon]]:grow-0">
+						{actions}
+					</div>
 				)}
 			</div>
 		</header>

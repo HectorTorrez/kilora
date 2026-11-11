@@ -244,7 +244,7 @@ function QuoteDetailPage() {
 									sortKey="description"
 									sort={items.sort}
 									onSort={items.toggle}
-									className="pl-4 sm:pl-5"
+									className="pl-3 sm:pl-4 sm:pl-5"
 								>
 									Descripción
 								</SortableHead>
@@ -278,7 +278,7 @@ function QuoteDetailPage() {
 									sortKey="subtotal"
 									sort={items.sort}
 									onSort={items.toggle}
-									className="pr-4 text-right sm:pr-5"
+									className="pr-3 sm:pr-4 text-right sm:pr-5"
 									align="right"
 								>
 									Subtotal
@@ -292,7 +292,7 @@ function QuoteDetailPage() {
 									key={`${item.description}-${index}`}
 									className="hover:bg-transparent"
 								>
-									<TableCell className="pl-4 text-[13px] font-medium whitespace-normal sm:pl-5">
+									<TableCell className="pl-3 sm:pl-4 text-[13px] font-medium whitespace-normal sm:pl-5">
 										{item.description}
 									</TableCell>
 									<TableCell className="hidden text-[13px] text-ink-3 sm:table-cell">
@@ -304,7 +304,7 @@ function QuoteDetailPage() {
 									<TableCell className="text-right font-mono text-[13px] tabular-nums">
 										{money(item.unit_price)}
 									</TableCell>
-									<TableCell className="pr-4 text-right font-mono text-[13px] tabular-nums sm:pr-5">
+									<TableCell className="pr-3 sm:pr-4 text-right font-mono text-[13px] tabular-nums sm:pr-5">
 										{money(
 											formatCents(
 												lineCents(

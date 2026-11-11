@@ -85,7 +85,7 @@ export function QuoteItemsFields({
 				<div
 					key={row.id}
 					className={cn(
-						"grid grid-cols-2 gap-3 rounded-md border p-3 @md:grid-cols-[minmax(0,1fr)_84px_120px_88px_40px] @2xl:gap-2 @2xl:rounded-none @2xl:border-0 @2xl:p-0",
+						"relative grid grid-cols-2 gap-3 rounded-md border p-3 @md:grid-cols-[minmax(0,1fr)_84px_120px_88px_40px] @2xl:gap-2 @2xl:rounded-none @2xl:border-0 @2xl:p-0",
 						table,
 					)}
 				>
@@ -104,7 +104,7 @@ export function QuoteItemsFields({
 						placeholder="Ej. Pastillas de freno delanteras"
 						className={cn(
 							hiddenLabel,
-							"order-first col-span-full @2xl:order-none @2xl:col-span-1",
+							"order-first col-span-full pr-10 @md:pr-0 @2xl:order-none @2xl:col-span-1",
 						)}
 					/>
 					<NumberField
@@ -143,7 +143,8 @@ export function QuoteItemsFields({
 						size="icon"
 						aria-label={`Quitar ítem ${index + 1}`}
 						title="Quitar ítem"
-						className="size-10 self-end justify-self-end text-ink-3 hover:text-destructive"
+						// En tarjeta angosta va arriba a la derecha, junto a "Descripción".
+						className="absolute top-1.5 right-1.5 size-10 text-ink-3 hover:text-destructive @md:static @md:self-end @md:justify-self-end"
 						disabled={rows.fields.length === 1}
 						onClick={() => rows.remove(index)}
 					>
@@ -157,7 +158,7 @@ export function QuoteItemsFields({
 					<Plus className="size-4" />
 					Agregar ítem
 				</Button>
-				<dl className="grid min-w-56 gap-1 text-[13px]">
+				<dl className="grid w-full gap-1 text-[13px] @md:w-auto @md:min-w-56">
 					<div className="flex justify-between gap-6 text-ink-3">
 						<dt>Repuestos</dt>
 						<dd className="font-mono tabular-nums">

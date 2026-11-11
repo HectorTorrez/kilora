@@ -74,6 +74,13 @@ function VehiclePage() {
 		(o) => o.status !== "listo" && o.status !== "cancelado",
 	);
 	const whatsApp = v.customer?.phone?.replace(/\D/g, "");
+	const customerCard = (
+		<VehicleCustomerCard
+			workshopID={workshopID}
+			vehicleID={v.id}
+			customer={v.customer}
+		/>
+	);
 
 	return (
 		<PageBody>
@@ -146,6 +153,8 @@ function VehiclePage() {
 
 			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
 				<div className="min-w-0 space-y-6">
+					{/* En móvil el cliente va antes del historial, que es largo. */}
+					<div className="lg:hidden">{customerCard}</div>
 					<SectionCard
 						title="Historial del vehículo"
 						description="De tus servicios ves todo. De otros talleres, solo el trabajo, la fecha y el kilometraje."
@@ -197,11 +206,7 @@ function VehiclePage() {
 				</div>
 
 				<div className="space-y-6">
-					<VehicleCustomerCard
-						workshopID={workshopID}
-						vehicleID={v.id}
-						customer={v.customer}
-					/>
+					<div className="hidden lg:block">{customerCard}</div>
 
 					<SectionCard title="Datos del vehículo">
 						<DetailList

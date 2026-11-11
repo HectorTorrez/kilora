@@ -99,7 +99,7 @@ function Logo() {
 	);
 }
 
-export function Hero({ hasDemo }: { hasDemo: boolean }) {
+export function Hero() {
 	return (
 		<section
 			id="inicio"
@@ -126,20 +126,13 @@ export function Hero({ hasDemo }: { hasDemo: boolean }) {
 						completo aunque cambie de taller.
 					</p>
 					<div className="mt-9 flex flex-wrap items-center gap-3">
-						{hasDemo ? (
-							<a href="#demo" className={buttonVariants({ size: "lg" })}>
-								Probar la demo
-								<ArrowDownRight />
-							</a>
-						) : (
-							<a
-								href="#como-funciona"
-								className={buttonVariants({ size: "lg" })}
-							>
-								Ver cómo funciona
-								<ArrowDownRight />
-							</a>
-						)}
+						<a
+							href="#como-funciona"
+							className={buttonVariants({ size: "lg" })}
+						>
+							Ver cómo funciona
+							<ArrowDownRight />
+						</a>
 						<Link
 							to="/registro"
 							search={{ redirect: undefined }}
@@ -731,7 +724,7 @@ export function FaqSection() {
 	);
 }
 
-export function FinalCta({ hasDemo }: { hasDemo: boolean }) {
+export function FinalCta() {
 	return (
 		<section
 			aria-labelledby="cta-title"
@@ -756,14 +749,6 @@ export function FinalCta({ hasDemo }: { hasDemo: boolean }) {
 						Crear cuenta
 						<ArrowRight />
 					</Link>
-					{hasDemo && (
-						<a
-							href="#demo"
-							className={buttonVariants({ size: "lg", variant: "outline" })}
-						>
-							Probar la demo
-						</a>
-					)}
 				</div>
 			</div>
 		</section>

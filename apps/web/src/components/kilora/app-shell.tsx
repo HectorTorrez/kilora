@@ -346,7 +346,8 @@ function SidebarContent({
 	const isActive = useIsActive();
 	return (
 		<div className="flex h-full flex-col gap-5 px-3 pt-5 pb-3">
-			<div className="flex items-center justify-between px-2">
+			{/* En el menú móvil, deja lugar al botón de cerrar de la hoja. */}
+			<div className="flex items-center justify-between px-2 in-data-[slot=sheet-content]:pr-9">
 				<Link
 					to="/taller"
 					className="font-display text-[18px] font-bold tracking-[0.22em]"

@@ -2,7 +2,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, MessageCircle, Send } from "lucide-react";
 import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import {
 	TextField,
 } from "@/components/kilora/form-fields";
 import { emailField } from "@/components/kilora/form-schemas";
+import { ListPagination } from "@/components/kilora/list-pagination";
 import { CopyField, SectionCard } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -21,7 +22,10 @@ import {
 	invitationsQuery,
 	inviteOwnerAction,
 } from "@/features/taller/vehicles";
+import { shortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const INVITATIONS_PAGE_SIZE = 5;
 
 const schema = z.object({ email: emailField });
 
@@ -53,6 +57,15 @@ export function OwnerInvitation({
 		{ inlineErrors: true },
 	);
 	const [qr, setQr] = useState("");
+	const [page, setPage] = useState(1);
+	const invitations = useMemo(
+		() => [...data].sort((a, b) => b.created_at.localeCompare(a.created_at)),
+		[data],
+	);
+	const visible = invitations.slice(
+		(page - 1) * INVITATIONS_PAGE_SIZE,
+		page * INVITATIONS_PAGE_SIZE,
+	);
 	const form = useForm({
 		mode: "onChange",
 		resolver: zodResolver(schema),
@@ -63,6 +76,7 @@ export function OwnerInvitation({
 		try {
 			await invite.mutateAsync(values.email);
 			toast.success("Invitación enviada");
+			setPage(1);
 			form.reset();
 		} catch (error) {
 			applyFormError(form, error);
@@ -141,31 +155,48 @@ export function OwnerInvitation({
 						)}
 					</div>
 				)}
-				{data.length > 0 && (
+				{invitations.length > 0 && (
 					<div>
 						<p className="mb-1.5 text-xs font-medium text-ink-3">
 							Invitaciones enviadas
+							<span className="ml-1 tabular-nums">({invitations.length})</span>
 						</p>
-						<ul className="divide-y rounded-md border text-[13px]">
-							{data.map((i) => (
-								<li
-									key={i.id ?? i.email}
-									className="flex items-center justify-between gap-2 px-3 py-2"
-								>
-									<span className="min-w-0 truncate">{i.email}</span>
-									<span
-										className={cn(
-											"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
-											i.status === "aceptada"
-												? "bg-ok-soft text-ok"
-												: "bg-secondary text-ink-2",
-										)}
+						<div className="overflow-hidden rounded-md border">
+							<ul className="divide-y text-[13px]">
+								{visible.map((i) => (
+									<li
+										key={i.id}
+										className="flex items-center justify-between gap-2 px-3 py-2"
 									>
-										{invitationStatus[i.status ?? ""] ?? i.status}
-									</span>
-								</li>
-							))}
-						</ul>
+										<div className="min-w-0">
+											<p className="truncate">{i.email}</p>
+											<p className="text-[11px] text-ink-3">
+												Enviada {shortDate(i.created_at)}
+											</p>
+										</div>
+										<span
+											className={cn(
+												"shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold",
+												i.status === "aceptada"
+													? "bg-ok-soft text-ok"
+													: "bg-secondary text-ink-2",
+											)}
+										>
+											{invitationStatus[i.status] ?? i.status}
+										</span>
+									</li>
+								))}
+							</ul>
+							{invitations.length > INVITATIONS_PAGE_SIZE && (
+								<ListPagination
+									page={page}
+									total={invitations.length}
+									pageSize={INVITATIONS_PAGE_SIZE}
+									onPageChange={setPage}
+									className="px-3 py-2"
+								/>
+							)}
+						</div>
 					</div>
 				)}
 			</div>

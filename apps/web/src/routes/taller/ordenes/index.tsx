@@ -205,7 +205,7 @@ function OrdersPage() {
 									sortKey="number"
 									sort={sort}
 									onSort={toggle}
-									className="w-20 pl-4"
+									className="pl-3 sm:w-20 sm:pl-4"
 								>
 									Orden
 								</SortableHead>
@@ -233,7 +233,7 @@ function OrdersPage() {
 									sortKey="status"
 									sort={sort}
 									onSort={toggle}
-									className="pr-4"
+									className="pr-3 sm:pr-4"
 									filter={
 										<FacetFilter
 											compact
@@ -256,7 +256,7 @@ function OrdersPage() {
 						<TableBody>
 							{rows.map((o) => (
 								<TableRow key={o.id} className="relative cursor-pointer">
-									<TableCell className="pl-4">
+									<TableCell className="pl-3 sm:pl-4">
 										<Link
 											className="font-mono text-[13px] font-semibold text-seal after:absolute after:inset-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 											to="/taller/ordenes/$orderId"
@@ -285,7 +285,7 @@ function OrdersPage() {
 									>
 										{shortDate(o.received_at)}
 									</TableCell>
-									<TableCell className="pr-4">
+									<TableCell className="pr-3 sm:pr-4">
 										<OrderStatusBadge status={o.status} />
 									</TableCell>
 								</TableRow>

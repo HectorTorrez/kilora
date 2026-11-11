@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Demo } from "@/components/kilora/demo";
 import {
 	Audiences,
 	FaqSection,
@@ -11,7 +10,6 @@ import {
 	Problem,
 	TwoLayers,
 } from "@/components/kilora/landing";
-import { demoQuery } from "@/lib/demo-accounts";
 import {
 	FAQS,
 	OG_IMAGE,
@@ -80,7 +78,6 @@ const structuredData = {
 };
 
 export const Route = createFileRoute("/")({
-	loader: ({ context }) => context.queryClient.ensureQueryData(demoQuery()),
 	head: () => ({
 		meta: [
 			{ title: SITE_TITLE },
@@ -123,8 +120,6 @@ export const Route = createFileRoute("/")({
 });
 
 function Landing() {
-	const demo = Route.useLoaderData();
-	const hasDemo = demo.enabled && demo.accounts.length > 0;
 	return (
 		<div className="min-h-dvh bg-background">
 			<a
@@ -135,14 +130,13 @@ function Landing() {
 			</a>
 			<LandingHeader />
 			<main id="contenido">
-				<Hero hasDemo={hasDemo} />
+				<Hero />
 				<Problem />
 				<HowItWorks />
 				<TwoLayers />
 				<Audiences />
-				<Demo demo={demo} />
 				<FaqSection />
-				<FinalCta hasDemo={hasDemo} />
+				<FinalCta />
 			</main>
 			<LandingFooter />
 		</div>

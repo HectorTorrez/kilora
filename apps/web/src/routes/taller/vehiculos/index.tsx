@@ -155,7 +155,7 @@ function VehiclesPage() {
 									sortKey="plate"
 									sort={sort}
 									onSort={toggle}
-									className="pl-4"
+									className="pl-3 sm:pl-4"
 								>
 									Placa
 								</SortableHead>
@@ -192,7 +192,7 @@ function VehiclesPage() {
 									sortKey="status"
 									sort={sort}
 									onSort={toggle}
-									className="pr-4"
+									className="pr-3 sm:pr-4"
 									filter={
 										<FacetFilter
 											compact
@@ -222,7 +222,7 @@ function VehiclesPage() {
 										})
 									}
 								>
-									<TableCell className="pl-4">
+									<TableCell className="pl-3 sm:pl-4">
 										<Link
 											to="/taller/vehiculos/$vehicleId"
 											params={{ vehicleId: v.id }}
@@ -269,7 +269,7 @@ function VehiclesPage() {
 									<TableCell className="hidden text-right text-[12.5px] text-ink-3 lg:table-cell">
 										{shortDate(v.last_activity_at)}
 									</TableCell>
-									<TableCell className="pr-4">
+									<TableCell className="pr-3 sm:pr-4">
 										<VehicleStatusBadge status={v.status} />
 									</TableCell>
 								</TableRow>
