@@ -67,7 +67,7 @@ func (q *Queries) CreateInvitation(ctx context.Context, arg CreateInvitationPara
 }
 
 const getInvitationVehicle = `-- name: GetInvitationVehicle :one
-SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id=$1
+SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id=$1
 `
 
 func (q *Queries) GetInvitationVehicle(ctx context.Context, id uuid.UUID) (Vehicle, error) {
@@ -83,8 +83,6 @@ func (q *Queries) GetInvitationVehicle(ctx context.Context, id uuid.UUID) (Vehic
 		&i.Model,
 		&i.Year,
 		&i.Vin,
-		&i.ContactName,
-		&i.ContactPhone,
 		&i.LastActivityAt,
 		&i.ArchivedAt,
 		&i.CreatedAt,
@@ -231,7 +229,7 @@ func (q *Queries) ListOwnerWorkshops(ctx context.Context, arg ListOwnerWorkshops
 }
 
 const lockInvitationVehicle = `-- name: LockInvitationVehicle :one
-SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id=$1 FOR UPDATE
+SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockInvitationVehicle(ctx context.Context, id uuid.UUID) (Vehicle, error) {
@@ -247,8 +245,6 @@ func (q *Queries) LockInvitationVehicle(ctx context.Context, id uuid.UUID) (Vehi
 		&i.Model,
 		&i.Year,
 		&i.Vin,
-		&i.ContactName,
-		&i.ContactPhone,
 		&i.LastActivityAt,
 		&i.ArchivedAt,
 		&i.CreatedAt,
@@ -258,7 +254,7 @@ func (q *Queries) LockInvitationVehicle(ctx context.Context, id uuid.UUID) (Vehi
 }
 
 const lockLinkedVehicle = `-- name: LockLinkedVehicle :one
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id=v.id WHERE v.id=$1 AND l.workshop_id=$2 FOR UPDATE OF v
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id=v.id WHERE v.id=$1 AND l.workshop_id=$2 FOR UPDATE OF v
 `
 
 type LockLinkedVehicleParams struct {
@@ -279,8 +275,6 @@ func (q *Queries) LockLinkedVehicle(ctx context.Context, arg LockLinkedVehiclePa
 		&i.Model,
 		&i.Year,
 		&i.Vin,
-		&i.ContactName,
-		&i.ContactPhone,
 		&i.LastActivityAt,
 		&i.ArchivedAt,
 		&i.CreatedAt,
@@ -323,7 +317,7 @@ func (q *Queries) RevokeVehicleInvitations(ctx context.Context, vehicleID uuid.U
 }
 
 const setUnownedVehicleOwner = `-- name: SetUnownedVehicleOwner :one
-UPDATE vehicle SET owner_user_id=$2, status='vinculado' WHERE id=$1 AND owner_user_id IS NULL RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at
+UPDATE vehicle SET owner_user_id=$2, status='vinculado' WHERE id=$1 AND owner_user_id IS NULL RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at
 `
 
 type SetUnownedVehicleOwnerParams struct {
@@ -344,8 +338,6 @@ func (q *Queries) SetUnownedVehicleOwner(ctx context.Context, arg SetUnownedVehi
 		&i.Model,
 		&i.Year,
 		&i.Vin,
-		&i.ContactName,
-		&i.ContactPhone,
 		&i.LastActivityAt,
 		&i.ArchivedAt,
 		&i.CreatedAt,

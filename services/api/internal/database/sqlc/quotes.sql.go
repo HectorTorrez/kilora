@@ -73,18 +73,19 @@ func (q *Queries) CountCounterQuotesByOutcome(ctx context.Context, arg CountCoun
 
 const createCounterQuote = `-- name: CreateCounterQuote :one
 INSERT INTO quote (
-  workshop_id, branch_id, number, customer_name, customer_phone, vehicle_id,
+  workshop_id, branch_id, number, customer_id, customer_name, customer_phone, vehicle_id,
   vehicle_make, vehicle_model, vehicle_year, vehicle_plate, notes, valid_until, total, created_by
 ) VALUES (
-  $1, $2, $3, $4, $5, $6,
-  $7, $8, $9, $10, $11, $12, $13, $14
-) RETURNING id, work_order_id, workshop_id, total, currency, outcome, outcome_at, outcome_by, share_token_hash, shared_at, share_expires_at, created_by, created_at, updated_at, number, branch_id, customer_name, customer_phone, vehicle_id, vehicle_make, vehicle_model, vehicle_year, vehicle_plate, notes, valid_until, converted_order_id
+  $1, $2, $3, $4, $5, $6, $7,
+  $8, $9, $10, $11, $12, $13, $14, $15
+) RETURNING id, work_order_id, workshop_id, total, currency, outcome, outcome_at, outcome_by, share_token_hash, shared_at, share_expires_at, created_by, created_at, updated_at, number, branch_id, customer_name, customer_phone, vehicle_id, vehicle_make, vehicle_model, vehicle_year, vehicle_plate, notes, valid_until, converted_order_id, customer_id
 `
 
 type CreateCounterQuoteParams struct {
 	WorkshopID    uuid.UUID      `json:"workshop_id"`
 	BranchID      uuid.UUID      `json:"branch_id"`
 	Number        int32          `json:"number"`
+	CustomerID    *uuid.UUID     `json:"customer_id"`
 	CustomerName  *string        `json:"customer_name"`
 	CustomerPhone *string        `json:"customer_phone"`
 	VehicleID     *uuid.UUID     `json:"vehicle_id"`
@@ -103,6 +104,7 @@ func (q *Queries) CreateCounterQuote(ctx context.Context, arg CreateCounterQuote
 		arg.WorkshopID,
 		arg.BranchID,
 		arg.Number,
+		arg.CustomerID,
 		arg.CustomerName,
 		arg.CustomerPhone,
 		arg.VehicleID,
@@ -143,6 +145,7 @@ func (q *Queries) CreateCounterQuote(ctx context.Context, arg CreateCounterQuote
 		&i.Notes,
 		&i.ValidUntil,
 		&i.ConvertedOrderID,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -183,7 +186,7 @@ func (q *Queries) DeleteQuoteItems(ctx context.Context, quoteID uuid.UUID) error
 
 const getCounterQuote = `-- name: GetCounterQuote :one
 SELECT
-  q.id, q.workshop_id, q.branch_id, q.number, q.customer_name, q.customer_phone, q.vehicle_id,
+  q.id, q.workshop_id, q.branch_id, q.number, q.customer_id, q.customer_name, q.customer_phone, q.vehicle_id,
   q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate, q.notes, q.valid_until,
   q.total::text AS total, q.currency, q.outcome, q.outcome_at, q.outcome_by,
   q.shared_at, q.share_expires_at, q.created_at, q.work_order_id, q.converted_order_id,
@@ -207,6 +210,7 @@ type GetCounterQuoteRow struct {
 	WorkshopID           uuid.UUID          `json:"workshop_id"`
 	BranchID             uuid.UUID          `json:"branch_id"`
 	Number               int32              `json:"number"`
+	CustomerID           *uuid.UUID         `json:"customer_id"`
 	CustomerName         *string            `json:"customer_name"`
 	CustomerPhone        *string            `json:"customer_phone"`
 	VehicleID            *uuid.UUID         `json:"vehicle_id"`
@@ -241,6 +245,7 @@ func (q *Queries) GetCounterQuote(ctx context.Context, arg GetCounterQuoteParams
 		&i.WorkshopID,
 		&i.BranchID,
 		&i.Number,
+		&i.CustomerID,
 		&i.CustomerName,
 		&i.CustomerPhone,
 		&i.VehicleID,
@@ -350,19 +355,25 @@ func (q *Queries) GetPublicQuote(ctx context.Context, shareTokenHash *string) (G
 }
 
 const getQuoteContact = `-- name: GetQuoteContact :one
-SELECT w.name, v.plate, v.contact_phone FROM work_order o JOIN workshop w ON w.id = o.workshop_id JOIN vehicle v ON v.id = o.vehicle_id WHERE o.id = $1
+SELECT w.name, v.plate, c.phone AS customer_phone
+FROM work_order o
+JOIN workshop w ON w.id = o.workshop_id
+JOIN vehicle v ON v.id = o.vehicle_id
+LEFT JOIN vehicle_link l ON l.vehicle_id = o.vehicle_id AND l.workshop_id = o.workshop_id
+LEFT JOIN customer c ON c.id = l.customer_id
+WHERE o.id = $1
 `
 
 type GetQuoteContactRow struct {
-	Name         string  `json:"name"`
-	Plate        *string `json:"plate"`
-	ContactPhone *string `json:"contact_phone"`
+	Name          string  `json:"name"`
+	Plate         *string `json:"plate"`
+	CustomerPhone *string `json:"customer_phone"`
 }
 
 func (q *Queries) GetQuoteContact(ctx context.Context, id uuid.UUID) (GetQuoteContactRow, error) {
 	row := q.db.QueryRow(ctx, getQuoteContact, id)
 	var i GetQuoteContactRow
-	err := row.Scan(&i.Name, &i.Plate, &i.ContactPhone)
+	err := row.Scan(&i.Name, &i.Plate, &i.CustomerPhone)
 	return i, err
 }
 
@@ -533,7 +544,7 @@ func (q *Queries) ListQuoteItems(ctx context.Context, quoteID uuid.UUID) ([]List
 }
 
 const lockCounterQuote = `-- name: LockCounterQuote :one
-SELECT id, number, outcome, branch_id, vehicle_id, customer_name, customer_phone,
+SELECT id, number, outcome, branch_id, vehicle_id, customer_id, customer_name, customer_phone,
   vehicle_make, vehicle_model, vehicle_year, vehicle_plate, work_order_id, converted_order_id
 FROM quote
 WHERE id = $1 AND workshop_id = $2
@@ -552,6 +563,7 @@ type LockCounterQuoteRow struct {
 	Outcome          QuoteOutcome `json:"outcome"`
 	BranchID         uuid.UUID    `json:"branch_id"`
 	VehicleID        *uuid.UUID   `json:"vehicle_id"`
+	CustomerID       *uuid.UUID   `json:"customer_id"`
 	CustomerName     *string      `json:"customer_name"`
 	CustomerPhone    *string      `json:"customer_phone"`
 	VehicleMake      *string      `json:"vehicle_make"`
@@ -571,6 +583,7 @@ func (q *Queries) LockCounterQuote(ctx context.Context, arg LockCounterQuotePara
 		&i.Outcome,
 		&i.BranchID,
 		&i.VehicleID,
+		&i.CustomerID,
 		&i.CustomerName,
 		&i.CustomerPhone,
 		&i.VehicleMake,
@@ -728,23 +741,25 @@ func (q *Queries) ShareQuote(ctx context.Context, arg ShareQuoteParams) (ShareQu
 const updateCounterQuote = `-- name: UpdateCounterQuote :one
 UPDATE quote SET
   branch_id = $1,
-  customer_name = $2,
-  customer_phone = $3,
-  vehicle_id = $4,
-  vehicle_make = $5,
-  vehicle_model = $6,
-  vehicle_year = $7,
-  vehicle_plate = $8,
-  notes = $9,
-  valid_until = $10,
-  total = $11
-WHERE id = $12 AND workshop_id = $13
+  customer_id = $2,
+  customer_name = $3,
+  customer_phone = $4,
+  vehicle_id = $5,
+  vehicle_make = $6,
+  vehicle_model = $7,
+  vehicle_year = $8,
+  vehicle_plate = $9,
+  notes = $10,
+  valid_until = $11,
+  total = $12
+WHERE id = $13 AND workshop_id = $14
   AND outcome = 'pendiente' AND converted_order_id IS NULL AND work_order_id IS NULL
 RETURNING id
 `
 
 type UpdateCounterQuoteParams struct {
 	BranchID      uuid.UUID      `json:"branch_id"`
+	CustomerID    *uuid.UUID     `json:"customer_id"`
 	CustomerName  *string        `json:"customer_name"`
 	CustomerPhone *string        `json:"customer_phone"`
 	VehicleID     *uuid.UUID     `json:"vehicle_id"`
@@ -762,6 +777,7 @@ type UpdateCounterQuoteParams struct {
 func (q *Queries) UpdateCounterQuote(ctx context.Context, arg UpdateCounterQuoteParams) (uuid.UUID, error) {
 	row := q.db.QueryRow(ctx, updateCounterQuote,
 		arg.BranchID,
+		arg.CustomerID,
 		arg.CustomerName,
 		arg.CustomerPhone,
 		arg.VehicleID,

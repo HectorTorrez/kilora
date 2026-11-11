@@ -61,7 +61,7 @@ func TestCounterQuotes(t *testing.T) {
 	if public["order_number"] != nil || public["model"] != "Civic" || public["plate"] != "P123" || public["quote_number"].(float64) != 1 || public["customer_name"] != "Ana López" {
 		t.Fatal(public)
 	}
-	secondBody := fmt.Sprintf(`{"customer_name":"Luis Pérez","vehicle_make":"Toyota","vehicle_model":"Yaris","vehicle_plate":"p-999","branch_id":%q,"items":[{"kind":"mano_de_obra","description":"Diagnóstico","quantity":"1","unit_price":"15.00"}]}`, ba)
+	secondBody := fmt.Sprintf(`{"customer_name":"Luis Pérez","customer_phone":"7111-2222","vehicle_make":"Toyota","vehicle_model":"Yaris","vehicle_plate":"p-999","branch_id":%q,"items":[{"kind":"mano_de_obra","description":"Diagnóstico","quantity":"1","unit_price":"15.00"}]}`, ba)
 	second := req(a, "POST", pa+"/quotes", secondBody, 201).(map[string]any)
 	secondID := second["id"].(string)
 	if second["number"].(float64) != 2 {
@@ -101,7 +101,7 @@ func TestCounterQuotes(t *testing.T) {
 		t.Fatal(againConvert)
 	}
 	var plate, name string
-	if e := db.QueryRow(context.Background(), "SELECT plate, contact_name FROM vehicle WHERE id = $1", order["vehicle_id"]).Scan(&plate, &name); e != nil || plate != "P999" || name != "Luis Pérez" {
+	if e := db.QueryRow(context.Background(), "SELECT v.plate, c.full_name FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id JOIN customer c ON c.id = l.customer_id WHERE v.id = $1", order["vehicle_id"]).Scan(&plate, &name); e != nil || plate != "P999" || name != "Luis Pérez" {
 		t.Fatal(plate, name, e)
 	}
 	req(b, "GET", pb+"/quotes/"+quoteID, "", 404)
@@ -110,7 +110,7 @@ func TestCounterQuotes(t *testing.T) {
 	if len(foreign["items"].([]any)) != 0 {
 		t.Fatal(foreign)
 	}
-	vehicle := req(a, "POST", pa+"/vehicles", `{"make":"Mazda","model":"3","plate":"P777"}`, 201).(map[string]any)
+	vehicle := req(a, "POST", pa+"/vehicles", `{"make":"Mazda","model":"3","plate":"P777","customer":{"full_name":"Marta Ruiz","phone":"7100-0003"}}`, 201).(map[string]any)
 	attached := req(a, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Revisión"}`, vehicle["id"], ba), 201).(map[string]any)
 	saved := req(a, "PUT", pa+"/work-orders/"+attached["id"].(string)+"/quote", `{"items":[{"kind":"mano_de_obra","description":"Servicio","quantity":"1","unit_price":"30.00"}]}`, 200).(map[string]any)
 	if saved["total"] != "30.00" || saved["outcome"] != "pendiente" {

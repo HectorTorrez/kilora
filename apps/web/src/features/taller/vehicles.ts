@@ -14,8 +14,8 @@ export function matchesVehicle(vehicle: S["Vehicle"], query: string) {
 			vehicle.plate,
 			vehicle.make,
 			vehicle.model,
-			vehicle.contact_name,
-			vehicle.contact_phone,
+			vehicle.customer?.full_name,
+			vehicle.customer?.phone,
 			vehicle.vin,
 		]
 			.filter(Boolean)

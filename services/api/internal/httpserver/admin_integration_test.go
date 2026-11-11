@@ -25,7 +25,7 @@ func TestRecommendationsMembersAndAudit(t *testing.T) {
 	a, b, c := client(), client(), client()
 	pa, ba := setup(a)
 	pb, _ := setup(b)
-	vid := req(a, "POST", pa+"/vehicles", `{"make":"Toyota","model":"Yaris"}`, 201).(map[string]any)["id"].(string)
+	vid := req(a, "POST", pa+"/vehicles", `{"make":"Toyota","model":"Yaris","customer":{"full_name":"Cliente Admin","phone":"7100-0001"}}`, 201).(map[string]any)["id"].(string)
 	oid := req(a, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Revisión"}`, vid, ba), 201).(map[string]any)["id"].(string)
 	req(a, "POST", pa+"/vehicles/"+vid+"/recommendations", `{"description":"Cambiar pastillas"}`, 400)
 	rec := req(a, "POST", pa+"/vehicles/"+vid+"/recommendations", fmt.Sprintf(`{"description":"Cambiar pastillas","category":"frenos","due_km":90000,"due_date":"2027-01-15","work_order_id":%q}`, oid), 201).(map[string]any)

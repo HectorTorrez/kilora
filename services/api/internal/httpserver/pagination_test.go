@@ -30,7 +30,7 @@ func TestPaginatedLists(t *testing.T) {
 	path, workshop, branch, _ := a.workshop(c)
 	var firstVehicle, firstOrder string
 	for i := range 27 {
-		vehicle := a.obj(c, "POST", path+"/vehicles", fmt.Sprintf(`{"make":"Toyota","model":"Modelo %02d","contact_name":"Cliente"}`, i), 201)["id"].(string)
+		vehicle := a.obj(c, "POST", path+"/vehicles", fmt.Sprintf(`{"make":"Toyota","model":"Modelo %02d","customer":{"full_name":"Cliente","phone":"7200%04d"}}`, i, i), 201)["id"].(string)
 		order := a.obj(c, "POST", path+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Revisión %02d","odometer_km":100}`, vehicle, branch, i), 201)["id"].(string)
 		a.obj(c, "POST", path+"/quotes", fmt.Sprintf(`{"customer_name":"Cliente %02d","vehicle_model":"Yaris","branch_id":%q,"items":[{"kind":"mano_de_obra","description":"Revisión","quantity":"1","unit_price":"15.00"}]}`, i, branch), 201)
 		if i == 0 {
@@ -176,10 +176,11 @@ func TestAuditPagination(t *testing.T) {
 	admin := a.client()
 	path, workshop, branch, _ := a.workshop(admin)
 	baseline := a.obj(admin, "GET", path+"/audit/page", "", 200)["total"].(float64)
+	customer := a.obj(admin, "POST", path+"/customers", `{"full_name":"Cliente Admin","phone":"7100-0005"}`, 201)["id"].(string)
 	for range 26 {
-		a.obj(admin, "POST", path+"/vehicles", `{"make":"Toyota","model":"Yaris"}`, 201)
+		a.obj(admin, "POST", path+"/vehicles", fmt.Sprintf(`{"make":"Toyota","model":"Yaris","customer_id":%q}`, customer), 201)
 	}
-	wantTotal := baseline + 26
+	wantTotal := baseline + 27 // el cliente y los 26 vehículos
 	seen := map[float64]bool{}
 	var previous float64
 	for _, offset := range []int{0, 25} {

@@ -14,6 +14,7 @@ import {
 	Plus,
 	ShieldCheck,
 	UserRound,
+	Users,
 } from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -61,6 +62,7 @@ type NavItem = {
 		| "/taller/ordenes"
 		| "/taller/cotizaciones"
 		| "/taller/vehiculos"
+		| "/taller/clientes"
 		| "/taller/configuracion"
 		| "/taller/actividad";
 	label: string;
@@ -77,6 +79,7 @@ const sections: { label: string; items: NavItem[] }[] = [
 			{ to: "/taller/ordenes", label: "Órdenes", icon: ClipboardList },
 			{ to: "/taller/cotizaciones", label: "Cotizaciones", icon: FileText },
 			{ to: "/taller/vehiculos", label: "Vehículos", icon: Car },
+			{ to: "/taller/clientes", label: "Clientes", icon: Users },
 		],
 	},
 	{

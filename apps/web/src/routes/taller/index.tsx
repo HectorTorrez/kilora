@@ -374,7 +374,7 @@ function DashboardPage() {
 												{v.make} {v.model} {v.year ?? ""}
 											</p>
 											<p className="truncate text-xs text-ink-3">
-												{v.contact_name || "Sin contacto"}
+												{v.customer?.full_name || "Sin cliente"}
 											</p>
 										</div>
 										<span className="inline-flex items-center gap-1 text-xs font-semibold text-seal">

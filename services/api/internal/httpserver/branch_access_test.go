@@ -16,7 +16,7 @@ func TestBranchAccess(t *testing.T) {
 	if _, err := a.q.CreateMembership(context.Background(), sqlc.CreateMembershipParams{UserID: mustUser(t, a, owner), WorkshopID: workshop, BranchID: south, Role: sqlc.MembershipRoleAdmin}); err != nil {
 		t.Fatal(err)
 	}
-	vehicle := a.obj(owner, "POST", path+"/vehicles", `{"make":"Toyota","model":"Yaris"}`, 201)["id"].(string)
+	vehicle := a.obj(owner, "POST", path+"/vehicles", `{"make":"Toyota","model":"Yaris","customer":{"full_name":"Cliente Sucursal","phone":"7100-0002"}}`, 201)["id"].(string)
 	newOrder := func(branch string) string {
 		return a.obj(owner, "POST", path+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Revisión"}`, vehicle, branch), 201)["id"].(string)
 	}

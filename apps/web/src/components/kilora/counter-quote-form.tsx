@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { Printer } from "lucide-react";
+import { Printer, UserRound } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -9,8 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
 import { SearchInput } from "@/components/ui/search-input";
+import {
+	type CustomerRef,
+	customersPageQuery,
+} from "@/features/taller/customers";
 import { matchesVehicle, vehiclesQuery } from "@/features/taller/vehicles";
-import { money, todayISO } from "@/lib/format";
+import { money, phone, todayISO } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 import {
 	applyFormError,
@@ -43,6 +47,7 @@ import { DetailList, SectionCard, StepTitle } from "./workshop-ui";
 type Schemas = components["schemas"];
 
 const schema = z.object({
+	customer_id: z.string(),
 	customer_name: requiredText("Ingresá el nombre del cliente").max(
 		100,
 		"Usá como máximo 100 caracteres",
@@ -80,6 +85,7 @@ export function counterQuoteFormValues(
 	branchID = "",
 ): CounterQuoteValues {
 	return {
+		customer_id: quote?.customer_id ?? "",
 		customer_name: quote?.customer_name ?? "",
 		customer_phone: quote?.customer_phone ?? "",
 		vehicle_id: quote?.vehicle_id ?? "",
@@ -101,6 +107,7 @@ export function toCounterQuoteInput(
 ): Schemas["CounterQuoteInput"] {
 	const plate = values.vehicle_plate.replace(/[\s-]/g, "").toUpperCase();
 	return {
+		customer_id: values.customer_id || null,
 		customer_name: values.customer_name,
 		customer_phone: values.customer_phone || null,
 		vehicle_id: values.vehicle_id || null,
@@ -156,6 +163,23 @@ export function CounterQuoteForm({
 		defaultValues: initial,
 	});
 	const linked = form.watch("vehicle_id");
+	const linkedCustomer = form.watch("customer_id");
+	const [customerSearch, setCustomerSearch] = useState("");
+	const customerQ = customerSearch.trim().toLowerCase().replace(/[\s-]/g, "");
+	const customers = useQuery({
+		...customersPageQuery(workshopID, customerQ, 0, 5),
+		enabled: !!customerQ && !linkedCustomer,
+	});
+	const linkCustomer = (customer: CustomerRef) => {
+		form.setValue("customer_id", customer.id);
+		form.setValue("customer_name", customer.full_name, {
+			shouldValidate: true,
+		});
+		form.setValue("customer_phone", customer.phone ?? "", {
+			shouldValidate: true,
+		});
+		setCustomerSearch("");
+	};
 	const query = search.trim().toLowerCase();
 	const matches = query
 		? vehicles.filter((vehicle) => matchesVehicle(vehicle, query)).slice(0, 8)
@@ -178,14 +202,16 @@ export function CounterQuoteForm({
 			applyFormError(form, error);
 		}
 	});
-	const [customer, model, make, year, items, validDays] = form.watch([
-		"customer_name",
-		"vehicle_model",
-		"vehicle_make",
-		"vehicle_year",
-		"items",
-		"valid_days",
-	]);
+	const [customer, customerPhone, model, make, year, items, validDays] =
+		form.watch([
+			"customer_name",
+			"customer_phone",
+			"vehicle_model",
+			"vehicle_make",
+			"vehicle_year",
+			"items",
+			"valid_days",
+		]);
 	const total = (items ?? []).reduce(
 		(sum, item) => sum + lineCents(item.quantity, item.unit_price),
 		0,
@@ -206,16 +232,78 @@ export function CounterQuoteForm({
 							</StepTitle>
 						}
 					>
-						<div className="grid gap-5 sm:grid-cols-2">
-							<TextField
-								name="customer_name"
-								label="Nombre"
-								autoComplete="name"
-								required
-								autoFocus
-							/>
-							<PhoneField name="customer_phone" label="Teléfono" optional />
-						</div>
+						{linkedCustomer ? (
+							<div className="flex items-center gap-3 rounded-lg border border-seal bg-seal-soft px-3 py-2 text-sm">
+								<UserRound className="size-4 shrink-0 text-seal" />
+								<p className="min-w-0 flex-1">
+									<span className="block truncate font-semibold">
+										{customer}
+									</span>
+									<span className="block truncate font-mono text-xs text-ink-3">
+										{phone(customerPhone) || "Sin teléfono"}
+									</span>
+								</p>
+								<Button
+									type="button"
+									variant="outline"
+									size="sm"
+									onClick={() => form.setValue("customer_id", "")}
+								>
+									Quitar vínculo
+								</Button>
+							</div>
+						) : (
+							<div className="grid gap-5">
+								<div className="grid gap-2">
+									<SearchInput
+										containerClassName=""
+										aria-label="Buscar cliente del taller"
+										value={customerSearch}
+										autoComplete="off"
+										placeholder="Buscar cliente del taller por nombre o teléfono (opcional)"
+										onChange={(event) => setCustomerSearch(event.target.value)}
+									/>
+									{customerQ && customers.data?.items.length ? (
+										<ul
+											aria-label="Clientes del taller"
+											className="divide-y overflow-hidden rounded-lg border"
+										>
+											{customers.data.items.map((c) => (
+												<li key={c.id}>
+													<button
+														type="button"
+														className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-seal-soft"
+														onClick={() => linkCustomer(c)}
+													>
+														<span className="min-w-0 flex-1 truncate font-medium">
+															{c.full_name}
+														</span>
+														<span className="font-mono text-xs text-ink-3">
+															{phone(c.phone)}
+														</span>
+													</button>
+												</li>
+											))}
+										</ul>
+									) : null}
+								</div>
+								<div className="grid gap-5 sm:grid-cols-2">
+									<TextField
+										name="customer_name"
+										label="Nombre"
+										autoComplete="name"
+										required
+										autoFocus
+									/>
+									<PhoneField
+										name="customer_phone"
+										label="Teléfono"
+										optional
+										description="Necesario para convertirla en orden."
+									/>
+								</div>
+							</div>
+						)}
 					</SectionCard>
 					<SectionCard
 						title={
@@ -283,16 +371,8 @@ export function CounterQuoteForm({
 																"vehicle_plate",
 																vehicle.plate ?? "",
 															);
-															if (vehicle.contact_name)
-																form.setValue(
-																	"customer_name",
-																	vehicle.contact_name,
-																);
-															if (vehicle.contact_phone)
-																form.setValue(
-																	"customer_phone",
-																	vehicle.contact_phone,
-																);
+															if (vehicle.customer)
+																linkCustomer(vehicle.customer);
 															setSearch("");
 															setOpenSearch(false);
 														}}

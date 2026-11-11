@@ -93,8 +93,8 @@ func (s *server) listVehiclesPage(w http.ResponseWriter, r *http.Request, wc wor
 		return err
 	}
 	ids := make([]uuid.UUID, 0, len(rows))
-	for _, v := range rows {
-		ids = append(ids, v.ID)
+	for _, row := range rows {
+		ids = append(ids, row.Vehicle.ID)
 	}
 	readings, err := q.ListLatestOdometerForVehicles(r.Context(), sqlc.ListLatestOdometerForVehiclesParams{WorkshopID: wc.workshopID, VehicleIds: ids})
 	if err != nil {
@@ -105,8 +105,8 @@ func (s *server) listVehiclesPage(w http.ResponseWriter, r *http.Request, wc wor
 		latest[readings[i].VehicleID] = &readings[i].Km
 	}
 	items := make([]map[string]any, 0, len(rows))
-	for _, v := range rows {
-		items = append(items, vehicleDTO(v, latest[v.ID]))
+	for _, row := range rows {
+		items = append(items, vehicleDTO(row.Vehicle, latest[row.Vehicle.ID], refFromColumns(row.CustomerID, row.CustomerName, row.CustomerPhone)))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items, "total": selectedTotal(totals, statuses), "counts": totals})
 	return nil

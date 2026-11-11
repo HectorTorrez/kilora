@@ -15,12 +15,14 @@ import (
 
 const invalidVehicle = "Marca, modelo, año o placa inválidos"
 
-func vehicleDTO(v sqlc.Vehicle, km *int32) map[string]any {
-	return map[string]any{"id": v.ID, "status": v.Status, "plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year, "vin": v.Vin, "contact_name": v.ContactName, "contact_phone": v.ContactPhone, "last_odometer_km": km, "last_activity_at": v.LastActivityAt.Time, "created_at": v.CreatedAt.Time}
+// vehicleDTO renders a vehicle; customer is the viewing workshop's customer and is nil for owners.
+func vehicleDTO(v sqlc.Vehicle, km *int32, customer *customerRef) map[string]any {
+	return map[string]any{"id": v.ID, "status": v.Status, "plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year, "vin": v.Vin, "customer": customer, "last_odometer_km": km, "last_activity_at": v.LastActivityAt.Time, "created_at": v.CreatedAt.Time}
 }
 
-// createProvisionalVehicle is the one way a workshop's vehicle comes into existence.
-func createProvisionalVehicle(ctx context.Context, q *sqlc.Queries, wc workshopAccess, p sqlc.CreateVehicleParams) (sqlc.Vehicle, error) {
+// createProvisionalVehicle is the one way a workshop's vehicle comes into existence,
+// always tied to one of the workshop's customers.
+func createProvisionalVehicle(ctx context.Context, q *sqlc.Queries, wc workshopAccess, p sqlc.CreateVehicleParams, customer uuid.UUID) (sqlc.Vehicle, error) {
 	p.CreatedByWorkshopID = &wc.workshopID
 	p.Status = sqlc.VehicleStatusProvisional
 	v, err := q.CreateVehicle(ctx, p)
@@ -28,6 +30,9 @@ func createProvisionalVehicle(ctx context.Context, q *sqlc.Queries, wc workshopA
 		return v, err
 	}
 	if err = q.LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: v.ID, WorkshopID: wc.workshopID}); err != nil {
+		return v, err
+	}
+	if _, err = q.SetVehicleCustomer(ctx, sqlc.SetVehicleCustomerParams{CustomerID: &customer, VehicleID: v.ID, WorkshopID: wc.workshopID}); err != nil {
 		return v, err
 	}
 	return v, recordAudit(ctx, q, wc.event("vehicle", v.ID, "vehicle.create"))
@@ -43,8 +48,7 @@ func (s *server) createVehicle(w http.ResponseWriter, r *http.Request, wc worksh
 		Model        string  `json:"model"`
 		Year         *int32  `json:"year"`
 		Vin          *string `json:"vin"`
-		ContactName  *string `json:"contact_name"`
-		ContactPhone *string `json:"contact_phone"`
+		customerChoice
 	}
 	if err := decode(r, &in); err != nil {
 		return err
@@ -53,24 +57,23 @@ func (s *server) createVehicle(w http.ResponseWriter, r *http.Request, wc worksh
 	if !values.VehicleText(in.Make) || !values.VehicleText(in.Model) || !values.ValidYear(in.Year) || !values.ValidPlate(in.Plate) {
 		return badRequest(invalidVehicle)
 	}
-	in.ContactName = values.OptionalText(in.ContactName)
-	if in.ContactName != nil && !values.PersonName(*in.ContactName) {
-		return badRequest("Nombre de contacto inválido: usá letras, espacios, apóstrofos o guiones (2 a 100 caracteres)")
-	}
-	phone, ok := values.OptionalPhone(in.ContactPhone)
-	if !ok {
-		return badRequest("Teléfono inválido")
+	if in.empty() {
+		return badRequest(customerRequired)
 	}
 	var v sqlc.Vehicle
+	var c sqlc.Customer
 	err := s.tx(r.Context(), func(q *sqlc.Queries) error {
 		var err error
-		v, err = createProvisionalVehicle(r.Context(), q, wc, sqlc.CreateVehicleParams{Plate: values.OptionalPlate(in.Plate), Make: in.Make, Model: in.Model, Year: in.Year, Vin: in.Vin, ContactName: in.ContactName, ContactPhone: phone})
+		if c, err = resolveCustomer(r.Context(), q, wc, in.customerChoice); err != nil {
+			return err
+		}
+		v, err = createProvisionalVehicle(r.Context(), q, wc, sqlc.CreateVehicleParams{Plate: values.OptionalPlate(in.Plate), Make: in.Make, Model: in.Model, Year: in.Year, Vin: values.OptionalText(in.Vin)}, c.ID)
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusCreated, vehicleDTO(v, nil))
+	writeJSON(w, http.StatusCreated, vehicleDTO(v, nil, refOf(c)))
 	return nil
 }
 
@@ -97,8 +100,8 @@ func (s *server) listVehicles(w http.ResponseWriter, r *http.Request, wc worksho
 		latest[readings[i].VehicleID] = &readings[i].Km
 	}
 	out := make([]map[string]any, 0, len(rows))
-	for _, v := range rows {
-		out = append(out, vehicleDTO(v, latest[v.ID]))
+	for _, row := range rows {
+		out = append(out, vehicleDTO(row.Vehicle, latest[row.Vehicle.ID], refFromColumns(row.CustomerID, row.CustomerName, row.CustomerPhone)))
 	}
 	writeJSON(w, http.StatusOK, out)
 	return nil
@@ -122,7 +125,15 @@ func (s *server) getVehicle(w http.ResponseWriter, r *http.Request, wc workshopA
 	} else if !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
-	out := vehicleDTO(v, km)
+	customer, err := vehicleCustomer(ctx, q, v.ID, wc.workshopID)
+	if err != nil {
+		return err
+	}
+	var ref *customerRef
+	if customer != nil {
+		ref = refOf(*customer)
+	}
+	out := vehicleDTO(v, km, ref)
 	out["owner_linked"] = v.OwnerUserID != nil
 	if v.OwnerUserID != nil {
 		owner, err := q.GetUserByID(ctx, *v.OwnerUserID)

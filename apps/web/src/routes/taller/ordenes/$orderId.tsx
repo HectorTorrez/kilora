@@ -341,10 +341,10 @@ function OrderDetail({
 					>
 						<DetailList
 							items={[
-								{ label: "Contacto", value: vehicle?.contact_name },
+								{ label: "Cliente", value: vehicle?.customer?.full_name },
 								{
 									label: "Teléfono",
-									value: phone(vehicle?.contact_phone),
+									value: phone(vehicle?.customer?.phone),
 									mono: true,
 								},
 								{ label: "Año", value: vehicle?.year },

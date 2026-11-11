@@ -15,8 +15,9 @@ import (
 const countVehiclesByStatus = `-- name: CountVehiclesByStatus :many
 SELECT v.status, count(*) AS total
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+LEFT JOIN customer c ON c.id = l.customer_id
 WHERE l.workshop_id = $1 AND v.status <> 'archivado'
-  AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
+  AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, c.full_name, c.phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
   AND ($3::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= $3::date)
   AND ($4::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= $4::date)
 GROUP BY v.status
@@ -60,7 +61,7 @@ func (q *Queries) CountVehiclesByStatus(ctx context.Context, arg CountVehiclesBy
 }
 
 const createVehicle = `-- name: CreateVehicle :one
-INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at
+INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at
 `
 
 type CreateVehicleParams struct {
@@ -72,8 +73,6 @@ type CreateVehicleParams struct {
 	Model               string        `json:"model"`
 	Year                *int32        `json:"year"`
 	Vin                 *string       `json:"vin"`
-	ContactName         *string       `json:"contact_name"`
-	ContactPhone        *string       `json:"contact_phone"`
 }
 
 func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (Vehicle, error) {
@@ -86,8 +85,6 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (V
 		arg.Model,
 		arg.Year,
 		arg.Vin,
-		arg.ContactName,
-		arg.ContactPhone,
 	)
 	var i Vehicle
 	err := row.Scan(
@@ -100,8 +97,6 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (V
 		&i.Model,
 		&i.Year,
 		&i.Vin,
-		&i.ContactName,
-		&i.ContactPhone,
 		&i.LastActivityAt,
 		&i.ArchivedAt,
 		&i.CreatedAt,
@@ -111,7 +106,7 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (V
 }
 
 const getVehicle = `-- name: GetVehicle :one
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE v.id = $1 AND l.workshop_id = $2
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE v.id = $1 AND l.workshop_id = $2
 `
 
 type GetVehicleParams struct {
@@ -132,8 +127,6 @@ func (q *Queries) GetVehicle(ctx context.Context, arg GetVehicleParams) (Vehicle
 		&i.Model,
 		&i.Year,
 		&i.Vin,
-		&i.ContactName,
-		&i.ContactPhone,
 		&i.LastActivityAt,
 		&i.ArchivedAt,
 		&i.CreatedAt,
@@ -143,7 +136,7 @@ func (q *Queries) GetVehicle(ctx context.Context, arg GetVehicleParams) (Vehicle
 }
 
 const getVehicleForOwner = `-- name: GetVehicleForOwner :one
-SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id = $1 AND owner_user_id = $2
+SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id = $1 AND owner_user_id = $2
 `
 
 type GetVehicleForOwnerParams struct {
@@ -164,8 +157,6 @@ func (q *Queries) GetVehicleForOwner(ctx context.Context, arg GetVehicleForOwner
 		&i.Model,
 		&i.Year,
 		&i.Vin,
-		&i.ContactName,
-		&i.ContactPhone,
 		&i.LastActivityAt,
 		&i.ArchivedAt,
 		&i.CreatedAt,
@@ -189,7 +180,7 @@ func (q *Queries) LinkVehicleToWorkshop(ctx context.Context, arg LinkVehicleToWo
 }
 
 const listVehiclesByOwner = `-- name: ListVehiclesByOwner :many
-SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE owner_user_id = $1 ORDER BY last_activity_at DESC
+SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE owner_user_id = $1 ORDER BY last_activity_at DESC
 `
 
 func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID *uuid.UUID) ([]Vehicle, error) {
@@ -211,8 +202,6 @@ func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID *uuid.UUI
 			&i.Model,
 			&i.Year,
 			&i.Vin,
-			&i.ContactName,
-			&i.ContactPhone,
 			&i.LastActivityAt,
 			&i.ArchivedAt,
 			&i.CreatedAt,
@@ -229,9 +218,10 @@ func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID *uuid.UUI
 }
 
 const listVehiclesForWorkshop = `-- name: ListVehiclesForWorkshop :many
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
 FROM vehicle v
 JOIN vehicle_link l ON l.vehicle_id = v.id
+LEFT JOIN customer c ON c.id = l.customer_id
 WHERE l.workshop_id = $1
   AND ($2::boolean OR v.status <> 'archivado')
   AND ($3::text = '' OR starts_with(v.plate, $3::text))
@@ -244,31 +234,39 @@ type ListVehiclesForWorkshopParams struct {
 	PlatePrefix     string    `json:"plate_prefix"`
 }
 
-func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesForWorkshopParams) ([]Vehicle, error) {
+type ListVehiclesForWorkshopRow struct {
+	Vehicle       Vehicle    `json:"vehicle"`
+	CustomerID    *uuid.UUID `json:"customer_id"`
+	CustomerName  *string    `json:"customer_name"`
+	CustomerPhone *string    `json:"customer_phone"`
+}
+
+func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesForWorkshopParams) ([]ListVehiclesForWorkshopRow, error) {
 	rows, err := q.db.Query(ctx, listVehiclesForWorkshop, arg.WorkshopID, arg.IncludeArchived, arg.PlatePrefix)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Vehicle{}
+	items := []ListVehiclesForWorkshopRow{}
 	for rows.Next() {
-		var i Vehicle
+		var i ListVehiclesForWorkshopRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.OwnerUserID,
-			&i.CreatedByWorkshopID,
-			&i.Status,
-			&i.Plate,
-			&i.Make,
-			&i.Model,
-			&i.Year,
-			&i.Vin,
-			&i.ContactName,
-			&i.ContactPhone,
-			&i.LastActivityAt,
-			&i.ArchivedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.Vehicle.ID,
+			&i.Vehicle.OwnerUserID,
+			&i.Vehicle.CreatedByWorkshopID,
+			&i.Vehicle.Status,
+			&i.Vehicle.Plate,
+			&i.Vehicle.Make,
+			&i.Vehicle.Model,
+			&i.Vehicle.Year,
+			&i.Vehicle.Vin,
+			&i.Vehicle.LastActivityAt,
+			&i.Vehicle.ArchivedAt,
+			&i.Vehicle.CreatedAt,
+			&i.Vehicle.UpdatedAt,
+			&i.CustomerID,
+			&i.CustomerName,
+			&i.CustomerPhone,
 		); err != nil {
 			return nil, err
 		}
@@ -281,10 +279,11 @@ func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesF
 }
 
 const listVehiclesPage = `-- name: ListVehiclesPage :many
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.contact_name, v.contact_phone, v.last_activity_at, v.archived_at, v.created_at, v.updated_at
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+LEFT JOIN customer c ON c.id = l.customer_id
 WHERE l.workshop_id = $1 AND v.status <> 'archivado'
-  AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
+  AND ($2::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, c.full_name, c.phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE $2 ESCAPE '\')
   AND (cardinality($3::text[]) = 0 OR v.status::text = ANY($3::text[]))
   AND ($4::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= $4::date)
   AND ($5::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= $5::date)
@@ -302,7 +301,14 @@ type ListVehiclesPageParams struct {
 	RowLimit   int32       `json:"row_limit"`
 }
 
-func (q *Queries) ListVehiclesPage(ctx context.Context, arg ListVehiclesPageParams) ([]Vehicle, error) {
+type ListVehiclesPageRow struct {
+	Vehicle       Vehicle    `json:"vehicle"`
+	CustomerID    *uuid.UUID `json:"customer_id"`
+	CustomerName  *string    `json:"customer_name"`
+	CustomerPhone *string    `json:"customer_phone"`
+}
+
+func (q *Queries) ListVehiclesPage(ctx context.Context, arg ListVehiclesPageParams) ([]ListVehiclesPageRow, error) {
 	rows, err := q.db.Query(ctx, listVehiclesPage,
 		arg.WorkshopID,
 		arg.Search,
@@ -316,25 +322,26 @@ func (q *Queries) ListVehiclesPage(ctx context.Context, arg ListVehiclesPagePara
 		return nil, err
 	}
 	defer rows.Close()
-	items := []Vehicle{}
+	items := []ListVehiclesPageRow{}
 	for rows.Next() {
-		var i Vehicle
+		var i ListVehiclesPageRow
 		if err := rows.Scan(
-			&i.ID,
-			&i.OwnerUserID,
-			&i.CreatedByWorkshopID,
-			&i.Status,
-			&i.Plate,
-			&i.Make,
-			&i.Model,
-			&i.Year,
-			&i.Vin,
-			&i.ContactName,
-			&i.ContactPhone,
-			&i.LastActivityAt,
-			&i.ArchivedAt,
-			&i.CreatedAt,
-			&i.UpdatedAt,
+			&i.Vehicle.ID,
+			&i.Vehicle.OwnerUserID,
+			&i.Vehicle.CreatedByWorkshopID,
+			&i.Vehicle.Status,
+			&i.Vehicle.Plate,
+			&i.Vehicle.Make,
+			&i.Vehicle.Model,
+			&i.Vehicle.Year,
+			&i.Vehicle.Vin,
+			&i.Vehicle.LastActivityAt,
+			&i.Vehicle.ArchivedAt,
+			&i.Vehicle.CreatedAt,
+			&i.Vehicle.UpdatedAt,
+			&i.CustomerID,
+			&i.CustomerName,
+			&i.CustomerPhone,
 		); err != nil {
 			return nil, err
 		}

@@ -66,7 +66,7 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 			"DELETE FROM correction WHERE history_record_id IN (SELECT id FROM history_record WHERE vehicle_id IN (SELECT id FROM vehicle WHERE created_by_workshop_id IN (SELECT id FROM demo_workshops) OR owner_user_id IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app'))) OR created_by IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app')",
 			"DELETE FROM history_record WHERE vehicle_id IN (SELECT id FROM vehicle WHERE created_by_workshop_id IN (SELECT id FROM demo_workshops) OR owner_user_id IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app'))",
 			"DELETE FROM invitation WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM odometer_reading WHERE vehicle_id IN (SELECT id FROM vehicle WHERE created_by_workshop_id IN (SELECT id FROM demo_workshops) OR owner_user_id IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app'))",
-			"DELETE FROM recommendation WHERE workshop_id IN (SELECT id FROM demo_workshops) OR vehicle_id IN (SELECT id FROM vehicle WHERE created_by_workshop_id IN (SELECT id FROM demo_workshops) OR owner_user_id IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app')) OR created_by IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app')", "DELETE FROM quote WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM work_order WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM vehicle_link WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM vehicle WHERE created_by_workshop_id IN (SELECT id FROM demo_workshops) OR owner_user_id IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app')", "DELETE FROM membership WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM branch WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM workshop WHERE name IN ('Taller Los Volcanes','AutoServicio La Ceiba')", "DELETE FROM app_user WHERE email LIKE '%@demo.kilora.app'",
+			"DELETE FROM recommendation WHERE workshop_id IN (SELECT id FROM demo_workshops) OR vehicle_id IN (SELECT id FROM vehicle WHERE created_by_workshop_id IN (SELECT id FROM demo_workshops) OR owner_user_id IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app')) OR created_by IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app')", "DELETE FROM quote WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM work_order WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM vehicle_link WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM customer WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM vehicle WHERE created_by_workshop_id IN (SELECT id FROM demo_workshops) OR owner_user_id IN (SELECT id FROM app_user WHERE email LIKE '%@demo.kilora.app')", "DELETE FROM membership WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM branch WHERE workshop_id IN (SELECT id FROM demo_workshops)", "DELETE FROM workshop WHERE name IN ('Taller Los Volcanes','AutoServicio La Ceiba')", "DELETE FROM app_user WHERE email LIKE '%@demo.kilora.app'",
 			"ALTER TABLE correction ENABLE TRIGGER correction_append_only", "ALTER TABLE history_record ENABLE TRIGGER history_record_append_only", "ALTER TABLE audit_event ENABLE TRIGGER audit_event_append_only",
 		} {
 			if err := exec(q); err != nil {
@@ -98,11 +98,31 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 			return err
 		}
 	}
+	// Clientes de Los Volcanes; María es la propietaria demo y también es clienta de La Ceiba.
+	customerNames := []string{"María Hernández", "Carlos Martínez", "Ana Rivera", "José Hernández", "Lucía Flores", "Roberto Mejía", "Sofía Ramírez"}
+	customers := make([]uuid.UUID, len(customerNames))
+	for i, name := range customerNames {
+		customers[i] = uuid.New()
+		phone, email, owner := fmt.Sprintf("+5037%03d%04d", 100+i, 2000+i), "", any(nil)
+		if i == 0 {
+			phone, email, owner = "+50370001234", "propietario@demo.kilora.app", users[2]
+		}
+		if err = exec("INSERT INTO customer(id,workshop_id,full_name,phone,email,user_id) VALUES($1,$2,$3,$4,NULLIF($5,''),$6)", customers[i], w, name, phone, email, owner); err != nil {
+			return err
+		}
+		if err = exec("INSERT INTO audit_event(actor_user_id,workshop_id,entity,entity_id,action) VALUES($1,$2,'customer',$3,'customer.create')", users[0], w, customers[i]); err != nil {
+			return err
+		}
+	}
+	ceibaMaria := uuid.New()
+	if err = exec("INSERT INTO customer(id,workshop_id,full_name,phone,email,user_id) VALUES($1,$2,'María Hernández','+50370001234','propietario@demo.kilora.app',$3)", ceibaMaria, c, users[2]); err != nil {
+		return err
+	}
 	vehicle := uuid.New()
 	if err = exec("INSERT INTO vehicle(id,owner_user_id,created_by_workshop_id,status,plate,make,model,year) VALUES($1,$2,$3,'vinculado','P512834','Toyota','Corolla',2018)", vehicle, users[2], w); err != nil {
 		return err
 	}
-	if err = exec("INSERT INTO vehicle_link VALUES($1,$2,now()),($1,$3,now())", vehicle, w, c); err != nil {
+	if err = exec("INSERT INTO vehicle_link(vehicle_id,workshop_id,created_at,customer_id) VALUES($1,$2,now(),$4),($1,$3,now(),$5)", vehicle, w, c, customers[0], ceibaMaria); err != nil {
 		return err
 	}
 	descriptions := []string{"Cambio de aceite y filtro", "Cambio de aceite y filtro", "Pastillas de freno", "Cambio de batería", "Cambio de aceite y filtro", "Llantas y alineación", "Amortiguadores delanteros", "Cambio de aceite y filtro"}
@@ -163,7 +183,7 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 	for i := 0; i < 8; i++ {
 		v, o := uuid.New(), uuid.New()
 		status := []string{"recibido", "diagnostico", "en_reparacion", "cancelado"}[i%4]
-		if err = exec("INSERT INTO vehicle(id,created_by_workshop_id,status,plate,make,model,year,contact_name,contact_phone) VALUES($1,$2,'provisional',$3,'Honda','Civic',2017,$4,'+50370001111')", v, w, fmt.Sprintf("P%06d", 420000+i), fmt.Sprintf("Cliente %d", i+1)); err != nil {
+		if err = exec("INSERT INTO vehicle(id,created_by_workshop_id,status,plate,make,model,year) VALUES($1,$2,'provisional',$3,'Honda','Civic',2017)", v, w, fmt.Sprintf("P%06d", 420000+i)); err != nil {
 			return err
 		}
 		if i == 7 {
@@ -171,7 +191,9 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 				return err
 			}
 		}
-		if err = exec("INSERT INTO vehicle_link(vehicle_id,workshop_id) VALUES($1,$2)", v, w); err != nil {
+		// Carlos Martínez trae dos carros; el último es de María, la propietaria demo.
+		owner := customers[[]int{1, 2, 3, 4, 1, 5, 6, 0}[i]]
+		if err = exec("INSERT INTO vehicle_link(vehicle_id,workshop_id,customer_id) VALUES($1,$2,$3)", v, w, owner); err != nil {
 			return err
 		}
 		if err = exec("INSERT INTO work_order(id,workshop_id,branch_id,vehicle_id,number,status,reason,created_by,cancelled_at,cancel_reason) VALUES($1,$2,$3,$4,$5,$6::work_order_status,'Revisión general',$7,CASE WHEN $6::work_order_status='cancelado' THEN now() END,CASE WHEN $6::work_order_status='cancelado' THEN 'Cliente canceló' END)", o, w, b2, v, 8+i, status, users[0]); err != nil {

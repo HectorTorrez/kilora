@@ -59,6 +59,7 @@ func (s *server) createInvitation(w http.ResponseWriter, r *http.Request, wc wor
 	var inv sqlc.Invitation
 	var v sqlc.Vehicle
 	var workshop sqlc.Workshop
+	var customer *sqlc.Customer
 	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
 		var err error
 		v, err = q.LockLinkedVehicle(ctx, sqlc.LockLinkedVehicleParams{ID: id, WorkshopID: wc.workshopID})
@@ -78,6 +79,9 @@ func (s *server) createInvitation(w http.ResponseWriter, r *http.Request, wc wor
 		if workshop, err = q.GetWorkshop(ctx, wc.workshopID); err != nil {
 			return auditEvent{}, err
 		}
+		if customer, err = vehicleCustomer(ctx, q, v.ID, wc.workshopID); err != nil {
+			return auditEvent{}, err
+		}
 		return wc.event("invitation", inv.ID, "invitation.create"), nil
 	})
 	if err != nil {
@@ -93,7 +97,11 @@ func (s *server) createInvitation(w http.ResponseWriter, r *http.Request, wc wor
 		plate = *v.Plate
 	}
 	text := fmt.Sprintf("%s te invita a vincular el vehículo %s: %s", workshop.Name, plate, link)
-	writeJSON(w, http.StatusCreated, map[string]any{"id": inv.ID, "url": link, "whatsapp_url": whatsAppURL(v.ContactPhone, text), "expires_at": inv.ExpiresAt.Time})
+	var phone *string
+	if customer != nil {
+		phone = customer.Phone
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"id": inv.ID, "url": link, "whatsapp_url": whatsAppURL(phone, text), "expires_at": inv.ExpiresAt.Time})
 	return nil
 }
 
@@ -192,11 +200,14 @@ func (s *server) acceptInvitation(w http.ResponseWriter, r *http.Request) error 
 		if err = q.AcceptInvitation(ctx, sqlc.AcceptInvitationParams{ID: i.ID, AcceptedBy: &user}); err != nil {
 			return auditEvent{}, err
 		}
+		if err = q.LinkVehicleCustomerUser(ctx, sqlc.LinkVehicleCustomerUserParams{UserID: &user, VehicleID: i.VehicleID, WorkshopID: i.WorkshopID}); err != nil {
+			return auditEvent{}, err
+		}
 		return auditEvent{actor: user, workshop: &i.WorkshopID, entity: "invitation", id: i.ID, action: "invitation.accept"}, nil
 	})
 	if err != nil {
 		return notFoundIfMissing(err, invitationUnavailable)
 	}
-	writeJSON(w, http.StatusOK, vehicleDTO(v, nil))
+	writeJSON(w, http.StatusOK, vehicleDTO(v, nil, nil))
 	return nil
 }

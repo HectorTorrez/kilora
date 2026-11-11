@@ -25,6 +25,8 @@ import { Route as MisVehiculosVehicleIdRouteImport } from './routes/mis-vehiculo
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
 import { Route as TallerActividadRouteImport } from './routes/taller/actividad'
 import { Route as TallerConfiguracionRouteImport } from './routes/taller/configuracion'
+import { Route as TallerClientesIndexRouteImport } from './routes/taller/clientes/index'
+import { Route as TallerClientesCustomerIdRouteImport } from './routes/taller/clientes/$customerId'
 import { Route as TallerCotizacionesIndexRouteImport } from './routes/taller/cotizaciones/index'
 import { Route as TallerCotizacionesNuevaRouteImport } from './routes/taller/cotizaciones/nueva'
 import { Route as TallerOrdenesIndexRouteImport } from './routes/taller/ordenes/index'
@@ -116,6 +118,17 @@ const TallerConfiguracionRoute = TallerConfiguracionRouteImport.update({
   path: '/configuracion',
   getParentRoute: () => TallerRoute,
 } as any)
+const TallerClientesIndexRoute = TallerClientesIndexRouteImport.update({
+  id: '/clientes/',
+  path: '/clientes/',
+  getParentRoute: () => TallerRoute,
+} as any)
+const TallerClientesCustomerIdRoute =
+  TallerClientesCustomerIdRouteImport.update({
+    id: '/clientes/$customerId',
+    path: '/clientes/$customerId',
+    getParentRoute: () => TallerRoute,
+  } as any)
 const TallerCotizacionesIndexRoute = TallerCotizacionesIndexRouteImport.update({
   id: '/cotizaciones/',
   path: '/cotizaciones/',
@@ -188,10 +201,12 @@ export interface FileRoutesByFullPath {
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
+  '/taller/clientes/$customerId': typeof TallerClientesCustomerIdRoute
   '/taller/cotizaciones/nueva': typeof TallerCotizacionesNuevaRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
   '/taller/vehiculos/$vehicleId': typeof TallerVehiculosVehicleIdRoute
+  '/taller/clientes/': typeof TallerClientesIndexRoute
   '/taller/cotizaciones/': typeof TallerCotizacionesIndexRoute
   '/taller/ordenes/': typeof TallerOrdenesIndexRoute
   '/taller/vehiculos/': typeof TallerVehiculosIndexRoute
@@ -214,10 +229,12 @@ export interface FileRoutesByTo {
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos': typeof MisVehiculosIndexRoute
   '/taller': typeof TallerIndexRoute
+  '/taller/clientes/$customerId': typeof TallerClientesCustomerIdRoute
   '/taller/cotizaciones/nueva': typeof TallerCotizacionesNuevaRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
   '/taller/vehiculos/$vehicleId': typeof TallerVehiculosVehicleIdRoute
+  '/taller/clientes': typeof TallerClientesIndexRoute
   '/taller/cotizaciones': typeof TallerCotizacionesIndexRoute
   '/taller/ordenes': typeof TallerOrdenesIndexRoute
   '/taller/vehiculos': typeof TallerVehiculosIndexRoute
@@ -243,10 +260,12 @@ export interface FileRoutesById {
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
   '/taller/': typeof TallerIndexRoute
+  '/taller/clientes/$customerId': typeof TallerClientesCustomerIdRoute
   '/taller/cotizaciones/nueva': typeof TallerCotizacionesNuevaRoute
   '/taller/ordenes/$orderId': typeof TallerOrdenesOrderIdRoute
   '/taller/ordenes/nueva': typeof TallerOrdenesNuevaRoute
   '/taller/vehiculos/$vehicleId': typeof TallerVehiculosVehicleIdRoute
+  '/taller/clientes/': typeof TallerClientesIndexRoute
   '/taller/cotizaciones/': typeof TallerCotizacionesIndexRoute
   '/taller/ordenes/': typeof TallerOrdenesIndexRoute
   '/taller/vehiculos/': typeof TallerVehiculosIndexRoute
@@ -273,10 +292,12 @@ export interface FileRouteTypes {
     | '/taller/configuracion'
     | '/mis-vehiculos/'
     | '/taller/'
+    | '/taller/clientes/$customerId'
     | '/taller/cotizaciones/nueva'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
     | '/taller/vehiculos/$vehicleId'
+    | '/taller/clientes/'
     | '/taller/cotizaciones/'
     | '/taller/ordenes/'
     | '/taller/vehiculos/'
@@ -299,10 +320,12 @@ export interface FileRouteTypes {
     | '/taller/configuracion'
     | '/mis-vehiculos'
     | '/taller'
+    | '/taller/clientes/$customerId'
     | '/taller/cotizaciones/nueva'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
     | '/taller/vehiculos/$vehicleId'
+    | '/taller/clientes'
     | '/taller/cotizaciones'
     | '/taller/ordenes'
     | '/taller/vehiculos'
@@ -327,10 +350,12 @@ export interface FileRouteTypes {
     | '/taller/configuracion'
     | '/mis-vehiculos/'
     | '/taller/'
+    | '/taller/clientes/$customerId'
     | '/taller/cotizaciones/nueva'
     | '/taller/ordenes/$orderId'
     | '/taller/ordenes/nueva'
     | '/taller/vehiculos/$vehicleId'
+    | '/taller/clientes/'
     | '/taller/cotizaciones/'
     | '/taller/ordenes/'
     | '/taller/vehiculos/'
@@ -467,6 +492,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TallerConfiguracionRouteImport
       parentRoute: typeof TallerRoute
     }
+    '/taller/clientes/': {
+      id: '/taller/clientes/'
+      path: '/clientes'
+      fullPath: '/taller/clientes/'
+      preLoaderRoute: typeof TallerClientesIndexRouteImport
+      parentRoute: typeof TallerRoute
+    }
+    '/taller/clientes/$customerId': {
+      id: '/taller/clientes/$customerId'
+      path: '/clientes/$customerId'
+      fullPath: '/taller/clientes/$customerId'
+      preLoaderRoute: typeof TallerClientesCustomerIdRouteImport
+      parentRoute: typeof TallerRoute
+    }
     '/taller/cotizaciones/': {
       id: '/taller/cotizaciones/'
       path: '/cotizaciones'
@@ -558,10 +597,12 @@ interface TallerRouteChildren {
   TallerActividadRoute: typeof TallerActividadRoute
   TallerConfiguracionRoute: typeof TallerConfiguracionRoute
   TallerIndexRoute: typeof TallerIndexRoute
+  TallerClientesCustomerIdRoute: typeof TallerClientesCustomerIdRoute
   TallerCotizacionesNuevaRoute: typeof TallerCotizacionesNuevaRoute
   TallerOrdenesOrderIdRoute: typeof TallerOrdenesOrderIdRoute
   TallerOrdenesNuevaRoute: typeof TallerOrdenesNuevaRoute
   TallerVehiculosVehicleIdRoute: typeof TallerVehiculosVehicleIdRoute
+  TallerClientesIndexRoute: typeof TallerClientesIndexRoute
   TallerCotizacionesIndexRoute: typeof TallerCotizacionesIndexRoute
   TallerOrdenesIndexRoute: typeof TallerOrdenesIndexRoute
   TallerVehiculosIndexRoute: typeof TallerVehiculosIndexRoute
@@ -574,10 +615,12 @@ const TallerRouteChildren: TallerRouteChildren = {
   TallerActividadRoute: TallerActividadRoute,
   TallerConfiguracionRoute: TallerConfiguracionRoute,
   TallerIndexRoute: TallerIndexRoute,
+  TallerClientesCustomerIdRoute: TallerClientesCustomerIdRoute,
   TallerCotizacionesNuevaRoute: TallerCotizacionesNuevaRoute,
   TallerOrdenesOrderIdRoute: TallerOrdenesOrderIdRoute,
   TallerOrdenesNuevaRoute: TallerOrdenesNuevaRoute,
   TallerVehiculosVehicleIdRoute: TallerVehiculosVehicleIdRoute,
+  TallerClientesIndexRoute: TallerClientesIndexRoute,
   TallerCotizacionesIndexRoute: TallerCotizacionesIndexRoute,
   TallerOrdenesIndexRoute: TallerOrdenesIndexRoute,
   TallerVehiculosIndexRoute: TallerVehiculosIndexRoute,

@@ -1,5 +1,5 @@
 -- name: CreateVehicle :one
-INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, contact_name, contact_phone) VALUES (sqlc.arg(owner_user_id), sqlc.arg(created_by_workshop_id), sqlc.arg(status), sqlc.arg(plate), sqlc.arg(make), sqlc.arg(model), sqlc.arg(year), sqlc.arg(vin), sqlc.arg(contact_name), sqlc.arg(contact_phone)) RETURNING *;
+INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin) VALUES (sqlc.arg(owner_user_id), sqlc.arg(created_by_workshop_id), sqlc.arg(status), sqlc.arg(plate), sqlc.arg(make), sqlc.arg(model), sqlc.arg(year), sqlc.arg(vin)) RETURNING *;
 
 -- name: GetVehicle :one
 SELECT v.* FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE v.id = sqlc.arg(id) AND l.workshop_id = sqlc.arg(workshop_id);
@@ -8,9 +8,10 @@ SELECT v.* FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE v.id 
 SELECT * FROM vehicle WHERE owner_user_id = sqlc.arg(owner_user_id) ORDER BY last_activity_at DESC;
 
 -- name: ListVehiclesForWorkshop :many
-SELECT v.*
+SELECT sqlc.embed(v), c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
 FROM vehicle v
 JOIN vehicle_link l ON l.vehicle_id = v.id
+LEFT JOIN customer c ON c.id = l.customer_id
 WHERE l.workshop_id = sqlc.arg(workshop_id)
   AND (sqlc.arg(include_archived)::boolean OR v.status <> 'archivado')
   AND (sqlc.arg(plate_prefix)::text = '' OR starts_with(v.plate, sqlc.arg(plate_prefix)::text))
@@ -26,10 +27,11 @@ UPDATE vehicle SET last_activity_at = now() WHERE id = sqlc.arg(vehicle_id) AND 
 SELECT * FROM vehicle WHERE id = sqlc.arg(id) AND owner_user_id = sqlc.arg(owner_user_id);
 
 -- name: ListVehiclesPage :many
-SELECT v.*
+SELECT sqlc.embed(v), c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+LEFT JOIN customer c ON c.id = l.customer_id
 WHERE l.workshop_id = sqlc.arg(workshop_id) AND v.status <> 'archivado'
-  AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
+  AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, c.full_name, c.phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
   AND (cardinality(sqlc.arg(statuses)::text[]) = 0 OR v.status::text = ANY(sqlc.arg(statuses)::text[]))
   AND (sqlc.narg(date_from)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
   AND (sqlc.narg(date_to)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
@@ -39,8 +41,9 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: CountVehiclesByStatus :many
 SELECT v.status, count(*) AS total
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+LEFT JOIN customer c ON c.id = l.customer_id
 WHERE l.workshop_id = sqlc.arg(workshop_id) AND v.status <> 'archivado'
-  AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, v.contact_name, v.contact_phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
+  AND (sqlc.narg(search)::text IS NULL OR regexp_replace(lower(concat_ws(' ', v.plate, v.make, v.model, c.full_name, c.phone, v.vin)), '[[:space:]-]', '', 'g') ILIKE sqlc.narg(search) ESCAPE '\')
   AND (sqlc.narg(date_from)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
   AND (sqlc.narg(date_to)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
 GROUP BY v.status;

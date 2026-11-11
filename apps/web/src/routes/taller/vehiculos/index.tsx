@@ -8,6 +8,7 @@ import {
 	DateRangeFilter,
 } from "@/components/kilora/date-range-filter";
 import { ClearFilters, FacetFilter } from "@/components/kilora/facet-filter";
+import { FormDialog } from "@/components/kilora/form-dialog";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { QueryContent } from "@/components/kilora/query-content";
 import { SortableHead, useTableSort } from "@/components/kilora/sortable-table";
@@ -23,13 +24,6 @@ import {
 } from "@/components/kilora/workshop-ui";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
 import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -73,7 +67,7 @@ function VehiclesPage() {
 	const { rows, sort, toggle } = useTableSort(data?.items ?? [], {
 		plate: (v) => v.plate,
 		vehicle: (v) => `${v.make} ${v.model} ${v.year ?? ""}`,
-		contact: (v) => v.contact_name,
+		customer: (v) => v.customer?.full_name.toLowerCase(),
 		km: (v) => v.last_odometer_km,
 		status: (v) => v.status,
 		activity: (v) => v.last_activity_at,
@@ -104,7 +98,7 @@ function VehiclesPage() {
 					<SearchInput
 						containerClassName="min-w-[220px] flex-1 sm:max-w-sm"
 						aria-label="Buscar vehículos"
-						placeholder="Buscar por placa, marca, contacto o teléfono"
+						placeholder="Buscar por placa, marca, cliente o teléfono"
 						value={query}
 						onChange={(e) => setQuery(e.target.value)}
 					/>
@@ -169,12 +163,12 @@ function VehiclesPage() {
 									Vehículo
 								</SortableHead>
 								<SortableHead
-									sortKey="contact"
+									sortKey="customer"
 									sort={sort}
 									onSort={toggle}
 									className="hidden md:table-cell"
 								>
-									Contacto
+									Cliente
 								</SortableHead>
 								<SortableHead
 									sortKey="km"
@@ -248,10 +242,21 @@ function VehiclesPage() {
 									</TableCell>
 									<TableCell className="hidden md:table-cell">
 										<p className="text-[13px]">
-											{v.contact_name || <Missing>Sin contacto</Missing>}
+											{v.customer ? (
+												<Link
+													to="/taller/clientes/$customerId"
+													params={{ customerId: v.customer.id }}
+													onClick={(e) => e.stopPropagation()}
+													className="hover:underline"
+												>
+													{v.customer.full_name}
+												</Link>
+											) : (
+												<Missing>Sin cliente</Missing>
+											)}
 										</p>
 										<p className="font-mono text-xs text-ink-3">
-											{phone(v.contact_phone)}
+											{phone(v.customer?.phone)}
 										</p>
 									</TableCell>
 									<TableCell className="hidden text-right font-mono text-[12.5px] tabular-nums sm:table-cell">
@@ -280,27 +285,23 @@ function VehiclesPage() {
 				/>
 			</Card>
 
-			<Dialog open={open} onOpenChange={setOpen}>
-				<DialogContent>
-					<DialogHeader>
-						<DialogTitle>Registrar vehículo provisional</DialogTitle>
-						<DialogDescription>
-							Solo marca y modelo son obligatorios. Podés invitar al propietario
-							después.
-						</DialogDescription>
-					</DialogHeader>
-					<VehicleForm
-						workshopID={workshopID}
-						onCreated={(created) => {
-							setOpen(false);
-							void navigate({
-								to: "/taller/vehiculos/$vehicleId",
-								params: { vehicleId: created.id },
-							});
-						}}
-					/>
-				</DialogContent>
-			</Dialog>
+			<FormDialog
+				open={open}
+				onOpenChange={setOpen}
+				title="Registrar vehículo provisional"
+				description="Cliente, marca y modelo son obligatorios. Podés invitar al propietario después."
+			>
+				<VehicleForm
+					workshopID={workshopID}
+					onCreated={(created) => {
+						setOpen(false);
+						void navigate({
+							to: "/taller/vehiculos/$vehicleId",
+							params: { vehicleId: created.id },
+						});
+					}}
+				/>
+			</FormDialog>
 		</PageBody>
 	);
 }

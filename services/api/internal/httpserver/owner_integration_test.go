@@ -41,7 +41,7 @@ func TestInvitationOwnerFlow(t *testing.T) {
 	wb, _ := workshop(b)
 	pa := "/api/v1/workshops/" + wa
 	pb := "/api/v1/workshops/" + wb
-	v := decodeMap(req(a, "POST", pa+"/vehicles", `{"plate":"p 123-456","make":"Marca","model":"Modelo"}`, 201))
+	v := decodeMap(req(a, "POST", pa+"/vehicles", `{"plate":"p 123-456","make":"Marca","model":"Modelo","customer":{"full_name":"Dueña Futura","phone":"7100-0004"}}`, 201))
 	vid := v["id"].(string)
 	vp := pa + "/vehicles/" + vid
 	o := decodeMap(req(a, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Servicio","internal_notes":"secreto_interno"}`, vid, branch), 201))

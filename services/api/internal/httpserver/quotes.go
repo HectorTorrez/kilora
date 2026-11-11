@@ -238,7 +238,7 @@ func (s *server) shareQuote(w http.ResponseWriter, r *http.Request, wc workshopA
 	if contact.Plate != nil {
 		vehicle = *contact.Plate
 	}
-	writeJSON(w, http.StatusOK, s.quoteShareResponse(contact.Name, vehicle, shared.Total, token, shared.ShareExpiresAt.Time, contact.ContactPhone))
+	writeJSON(w, http.StatusOK, s.quoteShareResponse(contact.Name, vehicle, shared.Total, token, shared.ShareExpiresAt.Time, contact.CustomerPhone))
 	return nil
 }
 
@@ -293,6 +293,7 @@ func (s *server) publicQuote(w http.ResponseWriter, r *http.Request) error {
 }
 
 type counterQuoteBody struct {
+	CustomerID    *uuid.UUID       `json:"customer_id"`
 	CustomerName  string           `json:"customer_name"`
 	CustomerPhone *string          `json:"customer_phone"`
 	VehicleID     *uuid.UUID       `json:"vehicle_id"`
@@ -310,7 +311,7 @@ type counterDraft struct {
 	name, model                   string
 	makeName, phone, plate, notes *string
 	year                          *int32
-	vehicle                       *uuid.UUID
+	vehicle, customer             *uuid.UUID
 	branch                        uuid.UUID
 	until                         pgtype.Date
 	items                         []parsedQuoteItem
@@ -319,7 +320,10 @@ type counterDraft struct {
 
 func parseCounterQuote(in counterQuoteBody) (counterDraft, error) {
 	d := counterDraft{name: strings.TrimSpace(in.CustomerName), model: strings.TrimSpace(in.VehicleModel), makeName: values.OptionalText(in.VehicleMake), plate: values.OptionalPlate(in.VehiclePlate), notes: values.OptionalText(in.Notes), year: in.VehicleYear, branch: in.BranchID}
-	if d.name == "" {
+	if in.CustomerID != nil && *in.CustomerID != uuid.Nil {
+		d.customer = in.CustomerID
+	}
+	if d.name == "" && d.customer == nil {
 		return d, badRequest("Nombre del cliente obligatorio")
 	}
 	if !values.VehicleText(d.model) || (d.makeName != nil && !values.VehicleText(*d.makeName)) || !values.ValidPlate(in.VehiclePlate) {
@@ -352,6 +356,33 @@ func parseCounterQuote(in counterQuoteBody) (counterDraft, error) {
 	return d, err
 }
 
+// bindQuoteParties checks the vehicle and customer belong to the workshop and, when
+// the quote points at a customer (or at a vehicle that has one), snapshots that
+// customer's name and phone so the quote keeps what was said at the time.
+func bindQuoteParties(ctx context.Context, q *sqlc.Queries, wc workshopAccess, d *counterDraft) error {
+	if err := requireLinkedVehicle(ctx, q, wc, d.vehicle); err != nil {
+		return err
+	}
+	if d.customer == nil && d.vehicle != nil {
+		c, err := vehicleCustomer(ctx, q, *d.vehicle, wc.workshopID)
+		if err != nil {
+			return err
+		}
+		if c != nil {
+			d.customer = &c.ID
+		}
+	}
+	if d.customer == nil {
+		return nil
+	}
+	c, err := q.GetCustomer(ctx, sqlc.GetCustomerParams{ID: *d.customer, WorkshopID: wc.workshopID})
+	if err != nil {
+		return notFoundIfMissing(err, customerNotFound)
+	}
+	d.name, d.phone = c.FullName, c.Phone
+	return nil
+}
+
 func requireLinkedVehicle(ctx context.Context, q *sqlc.Queries, wc workshopAccess, id *uuid.UUID) error {
 	if id == nil {
 		return nil
@@ -364,7 +395,7 @@ func counterQuoteJSON(row sqlc.GetCounterQuoteRow, items []any) map[string]any {
 	return map[string]any{
 		"id": row.ID, "number": row.Number, "branch_id": row.BranchID, "branch_name": row.BranchName,
 		"workshop_name": row.WorkshopName, "workshop_nit": row.WorkshopNit, "verified_at": nullableTime(row.VerifiedAt),
-		"customer_name": row.CustomerName, "customer_phone": row.CustomerPhone, "vehicle_id": row.VehicleID,
+		"customer_id": row.CustomerID, "customer_name": row.CustomerName, "customer_phone": row.CustomerPhone, "vehicle_id": row.VehicleID,
 		"vehicle_make": row.VehicleMake, "vehicle_model": row.VehicleModel, "vehicle_year": row.VehicleYear, "vehicle_plate": row.VehiclePlate,
 		"notes": row.Notes, "valid_until": nullableDate(row.ValidUntil), "items": items, "total": row.Total, "currency": row.Currency,
 		"outcome": row.Outcome, "outcome_at": nullableTime(row.OutcomeAt), "outcome_by": row.OutcomeBy,
@@ -429,14 +460,14 @@ func (s *server) createCounterQuote(w http.ResponseWriter, r *http.Request, wc w
 	var created uuid.UUID
 	err = retryNumbered(func() error {
 		return s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
-			if err := requireLinkedVehicle(ctx, q, wc, d.vehicle); err != nil {
+			if err := bindQuoteParties(ctx, q, wc, &d); err != nil {
 				return auditEvent{}, err
 			}
 			number, err := q.NextQuoteNumber(ctx, wc.workshopID)
 			if err != nil {
 				return auditEvent{}, err
 			}
-			row, err := q.CreateCounterQuote(ctx, sqlc.CreateCounterQuoteParams{WorkshopID: wc.workshopID, BranchID: d.branch, Number: number, CustomerName: &d.name, CustomerPhone: d.phone, VehicleID: d.vehicle, VehicleMake: d.makeName, VehicleModel: &d.model, VehicleYear: d.year, VehiclePlate: d.plate, Notes: d.notes, ValidUntil: d.until, Total: d.total, CreatedBy: wc.userID})
+			row, err := q.CreateCounterQuote(ctx, sqlc.CreateCounterQuoteParams{WorkshopID: wc.workshopID, BranchID: d.branch, Number: number, CustomerID: d.customer, CustomerName: &d.name, CustomerPhone: d.phone, VehicleID: d.vehicle, VehicleMake: d.makeName, VehicleModel: &d.model, VehicleYear: d.year, VehiclePlate: d.plate, Notes: d.notes, ValidUntil: d.until, Total: d.total, CreatedBy: wc.userID})
 			if err != nil {
 				return auditEvent{}, err
 			}
@@ -551,10 +582,10 @@ func (s *server) updateCounterQuote(w http.ResponseWriter, r *http.Request, wc w
 		return err
 	}
 	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
-		if err := requireLinkedVehicle(ctx, q, wc, d.vehicle); err != nil {
+		if err := bindQuoteParties(ctx, q, wc, &d); err != nil {
 			return auditEvent{}, err
 		}
-		id, err := q.UpdateCounterQuote(ctx, sqlc.UpdateCounterQuoteParams{BranchID: d.branch, CustomerName: &d.name, CustomerPhone: d.phone, VehicleID: d.vehicle, VehicleMake: d.makeName, VehicleModel: &d.model, VehicleYear: d.year, VehiclePlate: d.plate, Notes: d.notes, ValidUntil: d.until, Total: d.total, ID: row.ID, WorkshopID: wc.workshopID})
+		id, err := q.UpdateCounterQuote(ctx, sqlc.UpdateCounterQuoteParams{BranchID: d.branch, CustomerID: d.customer, CustomerName: &d.name, CustomerPhone: d.phone, VehicleID: d.vehicle, VehicleMake: d.makeName, VehicleModel: &d.model, VehicleYear: d.year, VehiclePlate: d.plate, Notes: d.notes, ValidUntil: d.until, Total: d.total, ID: row.ID, WorkshopID: wc.workshopID})
 		if errors.Is(err, pgx.ErrNoRows) {
 			return auditEvent{}, conflict(quoteHasOutcome)
 		}
@@ -644,9 +675,25 @@ func quoteVehicle(ctx context.Context, q *sqlc.Queries, wc workshopAccess, locke
 		makeName = *v
 	}
 	model := strings.TrimSpace(deref(locked.VehicleModel))
-	customer := strings.TrimSpace(deref(locked.CustomerName))
-	v, err := createProvisionalVehicle(ctx, q, wc, sqlc.CreateVehicleParams{Plate: locked.VehiclePlate, Make: makeName, Model: model, Year: locked.VehicleYear, ContactName: &customer, ContactPhone: locked.CustomerPhone})
+	customer, err := quoteCustomer(ctx, q, wc, locked)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	v, err := createProvisionalVehicle(ctx, q, wc, sqlc.CreateVehicleParams{Plate: locked.VehiclePlate, Make: makeName, Model: model, Year: locked.VehicleYear}, customer.ID)
 	return v.ID, err
+}
+
+// quoteCustomer finds who the new vehicle belongs to: the quote's customer, or the
+// workshop's customer with the quoted phone, created on the spot if there is none.
+func quoteCustomer(ctx context.Context, q *sqlc.Queries, wc workshopAccess, locked sqlc.LockCounterQuoteRow) (sqlc.Customer, error) {
+	if locked.CustomerID != nil {
+		c, err := q.GetCustomer(ctx, sqlc.GetCustomerParams{ID: *locked.CustomerID, WorkshopID: wc.workshopID})
+		return c, notFoundIfMissing(err, customerNotFound)
+	}
+	if locked.CustomerPhone == nil {
+		return sqlc.Customer{}, badRequest("Agregá el teléfono del cliente a la cotización antes de convertirla en orden")
+	}
+	return findOrCreateCustomer(ctx, q, wc, deref(locked.CustomerName), *locked.CustomerPhone)
 }
 
 func deref(p *string) string {

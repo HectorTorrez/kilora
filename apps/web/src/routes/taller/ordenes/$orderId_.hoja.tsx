@@ -137,9 +137,9 @@ function MechanicSheet() {
 					<Field label="VIN">
 						<span className="font-mono text-xs">{v.vin || "—"}</span>
 					</Field>
-					<Field label="Contacto">{v.contact_name || "—"}</Field>
+					<Field label="Cliente">{v.customer?.full_name || "—"}</Field>
 					<Field label="Teléfono">
-						<span className="font-mono">{phone(v.contact_phone) || "—"}</span>
+						<span className="font-mono">{phone(v.customer?.phone) || "—"}</span>
 					</Field>
 				</dl>
 				{qr && (

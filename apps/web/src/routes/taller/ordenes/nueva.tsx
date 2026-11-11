@@ -162,7 +162,7 @@ function NewOrderPage() {
 										{chosen.make} {chosen.model} {chosen.year ?? ""}
 									</p>
 									<p className="truncate text-xs text-ink-3">
-										{chosen.contact_name || "Sin contacto"} · último km{" "}
+										{chosen.customer?.full_name || "Sin cliente"} · último km{" "}
 										{formatKm(chosen.last_odometer_km)}
 									</p>
 								</div>
@@ -181,7 +181,7 @@ function NewOrderPage() {
 									containerClassName=""
 									autoFocus
 									aria-label="Buscar vehículo"
-									placeholder="Buscar por placa, marca o contacto"
+									placeholder="Buscar por placa, marca o cliente"
 									value={search}
 									onChange={(e) => setSearch(e.target.value)}
 								/>
@@ -204,7 +204,7 @@ function NewOrderPage() {
 															{v.make} {v.model}
 														</span>
 														<span className="block truncate text-xs text-ink-3">
-															{v.contact_name || "Sin contacto"}
+															{v.customer?.full_name || "Sin cliente"}
 														</span>
 													</span>
 												</button>
@@ -323,7 +323,7 @@ function NewOrderPage() {
 					open={creating}
 					onOpenChange={setCreating}
 					title="Registrar vehículo"
-					description="Queda como provisional hasta que el propietario acepte la invitación. Solo marca y modelo son obligatorios."
+					description="Queda como provisional hasta que el propietario acepte la invitación. Cliente, marca y modelo son obligatorios."
 				>
 					<VehicleForm
 						workshopID={workshopID}

@@ -25,9 +25,9 @@ func TestWorkshopIsolation(t *testing.T) {
 	a, b := client(), client()
 	pa, ba, _ := setup(a)
 	pb, bb, _ := setup(b)
-	vehicle := req(a, "POST", pa+"/vehicles", `{"make":"Toyota","model":"Yaris","plate":" p-123 ","contact_phone":"7777-8888"}`, 201).(map[string]any)
+	vehicle := req(a, "POST", pa+"/vehicles", `{"make":"Toyota","model":"Yaris","plate":" p-123 ","customer":{"full_name":"Ana López","phone":"7777-8888"}}`, 201).(map[string]any)
 	vid := vehicle["id"].(string)
-	if vehicle["plate"] != "P123" || vehicle["contact_phone"] != "+50377778888" {
+	if vehicle["plate"] != "P123" || vehicle["customer"].(map[string]any)["phone"] != "+50377778888" {
 		t.Fatal(vehicle)
 	}
 	order := req(a, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Revisión"}`, vid, ba), 201).(map[string]any)
@@ -52,9 +52,18 @@ func TestWorkshopIsolation(t *testing.T) {
 			t.Fatalf("lista no vacía: %v", v)
 		}
 	}
-	vb := req(b, "POST", pb+"/vehicles", `{"make":"Honda","model":"Civic"}`, 201).(map[string]any)["id"].(string)
+	vb := req(b, "POST", pb+"/vehicles", `{"make":"Honda","model":"Civic","customer":{"full_name":"Ana López","phone":"7777-8888"}}`, 201).(map[string]any)["id"].(string)
 	req(a, "GET", pa+"/vehicles/"+vb, "", 404)
 	req(a, "GET", pb+"/vehicles/"+vb, "", 403)
+	customerA := vehicle["customer"].(map[string]any)["id"].(string)
+	req(b, "GET", pb+"/customers/"+customerA, "", 404)
+	req(b, "PATCH", pb+"/customers/"+customerA, `{"full_name":"Intruso","phone":"7000-0000"}`, 404)
+	req(b, "POST", pb+"/vehicles", fmt.Sprintf(`{"make":"Kia","model":"Rio","customer_id":%q}`, customerA), 404)
+	req(b, "PUT", pb+"/vehicles/"+vb+"/customer", fmt.Sprintf(`{"customer_id":%q}`, customerA), 404)
+	req(b, "PUT", pb+"/vehicles/"+vid+"/customer", `{"customer":{"full_name":"Intruso","phone":"7000-0000"}}`, 404)
+	if list := req(b, "GET", pb+"/customers/page", "", 200).(map[string]any); list["total"].(float64) != 1 {
+		t.Fatal(list)
+	}
 	q := sqlc.New(db)
 	wid := uuid.MustParse(strings.TrimPrefix(pa, "/api/v1/workshops/"))
 	branch2, e := q.CreateBranch(context.Background(), sqlc.CreateBranchParams{WorkshopID: wid, Name: uuid.NewString()})
@@ -73,6 +82,7 @@ func TestWorkshopIsolation(t *testing.T) {
 			req(c, "POST", pa+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"x"}`, vid, branch2.ID), 403)
 		} else {
 			req(c, "POST", pa+"/vehicles", `{"make":"x","model":"y"}`, 403)
+			req(c, "POST", pa+"/customers", `{"full_name":"Mecánico","phone":"7000-0001"}`, 403)
 		}
 	}
 	op := pa + "/work-orders/" + oid
@@ -85,7 +95,7 @@ func TestWorkshopIsolation(t *testing.T) {
 	token := strings.Split(share["url"].(string), "/c/")[1]
 	public := req(&http.Client{}, "GET", "/api/v1/public/quotes/"+token, "", 200)
 	encoded, _ := json.Marshal(public)
-	if strings.Contains(string(encoded), "secreto interno") || strings.Contains(string(encoded), "internal_") || strings.Contains(string(encoded), "contact_") || strings.Contains(string(encoded), "secreto mecánico") {
+	if strings.Contains(string(encoded), "secreto interno") || strings.Contains(string(encoded), "internal_") || strings.Contains(string(encoded), "77778888") || strings.Contains(string(encoded), "Ana López") || strings.Contains(string(encoded), "secreto mecánico") {
 		t.Fatal(string(encoded))
 	}
 	share2 := req(a, "POST", op+"/quote/share", "", 200).(map[string]any)

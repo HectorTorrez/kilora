@@ -26,7 +26,13 @@ SELECT kind, description, quantity::text, unit_price::text FROM quote_item WHERE
 UPDATE quote SET share_token_hash = $1, shared_at = now(), share_expires_at = now() + interval '15 days' WHERE work_order_id = $2 AND workshop_id = $3 RETURNING id, share_expires_at, total::text;
 
 -- name: GetQuoteContact :one
-SELECT w.name, v.plate, v.contact_phone FROM work_order o JOIN workshop w ON w.id = o.workshop_id JOIN vehicle v ON v.id = o.vehicle_id WHERE o.id = $1;
+SELECT w.name, v.plate, c.phone AS customer_phone
+FROM work_order o
+JOIN workshop w ON w.id = o.workshop_id
+JOIN vehicle v ON v.id = o.vehicle_id
+LEFT JOIN vehicle_link l ON l.vehicle_id = o.vehicle_id AND l.workshop_id = o.workshop_id
+LEFT JOIN customer c ON c.id = l.customer_id
+WHERE o.id = $1;
 
 -- name: SetQuoteOutcome :one
 UPDATE quote SET outcome = $1, outcome_at = now(), outcome_by = $2 WHERE work_order_id = $3 AND workshop_id = $4 AND converted_order_id IS NULL RETURNING id;
@@ -52,16 +58,17 @@ WHERE q.share_token_hash = $1 AND q.share_expires_at > now();
 
 -- name: CreateCounterQuote :one
 INSERT INTO quote (
-  workshop_id, branch_id, number, customer_name, customer_phone, vehicle_id,
+  workshop_id, branch_id, number, customer_id, customer_name, customer_phone, vehicle_id,
   vehicle_make, vehicle_model, vehicle_year, vehicle_plate, notes, valid_until, total, created_by
 ) VALUES (
-  sqlc.arg(workshop_id), sqlc.arg(branch_id), sqlc.arg(number), sqlc.arg(customer_name), sqlc.narg(customer_phone), sqlc.narg(vehicle_id),
+  sqlc.arg(workshop_id), sqlc.arg(branch_id), sqlc.arg(number), sqlc.narg(customer_id), sqlc.arg(customer_name), sqlc.narg(customer_phone), sqlc.narg(vehicle_id),
   sqlc.narg(vehicle_make), sqlc.arg(vehicle_model), sqlc.narg(vehicle_year), sqlc.narg(vehicle_plate), sqlc.narg(notes), sqlc.arg(valid_until), sqlc.arg(total), sqlc.arg(created_by)
 ) RETURNING *;
 
 -- name: UpdateCounterQuote :one
 UPDATE quote SET
   branch_id = sqlc.arg(branch_id),
+  customer_id = sqlc.narg(customer_id),
   customer_name = sqlc.arg(customer_name),
   customer_phone = sqlc.narg(customer_phone),
   vehicle_id = sqlc.narg(vehicle_id),
@@ -78,7 +85,7 @@ RETURNING id;
 
 -- name: GetCounterQuote :one
 SELECT
-  q.id, q.workshop_id, q.branch_id, q.number, q.customer_name, q.customer_phone, q.vehicle_id,
+  q.id, q.workshop_id, q.branch_id, q.number, q.customer_id, q.customer_name, q.customer_phone, q.vehicle_id,
   q.vehicle_make, q.vehicle_model, q.vehicle_year, q.vehicle_plate, q.notes, q.valid_until,
   q.total::text AS total, q.currency, q.outcome, q.outcome_at, q.outcome_by,
   q.shared_at, q.share_expires_at, q.created_at, q.work_order_id, q.converted_order_id,
@@ -116,7 +123,7 @@ ORDER BY q.created_at DESC, q.number DESC
 LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: LockCounterQuote :one
-SELECT id, number, outcome, branch_id, vehicle_id, customer_name, customer_phone,
+SELECT id, number, outcome, branch_id, vehicle_id, customer_id, customer_name, customer_phone,
   vehicle_make, vehicle_model, vehicle_year, vehicle_plate, work_order_id, converted_order_id
 FROM quote
 WHERE id = sqlc.arg(id) AND workshop_id = sqlc.arg(workshop_id)

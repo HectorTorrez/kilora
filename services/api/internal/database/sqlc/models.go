@@ -597,6 +597,17 @@ type Correction struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
+type Customer struct {
+	ID         uuid.UUID          `json:"id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
+	FullName   string             `json:"full_name"`
+	Phone      *string            `json:"phone"`
+	Email      *string            `json:"email"`
+	UserID     *uuid.UUID         `json:"user_id"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
 type HistoryRecord struct {
 	ID            uuid.UUID          `json:"id"`
 	VehicleID     uuid.UUID          `json:"vehicle_id"`
@@ -704,6 +715,7 @@ type Quote struct {
 	Notes            *string            `json:"notes"`
 	ValidUntil       pgtype.Date        `json:"valid_until"`
 	ConvertedOrderID *uuid.UUID         `json:"converted_order_id"`
+	CustomerID       *uuid.UUID         `json:"customer_id"`
 }
 
 type QuoteItem struct {
@@ -752,8 +764,6 @@ type Vehicle struct {
 	Model               string             `json:"model"`
 	Year                *int32             `json:"year"`
 	Vin                 *string            `json:"vin"`
-	ContactName         *string            `json:"contact_name"`
-	ContactPhone        *string            `json:"contact_phone"`
 	LastActivityAt      pgtype.Timestamptz `json:"last_activity_at"`
 	ArchivedAt          pgtype.Timestamptz `json:"archived_at"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
@@ -764,6 +774,7 @@ type VehicleLink struct {
 	VehicleID  uuid.UUID          `json:"vehicle_id"`
 	WorkshopID uuid.UUID          `json:"workshop_id"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	CustomerID *uuid.UUID         `json:"customer_id"`
 }
 
 type WorkOrder struct {

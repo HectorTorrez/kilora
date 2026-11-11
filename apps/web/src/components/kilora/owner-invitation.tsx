@@ -37,11 +37,14 @@ export function OwnerInvitation({
 	vehicleID,
 	linked,
 	name,
+	suggestedEmail,
 }: {
 	workshopID: string;
 	vehicleID: string;
 	linked?: boolean;
 	name?: string | null;
+	/** Correo del cliente del taller, para no tener que escribirlo de nuevo. */
+	suggestedEmail?: string | null;
 }) {
 	const { data = [] } = useQuery(invitationsQuery(workshopID, vehicleID));
 	const invite = useWorkshopMutation(
@@ -53,7 +56,7 @@ export function OwnerInvitation({
 	const form = useForm({
 		mode: "onChange",
 		resolver: zodResolver(schema),
-		defaultValues: { email: "" },
+		defaultValues: { email: suggestedEmail ?? "" },
 	});
 	const submit = form.handleSubmit(async (values) => {
 		form.clearErrors("root");

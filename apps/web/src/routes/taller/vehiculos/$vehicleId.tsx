@@ -4,6 +4,7 @@ import { ClipboardList, MessageCircle, Plus } from "lucide-react";
 import { HistoryTimeline } from "@/components/kilora/history-timeline";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
+import { VehicleCustomerCard } from "@/components/kilora/vehicle-customer";
 import {
 	BackLink,
 	DetailList,
@@ -20,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ordersQuery } from "@/features/taller/orders";
 import { useWorkshopId } from "@/features/taller/session";
 import { historyQuery, vehicleQuery } from "@/features/taller/vehicles";
-import { date, day, km, phone, shortDate } from "@/lib/format";
+import { date, day, km, shortDate } from "@/lib/format";
 import { lastByCategory } from "@/lib/history";
 
 export const Route = createFileRoute("/taller/vehiculos/$vehicleId")({
@@ -72,7 +73,7 @@ function VehiclePage() {
 	const openOrder = vehicleOrders.find(
 		(o) => o.status !== "listo" && o.status !== "cancelado",
 	);
-	const whatsApp = v.contact_phone?.replace(/\D/g, "");
+	const whatsApp = v.customer?.phone?.replace(/\D/g, "");
 
 	return (
 		<PageBody>
@@ -196,15 +197,15 @@ function VehiclePage() {
 				</div>
 
 				<div className="space-y-6">
+					<VehicleCustomerCard
+						workshopID={workshopID}
+						vehicleID={v.id}
+						customer={v.customer}
+					/>
+
 					<SectionCard title="Datos del vehículo">
 						<DetailList
 							items={[
-								{ label: "Contacto", value: v.contact_name },
-								{
-									label: "Teléfono",
-									value: phone(v.contact_phone),
-									mono: true,
-								},
 								{ label: "VIN", value: v.vin, mono: true },
 								{ label: "Año", value: v.year },
 							]}
@@ -251,6 +252,7 @@ function VehiclePage() {
 						vehicleID={v.id}
 						linked={v.owner_linked ?? v.status === "vinculado"}
 						name={v.owner_name}
+						suggestedEmail={v.customer?.email}
 					/>
 				</div>
 			</div>
