@@ -3,7 +3,7 @@ import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Gauge, Plus } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -26,6 +26,7 @@ import {
 	requiredText,
 } from "@/components/kilora/form-schemas";
 import { HistoryItems } from "@/components/kilora/history-record";
+import { ListPagination } from "@/components/kilora/list-pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -49,16 +50,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { date, day, km as formatKm, money, plural } from "@/lib/format";
 import {
+	OWNER_HISTORY_PAGE_SIZE,
 	ownerActions,
 	ownerHistoryQuery,
 	ownerVehicleQuery,
 	useOwnerMutation,
 } from "@/lib/owner";
+import { useListPage } from "@/lib/pagination";
+import { cn } from "@/lib/utils";
 import { Route as OwnerLayout } from "../mis-vehiculos";
 
 type HistoryRecord = components["schemas"]["HistoryRecord"];
 type ManualBody = Parameters<typeof ownerActions.manual>[1];
 type CorrectionBody = Parameters<typeof ownerActions.correction>[1];
+const READINGS_PAGE_SIZE = 8;
 export const Route = createFileRoute("/mis-vehiculos/$vehicleId")({
 	loader: async ({ context, params }) => {
 		const [history, vehicle] = await Promise.all([
@@ -73,10 +78,12 @@ function Page() {
 	const { vehicleId: id } = Route.useParams();
 	const { me } = OwnerLayout.useRouteContext();
 	const initial = Route.useLoaderData();
-	const { data: h } = useQuery({
-		...ownerHistoryQuery(id),
-		initialData: initial.history,
+	const { page: historyPage, setPage: setHistoryPage } = useListPage(id);
+	const history = useQuery({
+		...ownerHistoryQuery(id, historyPage),
+		initialData: historyPage === 1 ? initial.history : undefined,
 	});
+	const h = history.data;
 	const { data: v } = useQuery({
 		...ownerVehicleQuery(id),
 		initialData: initial.vehicle,
@@ -85,6 +92,8 @@ function Page() {
 	const [kmOpen, setKmOpen] = useState(false);
 	const [warning, setWarning] = useState("");
 	const [editing, setEditing] = useState<HistoryRecord | null>(null);
+	const { page: readingsPage, setPage: setReadingsPage } = useListPage(id);
+	const historyRef = useRef<HTMLElement>(null);
 	const manual = useOwnerMutation(
 		(body: Parameters<typeof ownerActions.manual>[1]) =>
 			ownerActions.manual(id, body),
@@ -100,6 +109,15 @@ function Page() {
 				<Skeleton className="h-32" aria-label="Cargando historial…" />
 			</main>
 		);
+	const readings = v.odometer_readings ?? [];
+	const visibleReadings = readings.slice(
+		(readingsPage - 1) * READINGS_PAGE_SIZE,
+		readingsPage * READINGS_PAGE_SIZE,
+	);
+	const changeHistoryPage = (page: number) => {
+		setHistoryPage(page);
+		historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+	};
 	return (
 		<main className="mx-auto max-w-5xl space-y-6 px-5 py-8">
 			<Link to="/mis-vehiculos" className="text-sm text-seal">
@@ -112,7 +130,7 @@ function Page() {
 				</h1>
 				<p className="mt-2 opacity-70">
 					{formatKm(v.last_odometer_km)} ·{" "}
-					{plural(h.records.length, "registro", "registros")}
+					{plural(h.total, "registro", "registros")}
 				</p>
 			</header>
 			<div className="grid gap-2 sm:flex sm:flex-wrap">
@@ -129,7 +147,10 @@ function Page() {
 				open={manualOpen}
 				pending={manual.isPending}
 				onOpenChange={setManualOpen}
-				onSave={(body) => manual.mutateAsync(body)}
+				onSave={async (body) => {
+					await manual.mutateAsync(body);
+					setHistoryPage(1);
+				}}
 			/>
 			<KmDialog
 				open={kmOpen}
@@ -139,6 +160,7 @@ function Page() {
 				onSave={async (value) => {
 					const result = await km.mutateAsync(value);
 					if (result.warning) setWarning(result.warning);
+					setReadingsPage(1);
 					toast.success("Kilometraje actualizado");
 				}}
 			/>
@@ -148,12 +170,18 @@ function Page() {
 				</Alert>
 			)}
 			<div className="grid gap-6 md:grid-cols-[1fr_260px]">
-				<section>
+				<section ref={historyRef} className="scroll-mt-6">
 					<h2 className="mb-4 font-display text-2xl font-bold">
 						Historial de servicios
 					</h2>
-					<div className="space-y-4">
-						{h.records.length === 0 && (
+					<div
+						className={cn(
+							"space-y-4 transition-opacity",
+							history.isPlaceholderData && "opacity-60",
+						)}
+						aria-busy={history.isPlaceholderData}
+					>
+						{h.total === 0 && (
 							<p className="text-ink-3">Aún no hay servicios registrados.</p>
 						)}
 						{h.records.map((r) => (
@@ -210,6 +238,16 @@ function Page() {
 							</Card>
 						))}
 					</div>
+					{h.total > OWNER_HISTORY_PAGE_SIZE && (
+						<ListPagination
+							page={historyPage}
+							total={h.total}
+							pageSize={OWNER_HISTORY_PAGE_SIZE}
+							pending={history.isPlaceholderData}
+							onPageChange={changeHistoryPage}
+							className="mt-4 rounded-lg border px-4"
+						/>
+					)}
 				</section>
 				<aside className="space-y-5">
 					<Card className="gap-0 p-5 shadow-none">
@@ -226,10 +264,10 @@ function Page() {
 					</Card>
 					<Card className="gap-0 p-5 shadow-none">
 						<h2 className="font-bold">Lecturas de kilometraje</h2>
-						{(v.odometer_readings || []).length ? (
+						{readings.length ? (
 							<Table>
 								<TableBody>
-									{v.odometer_readings?.map((o) => (
+									{visibleReadings.map((o) => (
 										<TableRow key={JSON.stringify(o)}>
 											<TableCell>{formatKm(o.km)}</TableCell>
 											<TableCell>{date(o.read_at)}</TableCell>
@@ -239,6 +277,15 @@ function Page() {
 							</Table>
 						) : (
 							<p className="mt-2 text-sm text-ink-3">Sin lecturas</p>
+						)}
+						{readings.length > READINGS_PAGE_SIZE && (
+							<ListPagination
+								page={readingsPage}
+								total={readings.length}
+								pageSize={READINGS_PAGE_SIZE}
+								onPageChange={setReadingsPage}
+								className="mt-2 px-0 pb-0"
+							/>
 						)}
 					</Card>
 				</aside>

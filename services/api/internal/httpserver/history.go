@@ -30,7 +30,10 @@ func historyRecord(r sqlc.HistoryRecord, workshop *sqlc.Workshop, corrections []
 	return out, nil
 }
 
-func (s *server) writeHistory(ctx context.Context, w http.ResponseWriter, q *sqlc.Queries, viewer history.Viewer, vehicle sqlc.Vehicle, rows []sqlc.HistoryRecord, corrections []sqlc.Correction) error {
+// writeHistory responde con los registros visibles para viewer. total es la
+// cantidad de registros del vehículo cuando rows es solo una página; nil
+// significa que rows es el historial completo.
+func (s *server) writeHistory(ctx context.Context, w http.ResponseWriter, q *sqlc.Queries, viewer history.Viewer, vehicle sqlc.Vehicle, rows []sqlc.HistoryRecord, corrections []sqlc.Correction, total *int64) error {
 	grouped := make(map[uuid.UUID][]sqlc.Correction)
 	for _, c := range corrections {
 		grouped[c.HistoryRecordID] = append(grouped[c.HistoryRecordID], c)
@@ -57,7 +60,11 @@ func (s *server) writeHistory(ctx context.Context, w http.ResponseWriter, q *sql
 			records = append(records, p)
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"vehicle": map[string]any{"id": vehicle.ID, "plate": vehicle.Plate, "make": vehicle.Make, "model": vehicle.Model, "year": vehicle.Year}, "records": records})
+	count := int64(len(records))
+	if total != nil {
+		count = *total
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"vehicle": map[string]any{"id": vehicle.ID, "plate": vehicle.Plate, "make": vehicle.Make, "model": vehicle.Model, "year": vehicle.Year}, "records": records, "total": count})
 	return nil
 }
 
@@ -82,11 +89,15 @@ func (s *server) workshopHistory(w http.ResponseWriter, r *http.Request, wc work
 	}
 	isOwner := vehicle.OwnerUserID != nil && *vehicle.OwnerUserID == wc.userID
 	viewer := history.Viewer{WorkshopID: &wc.workshopID, WorkshopLinked: true, IsOwner: isOwner}
-	return s.writeHistory(ctx, w, q, viewer, vehicle, rows, corrections)
+	return s.writeHistory(ctx, w, q, viewer, vehicle, rows, corrections, nil)
 }
 
 func (s *server) ownerHistory(w http.ResponseWriter, r *http.Request) error {
 	id, err := pathID(r, "vehicleID", vehicleNotFound)
+	if err != nil {
+		return err
+	}
+	limit, offset, err := pageWindow(r)
 	if err != nil {
 		return err
 	}
@@ -97,13 +108,21 @@ func (s *server) ownerHistory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return notFoundIfMissing(err, vehicleNotFound)
 	}
-	rows, err := q.ListHistoryForOwner(ctx, sqlc.ListHistoryForOwnerParams{VehicleID: id, OwnerUserID: &user})
+	total, err := q.CountHistoryForOwner(ctx, sqlc.CountHistoryForOwnerParams{VehicleID: id, OwnerUserID: &user})
 	if err != nil {
 		return err
 	}
-	corrections, err := q.ListCorrectionsForOwner(ctx, sqlc.ListCorrectionsForOwnerParams{VehicleID: id, OwnerUserID: &user})
+	rows, err := q.ListHistoryPageForOwner(ctx, sqlc.ListHistoryPageForOwnerParams{VehicleID: id, OwnerUserID: &user, RowLimit: limit, RowOffset: offset})
 	if err != nil {
 		return err
 	}
-	return s.writeHistory(ctx, w, q, history.Viewer{IsOwner: true}, vehicle, rows, corrections)
+	ids := make([]uuid.UUID, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ID)
+	}
+	corrections, err := q.ListCorrectionsForRecords(ctx, ids)
+	if err != nil {
+		return err
+	}
+	return s.writeHistory(ctx, w, q, history.Viewer{IsOwner: true}, vehicle, rows, corrections, &total)
 }

@@ -1,5 +1,6 @@
 import type { components } from "@kilora/contracts";
 import {
+	keepPreviousData,
 	queryOptions,
 	useMutation,
 	useQueryClient,
@@ -23,15 +24,23 @@ export const ownerVehicleQuery = (vehicleID: string) =>
 				}),
 			),
 	});
-export const ownerHistoryQuery = (vehicleID: string) =>
+export const OWNER_HISTORY_PAGE_SIZE = 10;
+export const ownerHistoryQuery = (vehicleID: string, page = 1) =>
 	queryOptions({
-		queryKey: ["owner", "history", vehicleID],
+		queryKey: ["owner", "history", vehicleID, page],
 		queryFn: async () =>
 			unwrap(
 				await api.GET("/api/v1/me/vehicles/{vehicleID}/history", {
-					params: { path: { vehicleID } },
+					params: {
+						path: { vehicleID },
+						query: {
+							limit: OWNER_HISTORY_PAGE_SIZE,
+							offset: (page - 1) * OWNER_HISTORY_PAGE_SIZE,
+						},
+					},
 				}),
 			),
+		placeholderData: keepPreviousData,
 	});
 export const invitationQuery = (token: string) =>
 	queryOptions({

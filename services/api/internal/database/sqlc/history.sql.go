@@ -12,6 +12,22 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countHistoryForOwner = `-- name: CountHistoryForOwner :one
+SELECT count(*) FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.vehicle_id = $1 AND v.owner_user_id = $2
+`
+
+type CountHistoryForOwnerParams struct {
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
+}
+
+func (q *Queries) CountHistoryForOwner(ctx context.Context, arg CountHistoryForOwnerParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countHistoryForOwner, arg.VehicleID, arg.OwnerUserID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCorrection = `-- name: CreateCorrection :one
 INSERT INTO correction (history_record_id, reason, changes, created_by) VALUES ($1, $2, $3, $4) RETURNING id, history_record_id, reason, changes, created_by, created_at
 `
@@ -185,6 +201,37 @@ func (q *Queries) ListCorrectionsForOwner(ctx context.Context, arg ListCorrectio
 	return items, nil
 }
 
+const listCorrectionsForRecords = `-- name: ListCorrectionsForRecords :many
+SELECT id, history_record_id, reason, changes, created_by, created_at FROM correction WHERE history_record_id = ANY($1::uuid[]) ORDER BY created_at DESC
+`
+
+func (q *Queries) ListCorrectionsForRecords(ctx context.Context, recordIds []uuid.UUID) ([]Correction, error) {
+	rows, err := q.db.Query(ctx, listCorrectionsForRecords, recordIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Correction{}
+	for rows.Next() {
+		var i Correction
+		if err := rows.Scan(
+			&i.ID,
+			&i.HistoryRecordID,
+			&i.Reason,
+			&i.Changes,
+			&i.CreatedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listHistoryByVehicle = `-- name: ListHistoryByVehicle :many
 SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle_link l ON l.vehicle_id = h.vehicle_id WHERE h.vehicle_id = $1 AND l.workshop_id = $2 ORDER BY h.performed_on DESC, h.created_at DESC
 `
@@ -242,6 +289,59 @@ type ListHistoryForOwnerParams struct {
 
 func (q *Queries) ListHistoryForOwner(ctx context.Context, arg ListHistoryForOwnerParams) ([]HistoryRecord, error) {
 	rows, err := q.db.Query(ctx, listHistoryForOwner, arg.VehicleID, arg.OwnerUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []HistoryRecord{}
+	for rows.Next() {
+		var i HistoryRecord
+		if err := rows.Scan(
+			&i.ID,
+			&i.VehicleID,
+			&i.WorkshopID,
+			&i.WorkOrderID,
+			&i.Source,
+			&i.PerformedOn,
+			&i.OdometerKm,
+			&i.Summary,
+			&i.Items,
+			&i.Total,
+			&i.Currency,
+			&i.WorkshopNotes,
+			&i.InternalCost,
+			&i.InternalNotes,
+			&i.CreatedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listHistoryPageForOwner = `-- name: ListHistoryPageForOwner :many
+SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.vehicle_id = $1 AND v.owner_user_id = $2 ORDER BY h.performed_on DESC, h.created_at DESC, h.id DESC LIMIT $4 OFFSET $3
+`
+
+type ListHistoryPageForOwnerParams struct {
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
+	RowOffset   int32      `json:"row_offset"`
+	RowLimit    int32      `json:"row_limit"`
+}
+
+func (q *Queries) ListHistoryPageForOwner(ctx context.Context, arg ListHistoryPageForOwnerParams) ([]HistoryRecord, error) {
+	rows, err := q.db.Query(ctx, listHistoryPageForOwner,
+		arg.VehicleID,
+		arg.OwnerUserID,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}

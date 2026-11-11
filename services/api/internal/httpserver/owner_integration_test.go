@@ -105,6 +105,27 @@ func TestInvitationOwnerFlow(t *testing.T) {
 	if !strings.Contains(corrected, "Corregido") {
 		t.Fatal(corrected)
 	}
+	var page struct {
+		Total   int `json:"total"`
+		Records []struct {
+			ID          string            `json:"id"`
+			Corrections []json.RawMessage `json:"corrections"`
+		} `json:"records"`
+	}
+	if err := json.Unmarshal(req(owner, "GET", "/api/v1/me/vehicles/"+vid+"/history?limit=1&offset=1", "", 200), &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != 2 || len(page.Records) != 1 || page.Records[0].ID != manual["id"] || len(page.Records[0].Corrections) != 1 {
+		t.Fatalf("página inesperada: %+v", page)
+	}
+	page.Records = nil
+	if err := json.Unmarshal(req(owner, "GET", "/api/v1/me/vehicles/"+vid+"/history?limit=1", "", 200), &page); err != nil {
+		t.Fatal(err)
+	}
+	if page.Total != 2 || len(page.Records) != 1 || page.Records[0].ID == manual["id"] || len(page.Records[0].Corrections) != 0 {
+		t.Fatalf("primera página inesperada: %+v", page)
+	}
+	req(owner, "GET", "/api/v1/me/vehicles/"+vid+"/history?limit=0", "", 400)
 	id, _ := uuid.Parse(vid)
 	wid, _ := uuid.Parse(wb)
 	if err := sqlc.New(db).LinkVehicleToWorkshop(ctx, sqlc.LinkVehicleToWorkshopParams{VehicleID: id, WorkshopID: wid}); err != nil {

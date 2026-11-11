@@ -1195,7 +1195,11 @@ export interface paths {
         };
         get: {
             parameters: {
-                query?: never;
+                query?: {
+                    /** @description Registros por página (predeterminado 50). */
+                    limit?: number;
+                    offset?: number;
+                };
                 header?: never;
                 path: {
                     vehicleID: string;
@@ -4859,6 +4863,8 @@ export interface components {
         History: {
             vehicle: components["schemas"]["HistoryVehicle"];
             records: components["schemas"]["HistoryRecord"][];
+            /** @description Cantidad total de registros del vehículo, no solo los de esta página. */
+            total: number;
         };
         Health: {
             status: string;
