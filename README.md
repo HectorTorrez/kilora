@@ -124,3 +124,17 @@ Kilora uses React and TanStack Start for the web app, Go for the API, and Postgr
 | `pnpm db:migrate` | Apply pending database migrations. |
 | `pnpm db:seed` | Populate demo data. |
 | `pnpm sqlc` | Regenerate database query code; requires sqlc. |
+
+## Production configuration
+
+Set `APP_ENV=production`, a generated `SESSION_SECRET` of at least 32 characters,
+`DEMO_MODE=false`, `WEB_ORIGIN` to the exact public HTTPS origin (without a trailing
+slash), and `RESEND_API_KEY` with a valid `EMAIL_FROM` on a verified sending domain.
+The API refuses to start with missing mail credentials or unsafe production settings.
+Development can still use the log mailer without credentials.
+
+Set `TRUSTED_PROXY_CIDRS` to the comma-separated networks of the reverse proxies
+that connect directly to the API. Keep the API private behind those proxies and
+ensure the ingress appends or overwrites `X-Forwarded-For`. With no trusted proxies,
+forwarded headers are ignored. Authentication rate limits are per API process;
+use shared edge limits when running multiple replicas.
