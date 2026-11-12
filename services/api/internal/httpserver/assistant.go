@@ -34,11 +34,19 @@ var elSalvador = func() *time.Location {
 // final está en slowSuffixes.
 func timeouts(fallback time.Duration, overrides map[string]time.Duration, slowSuffixes []string, slow time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		general := middleware.Timeout(fallback)(next)
-		slowHandler := middleware.Timeout(slow)(next)
+		withTimeout := func(d time.Duration) http.Handler {
+			handler := middleware.Timeout(d)(next)
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Keep the socket open long enough to deliver the timeout response.
+				_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(d + 5*time.Second))
+				handler.ServeHTTP(w, r)
+			})
+		}
+		general := withTimeout(fallback)
+		slowHandler := withTimeout(slow)
 		special := make(map[string]http.Handler, len(overrides))
 		for path, d := range overrides {
-			special[path] = middleware.Timeout(d)(next)
+			special[path] = withTimeout(d)
 		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if h, ok := special[r.URL.Path]; ok {
@@ -118,7 +126,6 @@ func (s *server) assistantChat(w http.ResponseWriter, r *http.Request) error {
 	// A partir de aquí la respuesta es un stream de eventos (SSE); los errores
 	// viajan como evento "error" porque el estado HTTP ya se envió.
 	rc := http.NewResponseController(w)
-	_ = rc.SetWriteDeadline(time.Now().Add(assistantTimeout + 5*time.Second))
 	h := w.Header()
 	h.Set("Content-Type", "text/event-stream; charset=utf-8")
 	h.Set("Cache-Control", "no-cache, no-transform")
