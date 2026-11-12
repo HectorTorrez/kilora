@@ -93,6 +93,12 @@ Signed-in workshop staff and owners get an **Asistente** button. It answers two 
 
 Set `OPENAI_API_KEY` in `.env` to turn it on. Without it, the assistant replies with a 503 and the rest of the app still works.
 
+### AI inside the workflows
+
+Besides the chat, the same key enables AI helpers inside the forms. They follow one rule: **the AI drafts, a person confirms.** No AI endpoint writes data, and the model only sees what the user could already see.
+
+- **Quote from a note.** In any quote editor, *Describir con IA* turns a typed or dictated note ("cambio de aceite 5W-30 con filtro, pastillas delanteras…") into quote items matched to the part catalog. Prices are filled only when the note states them.
+
 ## Development reference
 
 Kilora uses React and TanStack Start for the web app, Go for the API, and PostgreSQL for storage.
