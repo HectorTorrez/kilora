@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Plus, X } from "lucide-react";
+import { Check, Plus, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import {
 	vehicleRecommendationsQuery,
 } from "@/features/taller/recommendations";
 import { categoryLabels } from "@/lib/domain";
+import { day, km } from "@/lib/format";
 import { dueText, type Urgency, urgency } from "@/lib/recommendations";
 import { cn } from "@/lib/utils";
 import { FormDialog } from "./form-dialog";
@@ -30,6 +31,8 @@ import {
 	TextField,
 } from "./form-fields";
 import { kmField, requiredText } from "./form-schemas";
+
+type Suggestion = components["schemas"]["RecommendationSuggestion"];
 
 const urgencyStyle: Record<Urgency, string> = {
 	vencida: "bg-destructive/10 text-destructive",
@@ -205,6 +208,14 @@ export function RecommendationsCard({
 		recommendationActions(workshopID).resolve,
 	);
 	const [open, setOpen] = useState(false);
+	const actions = recommendationActions(workshopID);
+	const suggest = useWorkshopMutation(workshopID, actions.suggest);
+	const create = useWorkshopMutation(workshopID, actions.recommend);
+	const [suggestions, setSuggestions] = useState<Suggestion[] | null>(null);
+	const drop = (category: string) =>
+		setSuggestions(
+			(list) => list?.filter((s) => s.category !== category) ?? null,
+		);
 	const pending = data.filter((r) => r.status === "pendiente");
 	const resolved = data.filter((r) => r.status !== "pendiente").slice(0, 3);
 
@@ -213,13 +224,119 @@ export function RecommendationsCard({
 			title="Recomendaciones"
 			description="Trabajos a futuro para avisarle al cliente."
 			actions={
-				<Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-					<Plus className="size-3.5" />
-					Agregar
-				</Button>
+				<div className="flex gap-1">
+					<Button
+						variant="ghost"
+						size="sm"
+						disabled={suggest.isPending}
+						title="Revisa el historial y el kilometraje para proponer trabajos"
+						onClick={() =>
+							suggest.mutate(vehicleID, {
+								onSuccess: (result) => setSuggestions(result.suggestions),
+							})
+						}
+					>
+						<Sparkles className="size-3.5" />
+						{suggest.isPending ? "Revisando…" : "Sugerir"}
+					</Button>
+					<Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
+						<Plus className="size-3.5" />
+						Agregar
+					</Button>
+				</div>
 			}
 			bodyClassName="p-0 sm:p-0"
 		>
+			{suggestions ? (
+				<div className="border-b bg-muted/40 px-4 py-3 sm:px-5">
+					<div className="flex items-center justify-between gap-2">
+						<p className="flex items-center gap-1.5 text-xs font-medium text-ink-2">
+							<Sparkles className="size-3.5 text-primary" aria-hidden />
+							Sugerencias según el historial
+						</p>
+						<Button
+							variant="ghost"
+							size="icon"
+							className="size-7 text-ink-3"
+							aria-label="Cerrar sugerencias"
+							onClick={() => setSuggestions(null)}
+						>
+							<X className="size-3.5" />
+						</Button>
+					</div>
+					{suggestions.length === 0 ? (
+						<p className="mt-1 text-[13px] text-ink-3">
+							Nada por ahora: según el historial y el kilometraje, todo está al
+							día o ya tiene una recomendación pendiente.
+						</p>
+					) : (
+						<ul className="mt-2 space-y-2">
+							{suggestions.map((s) => (
+								<li
+									key={s.category}
+									className="flex items-start gap-3 rounded-md border bg-card p-2.5"
+								>
+									<div className="min-w-0 flex-1">
+										<p className="text-[13px] font-medium">{s.description}</p>
+										<p className="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-ink-3">
+											<UrgencyBadge value={s.overdue ? "vencida" : "proxima"} />
+											<span>
+												Último: {day(s.last_performed_on)}
+												{s.last_odometer_km != null
+													? ` · ${km(s.last_odometer_km)}`
+													: ""}
+											</span>
+											<span>· {categoryLabels[s.category]}</span>
+										</p>
+									</div>
+									<div className="flex shrink-0 gap-1">
+										<Button
+											variant="ghost"
+											size="icon"
+											className="size-8 text-ok hover:bg-ok-soft hover:text-ok"
+											aria-label={`Agregar: ${s.description}`}
+											title="Agregar recomendación"
+											disabled={create.isPending}
+											onClick={() =>
+												create.mutate(
+													{
+														vehicleID,
+														body: {
+															description: s.description,
+															category: s.category,
+															due_date: s.due_date,
+															due_km: s.due_km,
+															work_order_id: workOrderID ?? null,
+														},
+													},
+													{
+														onSuccess: () => {
+															drop(s.category);
+															toast.success("Recomendación registrada");
+														},
+													},
+												)
+											}
+										>
+											<Plus className="size-4" />
+										</Button>
+										<Button
+											variant="ghost"
+											size="icon"
+											className="size-8 text-ink-3"
+											aria-label={`Ignorar: ${s.description}`}
+											title="Ignorar"
+											onClick={() => drop(s.category)}
+										>
+											<X className="size-4" />
+										</Button>
+									</div>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+			) : null}
 			{isLoading ? null : !pending.length && !resolved.length ? (
 				<p className="px-4 py-6 text-center text-[13px] text-ink-3 sm:px-5">
 					Sin recomendaciones pendientes.

@@ -34,6 +34,21 @@ func historyRecord(r sqlc.HistoryRecord, workshop *sqlc.Workshop, corrections []
 // cantidad de registros del vehículo cuando rows es solo una página; nil
 // significa que rows es el historial completo.
 func (s *server) writeHistory(ctx context.Context, w http.ResponseWriter, q *sqlc.Queries, viewer history.Viewer, vehicle sqlc.Vehicle, rows []sqlc.HistoryRecord, corrections []sqlc.Correction, total *int64) error {
+	records, err := projectHistory(ctx, q, viewer, rows, corrections)
+	if err != nil {
+		return err
+	}
+	count := int64(len(records))
+	if total != nil {
+		count = *total
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"vehicle": map[string]any{"id": vehicle.ID, "plate": vehicle.Plate, "make": vehicle.Make, "model": vehicle.Model, "year": vehicle.Year}, "records": records, "total": count})
+	return nil
+}
+
+// projectHistory aplica la proyección del historial a cada registro según
+// quién mira y descarta los que no puede ver.
+func projectHistory(ctx context.Context, q *sqlc.Queries, viewer history.Viewer, rows []sqlc.HistoryRecord, corrections []sqlc.Correction) ([]history.Projected, error) {
 	grouped := make(map[uuid.UUID][]sqlc.Correction)
 	for _, c := range corrections {
 		grouped[c.HistoryRecordID] = append(grouped[c.HistoryRecordID], c)
@@ -46,7 +61,7 @@ func (s *server) writeHistory(ctx context.Context, w http.ResponseWriter, q *sql
 			if workshops[*row.WorkshopID] == nil {
 				found, err := q.GetWorkshop(ctx, *row.WorkshopID)
 				if err != nil {
-					return err
+					return nil, err
 				}
 				workshops[*row.WorkshopID] = &found
 			}
@@ -54,18 +69,13 @@ func (s *server) writeHistory(ctx context.Context, w http.ResponseWriter, q *sql
 		}
 		rec, err := historyRecord(row, workshop, grouped[row.ID])
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if p, ok := history.Project(history.ResolveViewer(rec, viewer), rec); ok {
 			records = append(records, p)
 		}
 	}
-	count := int64(len(records))
-	if total != nil {
-		count = *total
-	}
-	writeJSON(w, http.StatusOK, map[string]any{"vehicle": map[string]any{"id": vehicle.ID, "plate": vehicle.Plate, "make": vehicle.Make, "model": vehicle.Model, "year": vehicle.Year}, "records": records, "total": count})
-	return nil
+	return records, nil
 }
 
 func (s *server) workshopHistory(w http.ResponseWriter, r *http.Request, wc workshopAccess) error {

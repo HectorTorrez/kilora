@@ -32,6 +32,13 @@ export const recommendationsQuery = (
 			),
 	});
 export const recommendationActions = (workshopID: string) => ({
+	suggest: async (vehicleID: string) =>
+		unwrap(
+			await api.POST(
+				"/api/v1/workshops/{workshopID}/vehicles/{vehicleID}/recommendations/suggest",
+				{ params: { path: { workshopID, vehicleID } } },
+			),
+		),
 	recommend: async ({
 		vehicleID,
 		body,

@@ -22,7 +22,7 @@ var errAIDisabled = httpError{http.StatusServiceUnavailable, "La IA no está con
 
 // aiPaths son las rutas que llaman al modelo y necesitan más tiempo que el
 // límite general. Se reconocen por el final de la ruta.
-var aiPaths = []string{"/ai/quote-draft", receiptPath, "/ai/explain", "/ai/message"}
+var aiPaths = []string{"/ai/quote-draft", receiptPath, "/ai/explain", "/ai/message", "/recommendations/suggest"}
 
 const (
 	receiptPath = "/ai/receipt"

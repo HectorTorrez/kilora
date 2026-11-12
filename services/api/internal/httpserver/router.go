@@ -134,6 +134,7 @@ func NewRouter(d Deps) http.Handler {
 				r.Get("/vehicles/{vehicleID}/history", s.inWorkshop(s.workshopHistory))
 				r.Get("/vehicles/{vehicleID}/recommendations", s.inWorkshop(s.listVehicleRecommendations))
 				r.Post("/vehicles/{vehicleID}/recommendations", s.inWorkshop(s.createRecommendation))
+				r.Post("/vehicles/{vehicleID}/recommendations/suggest", s.inWorkshop(s.suggestRecommendations))
 				r.Get("/recommendations", s.inWorkshop(s.listWorkshopRecommendations))
 				r.Patch("/recommendations/{recommendationID}", s.inWorkshop(s.resolveRecommendation))
 				r.Get("/members", s.inWorkshop(s.listMembers))
