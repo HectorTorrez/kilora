@@ -6,7 +6,9 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -233,4 +235,37 @@ func (s *server) limitPublicRead(r *http.Request, scope string) error {
 		return errTooManyRequests
 	}
 	return nil
+}
+
+// Forwarded addresses are accepted only from explicitly trusted proxy networks.
+func trustedClientIP(prefixes []netip.Prefix) func(http.Handler) http.Handler {
+	trusted := func(ip netip.Addr) bool {
+		for _, prefix := range prefixes {
+			if prefix.Contains(ip.Unmap()) {
+				return true
+			}
+		}
+		return false
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			peer, err := netip.ParseAddr(clientIP(r))
+			if err == nil && trusted(peer) {
+				chain := strings.Split(r.Header.Get("X-Forwarded-For"), ",")
+				candidate := peer
+				valid := true
+				for i := len(chain) - 1; i >= 0 && trusted(candidate); i-- {
+					candidate, err = netip.ParseAddr(strings.TrimSpace(chain[i]))
+					if err != nil {
+						valid = false
+						break
+					}
+				}
+				if valid {
+					r.RemoteAddr = candidate.String()
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }

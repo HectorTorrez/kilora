@@ -70,6 +70,9 @@ func createToken(ctx context.Context, q *sqlc.Queries, user uuid.UUID, purpose s
 }
 
 func (s *server) register(w http.ResponseWriter, r *http.Request) error {
+	if !s.limiter.allow("register:"+clientIP(r), 20) {
+		return errTooManyRequests
+	}
 	var in struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -127,7 +130,7 @@ func (s *server) login(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	email := values.NormalizeEmail(in.Email)
-	if !s.limiter.allow(clientIP(r)+"|"+email, loginAttemptLimit) {
+	if !s.limiter.allow("login-ip:"+clientIP(r), 50) || !s.limiter.allow("login-email:"+email, loginAttemptLimit) {
 		return httpError{http.StatusTooManyRequests, "Demasiados intentos. Intenta más tarde"}
 	}
 	invalid := httpError{http.StatusUnauthorized, "Correo o contraseña incorrectos"}
@@ -196,6 +199,9 @@ func (s *server) verify(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *server) forgot(w http.ResponseWriter, r *http.Request) error {
+	if !s.limiter.allow("forgot-ip:"+clientIP(r), 10) {
+		return errTooManyRequests
+	}
 	var in struct {
 		Email string `json:"email"`
 	}
@@ -204,6 +210,9 @@ func (s *server) forgot(w http.ResponseWriter, r *http.Request) error {
 	}
 	w.WriteHeader(http.StatusNoContent)
 	email := values.NormalizeEmail(in.Email)
+	if !s.limiter.allow("forgot-email:"+email, 3) {
+		return nil
+	}
 	if auth.IsDemoEmail(email) {
 		return nil
 	}
@@ -231,6 +240,9 @@ func (s *server) forgot(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (s *server) reset(w http.ResponseWriter, r *http.Request) error {
+	if !s.limiter.allow("reset:"+clientIP(r), 10) {
+		return errTooManyRequests
+	}
 	var in struct {
 		Token    string `json:"token"`
 		Password string `json:"password"`
