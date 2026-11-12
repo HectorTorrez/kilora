@@ -5626,6 +5626,205 @@
           }
         ]
       }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/report": {
+      "get": {
+        "summary": "Estado del reporte de reventa",
+        "description": "Enlace activo del reporte, si hay uno. El enlace en sí no se puede recuperar: se crea uno nuevo.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleReportState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Crear enlace del reporte de reventa",
+        "description": "Crea un enlace de solo lectura (30 días) con el historial completo sin montos ni notas, y desactiva los anteriores. Si la IA está activa, agrega un resumen del historial.",
+        "responses": {
+          "201": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VehicleReportCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "Desactivar el reporte de reventa",
+        "description": "Desactiva todos los enlaces del reporte de este vehículo.",
+        "responses": {
+          "204": {
+            "description": "Desactivado"
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/public/reports/{token}": {
+      "get": {
+        "summary": "Reporte de reventa público",
+        "description": "Reporte compartido por el propietario. Sin cuenta.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicVehicleReport"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -9082,6 +9281,218 @@
         "required": [
           "suggestions",
           "current_odometer_km"
+        ]
+      },
+      "VehicleReportStatus": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Resumen del historial redactado con IA; null si la IA está desactivada o falló."
+          }
+        },
+        "required": [
+          "created_at",
+          "expires_at",
+          "summary"
+        ]
+      },
+      "VehicleReportCreated": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/VehicleReportStatus"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string"
+              },
+              "whatsapp_url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "url",
+              "whatsapp_url"
+            ]
+          }
+        ]
+      },
+      "VehicleReportState": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/VehicleReportStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "active"
+        ]
+      },
+      "VehicleReportStats": {
+        "type": "object",
+        "properties": {
+          "services": {
+            "type": "integer"
+          },
+          "workshop_records": {
+            "type": "integer"
+          },
+          "verified_records": {
+            "type": "integer"
+          },
+          "owner_records": {
+            "type": "integer"
+          },
+          "workshops": {
+            "type": "integer"
+          },
+          "first_performed_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "last_performed_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "latest_odometer_km": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "services",
+          "workshop_records",
+          "verified_records",
+          "owner_records",
+          "workshops",
+          "first_performed_on",
+          "last_performed_on",
+          "latest_odometer_km"
+        ]
+      },
+      "PublicVehicleReport": {
+        "type": "object",
+        "description": "Reporte de reventa: historial completo sin montos, notas ni datos internos.",
+        "properties": {
+          "vehicle": {
+            "type": "object",
+            "properties": {
+              "make": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "year": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "plate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "body_type": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/BodyType"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "make",
+              "model",
+              "year",
+              "plate",
+              "body_type"
+            ]
+          },
+          "summary": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stats": {
+            "$ref": "#/components/schemas/VehicleReportStats"
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryRecord"
+            }
+          },
+          "odometer_readings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "km": {
+                  "type": "integer"
+                },
+                "read_at": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "km",
+                "read_at"
+              ]
+            }
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vehicle",
+          "summary",
+          "stats",
+          "records",
+          "odometer_readings",
+          "created_at",
+          "expires_at"
         ]
       }
     }

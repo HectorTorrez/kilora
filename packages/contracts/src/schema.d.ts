@@ -5210,6 +5210,208 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/vehicles/{vehicleID}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estado del reporte de reventa
+         * @description Enlace activo del reporte, si hay uno. El enlace en sí no se puede recuperar: se crea uno nuevo.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VehicleReportState"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Crear enlace del reporte de reventa
+         * @description Crea un enlace de solo lectura (30 días) con el historial completo sin montos ni notas, y desactiva los anteriores. Si la IA está activa, agrega un resumen del historial.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta exitosa */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VehicleReportCreated"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Desactivar el reporte de reventa
+         * @description Desactiva todos los enlaces del reporte de este vehículo.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Desactivado */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/public/reports/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Reporte de reventa público
+         * @description Reporte compartido por el propietario. Sin cuenta.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    token: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicVehicleReport"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6053,6 +6255,55 @@ export interface components {
         RecommendationSuggestions: {
             suggestions: components["schemas"]["RecommendationSuggestion"][];
             current_odometer_km: number | null;
+        };
+        VehicleReportStatus: {
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
+            /** @description Resumen del historial redactado con IA; null si la IA está desactivada o falló. */
+            summary: string | null;
+        };
+        VehicleReportCreated: components["schemas"]["VehicleReportStatus"] & {
+            url: string;
+            whatsapp_url: string;
+        };
+        VehicleReportState: {
+            active: components["schemas"]["VehicleReportStatus"] | null;
+        };
+        VehicleReportStats: {
+            services: number;
+            workshop_records: number;
+            verified_records: number;
+            owner_records: number;
+            workshops: number;
+            /** Format: date */
+            first_performed_on: string | null;
+            /** Format: date */
+            last_performed_on: string | null;
+            latest_odometer_km: number | null;
+        };
+        /** @description Reporte de reventa: historial completo sin montos, notas ni datos internos. */
+        PublicVehicleReport: {
+            vehicle: {
+                make: string;
+                model: string;
+                year: number | null;
+                plate: string | null;
+                body_type: components["schemas"]["BodyType"] | null;
+            };
+            summary: string | null;
+            stats: components["schemas"]["VehicleReportStats"];
+            records: components["schemas"]["HistoryRecord"][];
+            odometer_readings: {
+                km: number;
+                /** Format: date-time */
+                read_at: string;
+            }[];
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            expires_at: string;
         };
     };
     responses: never;

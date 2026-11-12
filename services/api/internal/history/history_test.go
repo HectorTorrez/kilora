@@ -21,7 +21,7 @@ func TestProjection(t *testing.T) {
 	for _, tc := range []struct {
 		kind             ViewerKind
 		contains, absent []string
-	}{{ViewerAuthorWorkshop, []string{"costo secreto", "mecanico secreto", "precio secreto", "razon secreta", "workshop_verified_at"}, nil}, {ViewerOwner, []string{"precio secreto", "razon secreta", "workshop_verified_at"}, []string{"costo secreto", "nota interna secreta", "mecanico secreto", "created_by\":\"11111111"}}, {ViewerLinkedWorkshop, []string{"filtro", "cambio"}, []string{"precio secreto", "costo secreto", "nota interna secreta", "nota taller secreta", "mecanico secreto", "taller secreto", "marca secreta", "razon secreta", "internal_cost", "internal_notes", "mechanic_notes", "workshop_id", "workshop_name", "workshop_verified_at", "created_by", "price", "total", "currency", "reason"}}} {
+	}{{ViewerAuthorWorkshop, []string{"costo secreto", "mecanico secreto", "precio secreto", "razon secreta", "workshop_verified_at"}, nil}, {ViewerOwner, []string{"precio secreto", "razon secreta", "workshop_verified_at"}, []string{"costo secreto", "nota interna secreta", "mecanico secreto", "created_by\":\"11111111"}}, {ViewerLinkedWorkshop, []string{"filtro", "cambio"}, []string{"precio secreto", "costo secreto", "nota interna secreta", "nota taller secreta", "mecanico secreto", "taller secreto", "marca secreta", "razon secreta", "internal_cost", "internal_notes", "mechanic_notes", "workshop_id", "workshop_name", "workshop_verified_at", "created_by", "price", "total", "currency", "reason"}}, {ViewerReport, []string{"filtro", "cambio", "taller secreto", "workshop_verified_at", "marca secreta"}, []string{"precio secreto", "costo secreto", "nota interna secreta", "nota taller secreta", "mecanico secreto", "razon secreta", "internal_cost", "internal_notes", "mechanic_notes", "workshop_id", "created_by", "price", "total", "currency", "reason"}}} {
 		t.Run(fmt.Sprint(tc.kind), func(t *testing.T) {
 			p, ok := Project(tc.kind, r)
 			if !ok {
@@ -45,6 +45,13 @@ func TestProjection(t *testing.T) {
 	}
 	if _, ok := Project(ViewerNone, r); ok {
 		t.Fatal("None visible")
+	}
+	// En el reporte, ni los registros propios del propietario muestran montos.
+	manual := fixture()
+	manual.Source = "propietario"
+	p, _ := Project(ViewerReport, manual)
+	if b, _ := json.Marshal(p); strings.Contains(string(b), "precio secreto") || strings.Contains(string(b), "costo secreto") || strings.Contains(string(b), "nota taller secreta") {
+		t.Fatalf("reporte con datos privados: %s", b)
 	}
 }
 func TestResolveViewer(t *testing.T) {

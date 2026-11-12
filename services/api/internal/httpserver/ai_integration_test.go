@@ -276,3 +276,66 @@ func TestSuggestRecommendationsWorksWithoutAI(t *testing.T) {
 		t.Fatalf("batería: %v", battery)
 	}
 }
+
+func TestResaleReportHidesMoneyAndNotes(t *testing.T) {
+	api, fake := newAITestAPI(t, func(string) any {
+		return map[string]any{"summary": "Historial con un servicio de taller."}
+	})
+	_, owner, _, vid, _ := publishedForOwner(t, api)
+	api.req(owner, "POST", "/api/v1/me/vehicles/"+vid+"/history", `{"performed_on":"2024-02-01","summary":"Cambio de batería","items":[{"kind":"pieza","description":"Batería","price":"99.99"}],"total":"99.99","workshop_name_text":"Lugar privado"}`, 201)
+	base := "/api/v1/me/vehicles/" + vid + "/report"
+	if got := api.obj(owner, "GET", base, "", 200); got["active"] != nil {
+		t.Fatalf("ya había reporte: %v", got)
+	}
+
+	created := api.obj(owner, "POST", base, "", 201)
+	if created["summary"] != "Historial con un servicio de taller." || !strings.Contains(created["whatsapp_url"].(string), "wa.me") {
+		t.Fatalf("reporte: %v", created)
+	}
+	token := created["url"].(string)[strings.LastIndex(created["url"].(string), "/")+1:]
+	secrets := []string{"secreto", "12.50", "99.99", "3.00", "Lugar privado", "internal", "total", "price"}
+	prompt := fake.last()
+	for _, s := range secrets {
+		if strings.Contains(prompt, s) {
+			t.Fatalf("el modelo recibió %q: %s", s, prompt)
+		}
+	}
+	anon := api.client()
+	public := string(api.raw(anon, "GET", "/api/v1/public/reports/"+token, "", 200))
+	for _, s := range secrets {
+		if strings.Contains(public, s) {
+			t.Fatalf("el reporte público muestra %q: %s", s, public)
+		}
+	}
+	for _, s := range []string{"Cambio de aceite", "Cambio de batería", `"workshop_name":"Taller"`, `"services":2`, `"owner_records":1`, "Historial con un servicio"} {
+		if !strings.Contains(public, s) {
+			t.Fatalf("falta %q: %s", s, public)
+		}
+	}
+	if got := api.obj(owner, "GET", base, "", 200); got["active"] == nil {
+		t.Fatal("el reporte no aparece activo")
+	}
+
+	// Un enlace nuevo desactiva el anterior; desactivar corta el acceso.
+	second := api.obj(owner, "POST", base, "", 201)["url"].(string)
+	api.req(anon, "GET", "/api/v1/public/reports/"+token, "", 404)
+	api.req(anon, "GET", "/api/v1/public/reports/"+second[strings.LastIndex(second, "/")+1:], "", 200)
+	api.req(owner, "DELETE", base, "", 204)
+	api.req(anon, "GET", "/api/v1/public/reports/"+second[strings.LastIndex(second, "/")+1:], "", 404)
+
+	stranger := api.client()
+	api.register(stranger)
+	api.req(stranger, "POST", base, "", 404)
+	api.req(stranger, "DELETE", base, "", 404)
+}
+
+func TestResaleReportWithoutAI(t *testing.T) {
+	api := newTestAPI(t)
+	_, owner, _, vid, _ := publishedForOwner(t, api)
+	created := api.obj(owner, "POST", "/api/v1/me/vehicles/"+vid+"/report", "", 201)
+	if created["summary"] != nil {
+		t.Fatalf("resumen sin IA: %v", created)
+	}
+	url := created["url"].(string)
+	api.req(api.client(), "GET", "/api/v1/public/reports/"+url[strings.LastIndex(url, "/")+1:], "", 200)
+}

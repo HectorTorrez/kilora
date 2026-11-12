@@ -71,6 +71,7 @@ func NewRouter(d Deps) http.Handler {
 		r.Post("/auth/demo", s.handle(s.demoLogin))
 		r.Get("/public/quotes/{token}", s.handle(s.publicQuote))
 		r.Get("/public/invitations/{token}", s.handle(s.publicInvitation))
+		r.Get("/public/reports/{token}", s.handle(s.publicReport))
 		r.Post("/auth/register", s.handle(s.register))
 		r.Post("/auth/login", s.handle(s.login))
 		r.Post("/auth/logout", s.handle(s.logout))
@@ -93,6 +94,9 @@ func NewRouter(d Deps) http.Handler {
 			r.Get("/me/vehicles/{vehicleID}/history", s.handle(s.ownerHistory))
 			r.Post("/me/vehicles/{vehicleID}/ai/receipt", s.handle(s.readReceipt))
 			r.Post("/me/vehicles/{vehicleID}/history/{recordID}/ai/explain", s.handle(s.explainRecord))
+			r.Get("/me/vehicles/{vehicleID}/report", s.handle(s.getReportStatus))
+			r.Post("/me/vehicles/{vehicleID}/report", s.handle(s.createReport))
+			r.Delete("/me/vehicles/{vehicleID}/report", s.handle(s.revokeReport))
 			r.Route("/workshops/{workshopID}", func(r chi.Router) {
 				r.Use(s.requireWorkshop)
 				r.Get("/", s.inWorkshop(s.getWorkshop))
