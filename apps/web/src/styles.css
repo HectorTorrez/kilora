@@ -333,3 +333,65 @@
     background: #fff;
   }
 }
+
+/* Anatomía del vehículo: silueta gris, piezas apenas marcadas y la pieza
+   cambiada en naranja (como los mapas musculares de las apps de gimnasio). */
+.anatomy {
+  --an-body: #e2e6eb;
+  --an-body-line: #9aa3af;
+  --an-glass: #f8fafc;
+  --an-part: #f1f3f6;
+  --an-part-line: #c3cad3;
+  --an-tire: #5b6472;
+  --an-tire-line: #3f4652;
+  --an-detail: #cfd5dd;
+  --an-soft: #fdd8c6;
+  --an-soft-line: #f59e7a;
+  --an-hot: #f05a28;
+  --an-hot-line: #c2410c;
+  --an-label: #111827;
+  --an-label-text: #ffffff;
+}
+.dark .anatomy {
+  --an-body: #2a333d;
+  --an-body-line: #56616e;
+  --an-glass: #18202a;
+  --an-part: #232b35;
+  --an-part-line: #3e4955;
+  --an-tire: #10151b;
+  --an-tire-line: #3e4955;
+  --an-detail: #36404b;
+  --an-soft: #5b2a17;
+  --an-soft-line: #d0602f;
+  --an-hot: #ff6a35;
+  --an-hot-line: #ffb08f;
+  --an-label: #eef1f4;
+  --an-label-text: #0f141a;
+}
+/* La carrocería son varias formas: se dibuja un contorno grueso y encima el
+   relleno sin borde, así solo queda el borde exterior de la unión. */
+.anatomy [data-role="outline"] { fill: var(--an-body); stroke: var(--an-body-line); stroke-width: 2.6; stroke-linejoin: round; }
+.anatomy [data-role="body"] { fill: var(--an-body); stroke: none; }
+.anatomy [data-role="glass"] { fill: var(--an-glass); stroke: var(--an-body-line); stroke-width: 0.9; }
+.anatomy [data-role="detail"] { fill: var(--an-detail); stroke: none; }
+.anatomy [data-role="part"] { fill: var(--an-part); stroke: var(--an-part-line); stroke-width: 1; }
+.anatomy [data-role="line"] { fill: none; stroke: var(--an-part-line); stroke-width: 2.2; stroke-linecap: round; }
+.anatomy [data-role="tire"] { fill: var(--an-tire); stroke: var(--an-tire-line); stroke-width: 1; }
+.anatomy [data-hl="soft"]:not([data-role="line"]) { fill: var(--an-soft); stroke: var(--an-soft-line); }
+.anatomy [data-hl="soft"][data-role="line"] { stroke: var(--an-soft-line); }
+.anatomy [data-hl="hot"]:not([data-role="line"]) { fill: var(--an-hot); stroke: var(--an-hot-line); }
+.anatomy [data-hl="hot"][data-role="line"] { stroke: var(--an-hot); stroke-width: 3.6; }
+.anatomy [data-role="body"][data-hl] { stroke: none; }
+.anatomy [data-hl="hot"] { animation: anatomy-pulse 1.8s ease-in-out infinite; }
+.anatomy .anatomy-halo { fill: var(--an-hot); fill-opacity: 0.16; stroke: var(--an-hot); stroke-opacity: 0.5; stroke-width: 1.5; }
+.anatomy .anatomy-callout-line { stroke: var(--an-hot-line); stroke-width: 1; stroke-dasharray: 3 3; fill: none; }
+.anatomy .anatomy-callout-dot { fill: var(--an-label-text); stroke: var(--an-hot); stroke-width: 2; }
+.anatomy .anatomy-callout-pill { fill: var(--an-label); }
+.anatomy .anatomy-callout-text { fill: var(--an-label-text); font-family: var(--font-sans); font-weight: 600; }
+@keyframes anatomy-pulse {
+  0%, 100% { filter: drop-shadow(0 0 1px rgb(240 90 40 / 0.5)); }
+  50% { filter: drop-shadow(0 0 5px rgb(240 90 40 / 0.95)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anatomy [data-hl="hot"] { animation: none; }
+}

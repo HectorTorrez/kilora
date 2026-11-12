@@ -4765,6 +4765,7 @@ export interface components {
         CreateJob: {
             description: string;
             category?: components["schemas"]["PartCategory"] | null;
+            part?: components["schemas"]["PartKey"] | null;
             labor_price?: components["schemas"]["DecimalInput"];
             internal_cost?: components["schemas"]["DecimalInput"];
             mechanic_notes?: string | null;
@@ -4777,6 +4778,7 @@ export interface components {
             position: number;
             description: string;
             category: components["schemas"]["PartCategory"] | null;
+            part: components["schemas"]["PartKey"] | null;
             labor_price: string | null;
             internal_cost: string | null;
             mechanic_notes: string | null;
@@ -4857,6 +4859,7 @@ export interface components {
             description: string;
             name?: string;
             category?: components["schemas"]["PartCategory"] | null;
+            part?: components["schemas"]["PartKey"] | null;
             brand?: string;
             model?: string;
             quantity?: number;
@@ -4934,6 +4937,7 @@ export interface components {
             description: string;
             quantity: string | number;
             unit_price: string | number;
+            part?: components["schemas"]["PartKey"] | null;
         };
         QuoteInput: {
             items: components["schemas"]["QuoteItem"][];
@@ -5069,6 +5073,7 @@ export interface components {
             make: string;
             model: string;
             year: number | null;
+            body_type: components["schemas"]["BodyType"] | null;
             order_number: number | null;
             quote_number: number;
             customer_name: string | null;
@@ -5329,6 +5334,11 @@ export interface components {
          * @enum {string}
          */
         BodyType: "sedan" | "hatchback" | "suv" | "pickup" | "van" | "camion";
+        /**
+         * @description Pieza concreta del catálogo; define dónde se dibuja en el vehículo.
+         * @enum {string}
+         */
+        PartKey: "aceite_motor" | "filtro_aceite" | "filtro_aire" | "bujias" | "correa_distribucion" | "banda_accesorios" | "inyectores" | "filtro_combustible" | "refrigerante" | "radiador" | "termostato" | "bomba_agua" | "gas_ac" | "compresor_ac" | "filtro_cabina" | "bateria" | "alternador" | "motor_arranque" | "faros" | "luces_traseras" | "aceite_transmision" | "embrague" | "flechas" | "cardan" | "diferencial" | "cremallera" | "terminales_direccion" | "liquido_direccion" | "pastillas_delanteras" | "pastillas_traseras" | "discos_delanteros" | "discos_traseros" | "zapatas_traseras" | "liquido_frenos" | "amortiguadores_delanteros" | "amortiguadores_traseros" | "ballestas" | "llantas_delanteras" | "llantas_traseras" | "alineacion_balanceo" | "catalizador" | "silenciador" | "parabrisas" | "plumillas" | "espejos" | "pintura";
     };
     responses: never;
     parameters: never;

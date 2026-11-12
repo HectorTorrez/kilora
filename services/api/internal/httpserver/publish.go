@@ -35,7 +35,7 @@ func publishOrder(ctx context.Context, q *sqlc.Queries, wc workshopAccess, o sql
 			c := string(*j.Category)
 			category = &c
 		}
-		items = append(items, history.Item{Kind: "trabajo", Description: j.Description, Category: category, Price: fixedAmount(j.LaborPrice), InternalCost: fixedAmount(j.InternalCost), MechanicNotes: j.MechanicNotes})
+		items = append(items, history.Item{Kind: "trabajo", Description: j.Description, Category: category, Part: j.Part, Price: fixedAmount(j.LaborPrice), InternalCost: fixedAmount(j.InternalCost), MechanicNotes: j.MechanicNotes})
 		total = total.Add(amount(j.LaborPrice))
 		cost = cost.Add(amount(j.InternalCost))
 		for _, p := range parts {

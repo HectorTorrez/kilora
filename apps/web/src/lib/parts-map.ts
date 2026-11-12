@@ -324,3 +324,49 @@ export const statusColor: Record<ZoneStatus, string> = {
 	pronto: "#fbbf24",
 	revisar: "#fb7185",
 };
+
+export type Health = {
+	/** 0–100; null si ninguna zona con intervalo tiene servicios. */
+	score: number | null;
+	revisar: number;
+	pronto: number;
+	sinRegistro: number;
+};
+
+const healthPoints: Partial<Record<ZoneStatus, number>> = {
+	"al-dia": 100,
+	pronto: 60,
+	revisar: 20,
+};
+
+/** Salud general: promedio de las zonas con intervalo de referencia. */
+export function healthOf(summary: Record<Zone, ZoneSummary>): Health {
+	const statuses = zones.map((z) => summary[z].status);
+	const scored = statuses
+		.map((s) => healthPoints[s])
+		.filter((p): p is number => p !== undefined);
+	return {
+		score: scored.length
+			? Math.round(scored.reduce((a, b) => a + b, 0) / scored.length)
+			: null,
+		revisar: statuses.filter((s) => s === "revisar").length,
+		pronto: statuses.filter((s) => s === "pronto").length,
+		sinRegistro: statuses.filter((s) => s === "sin-registro").length,
+	};
+}
+
+export const healthColor = (score: number | null) =>
+	score === null
+		? statusColor.registrado
+		: score >= 80
+			? statusColor["al-dia"]
+			: score >= 50
+				? statusColor.pronto
+				: statusColor.revisar;
+
+/** Zonas que tocó un servicio (para la línea de tiempo). */
+export function recordZones(record: HistoryRecord): Zone[] {
+	const found = new Set(record.items.flatMap(zonesOfItem));
+	if (!found.size) for (const z of zonesOfText(record.summary)) found.add(z);
+	return zones.filter((z) => found.has(z));
+}

@@ -13,6 +13,7 @@ import { date, money } from "@/lib/format";
 import {
 	blankQuoteItem,
 	QuoteItemsFields,
+	quoteItemPayload,
 	quoteItemsSchema,
 	quoteItemValues,
 } from "./quote-items-fields";
@@ -67,7 +68,7 @@ export function OrderQuoteCard({
 							disabled={quote.isPending || (!!order.quote && !isDirty)}
 							onClick={form.handleSubmit(({ items }) =>
 								quote.mutate(
-									{ items },
+									{ items: items.map(quoteItemPayload) },
 									{
 										onSuccess: (saved) => {
 											reset({ items: saved.items.map(quoteItemValues) });

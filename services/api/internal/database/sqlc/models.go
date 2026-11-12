@@ -728,6 +728,7 @@ type Job struct {
 	MechanicNotes *string            `json:"mechanic_notes"`
 	Currency      string             `json:"currency"`
 	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	Part          *string            `json:"part"`
 }
 
 type Membership struct {
@@ -801,6 +802,7 @@ type QuoteItem struct {
 	Description string         `json:"description"`
 	Quantity    pgtype.Numeric `json:"quantity"`
 	UnitPrice   pgtype.Numeric `json:"unit_price"`
+	Part        *string        `json:"part"`
 }
 
 type Recommendation struct {

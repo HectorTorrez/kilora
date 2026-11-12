@@ -43,7 +43,7 @@ func orderDTO(o sqlc.WorkOrder) map[string]any {
 }
 
 func jobDTO(j sqlc.Job) map[string]any {
-	return map[string]any{"id": j.ID, "work_order_id": j.WorkOrderID, "position": j.Position, "description": j.Description, "category": j.Category, "labor_price": numericText(j.LaborPrice), "internal_cost": numericText(j.InternalCost), "mechanic_notes": j.MechanicNotes, "currency": j.Currency}
+	return map[string]any{"id": j.ID, "work_order_id": j.WorkOrderID, "position": j.Position, "description": j.Description, "category": j.Category, "part": j.Part, "labor_price": numericText(j.LaborPrice), "internal_cost": numericText(j.InternalCost), "mechanic_notes": j.MechanicNotes, "currency": j.Currency}
 }
 
 func partDTO(p sqlc.Part) map[string]any {
@@ -356,6 +356,7 @@ func (s *server) createJob(w http.ResponseWriter, r *http.Request, wc workshopAc
 		var in struct {
 			Description   string             `json:"description"`
 			Category      *sqlc.PartCategory `json:"category"`
+			Part          *string            `json:"part"`
 			LaborPrice    json.RawMessage    `json:"labor_price"`
 			InternalCost  json.RawMessage    `json:"internal_cost"`
 			MechanicNotes *string            `json:"mechanic_notes"`
@@ -372,11 +373,15 @@ func (s *server) createJob(w http.ResponseWriter, r *http.Request, wc workshopAc
 		if in.Category != nil && !in.Category.Valid() {
 			return auditEvent{}, badRequest("Categoría inválida")
 		}
+		part, category, err := resolvePart(in.Part, in.Category)
+		if err != nil {
+			return auditEvent{}, err
+		}
 		position, err := q.NextJobPosition(ctx, o.ID)
 		if err != nil {
 			return auditEvent{}, err
 		}
-		created, err = q.CreateJob(ctx, sqlc.CreateJobParams{WorkOrderID: o.ID, WorkshopID: wc.workshopID, Position: position, Description: in.Description, Category: in.Category, LaborPrice: labor, InternalCost: cost, MechanicNotes: in.MechanicNotes, Currency: values.Currency})
+		created, err = q.CreateJob(ctx, sqlc.CreateJobParams{WorkOrderID: o.ID, WorkshopID: wc.workshopID, Position: position, Description: in.Description, Category: category, Part: part, LaborPrice: labor, InternalCost: cost, MechanicNotes: in.MechanicNotes, Currency: values.Currency})
 		return wc.event("job", created.ID, "job.create"), err
 	})
 	if err != nil {

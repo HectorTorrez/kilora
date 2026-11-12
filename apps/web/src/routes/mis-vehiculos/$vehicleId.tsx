@@ -7,6 +7,7 @@ import { useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { PartDialog } from "@/components/kilora/car-anatomy";
 import { CarPartsMap } from "@/components/kilora/car-parts-map";
 import {
 	applyFormError,
@@ -26,6 +27,10 @@ import {
 	pastDateField,
 	requiredText,
 } from "@/components/kilora/form-schemas";
+import {
+	HistoryPartsStrip,
+	PartHistory,
+} from "@/components/kilora/history-parts";
 import { HistoryItems } from "@/components/kilora/history-record";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -60,6 +65,7 @@ import {
 	useOwnerMutation,
 } from "@/lib/owner";
 import { useListPage } from "@/lib/pagination";
+import type { PartKey } from "@/lib/part-catalog";
 import { cn } from "@/lib/utils";
 import { Route as OwnerLayout } from "../mis-vehiculos";
 
@@ -125,6 +131,10 @@ function Page() {
 	const [kmOpen, setKmOpen] = useState(false);
 	const [warning, setWarning] = useState("");
 	const [editing, setEditing] = useState<HistoryRecord | null>(null);
+	const [viewing, setViewing] = useState<{
+		part: PartKey;
+		record: HistoryRecord;
+	} | null>(null);
 	const { page: readingsPage, setPage: setReadingsPage } = useListPage(id);
 	const historyRef = useRef<HTMLElement>(null);
 	const manual = useOwnerMutation(
@@ -251,6 +261,11 @@ function Page() {
 										<span className="ml-2 text-sm text-seal">✓ Verificado</span>
 									)}
 								</p>
+								<HistoryPartsStrip
+									record={r}
+									bodyType={v.body_type}
+									onOpen={(part, record) => setViewing({ part, record })}
+								/>
 								<HistoryItems items={r.items} />
 								{r.total && (
 									<p className="mt-3 font-semibold">Total: {money(r.total)}</p>
@@ -348,6 +363,30 @@ function Page() {
 					onSave={(body) => correction.mutateAsync(body)}
 				/>
 			)}
+			<PartDialog
+				part={viewing?.part ?? null}
+				bodyType={v.body_type}
+				onOpenChange={(open) => !open && setViewing(null)}
+				subtitle={
+					viewing &&
+					[
+						day(viewing.record.performed_on),
+						viewing.record.workshop_name,
+						viewing.record.odometer_km != null
+							? formatKm(viewing.record.odometer_km)
+							: null,
+					]
+						.filter(Boolean)
+						.join(" · ")
+				}
+			>
+				{viewing && (
+					<PartHistory
+						part={viewing.part}
+						records={partsMap.data?.records ?? h.records}
+					/>
+				)}
+			</PartDialog>
 		</main>
 	);
 }

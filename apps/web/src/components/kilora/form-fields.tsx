@@ -78,7 +78,7 @@ export function InputGroup({
 	);
 }
 
-function FieldShell({
+export function FieldShell({
 	label,
 	optional,
 	required,
@@ -114,7 +114,7 @@ export function RequiredLegend({ className }: { className?: string }) {
 	);
 }
 
-type SharedField = {
+export type SharedField = {
 	name: string;
 	label: ReactNode;
 	description?: ReactNode;

@@ -128,6 +128,7 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 	descriptions := []string{"Cambio de aceite y filtro", "Cambio de aceite y filtro", "Pastillas de freno delanteras", "Cambio de batería", "Cambio de refrigerante", "Llantas y alineación", "Amortiguadores delanteros", "Cambio de aceite y filtro"}
 	brands := []string{"Mobil", "Mobil", "Bosch", "Bosch", "Prestone", "Michelin", "Monroe", "Mobil"}
 	cats := []string{"aceite", "aceite", "frenos", "bateria", "refrigeracion", "llantas", "amortiguadores", "aceite"}
+	parts := []string{"aceite_motor", "aceite_motor", "pastillas_delanteras", "bateria", "refrigerante", "alineacion_balanceo", "amortiguadores_delanteros", "aceite_motor"}
 	for i, desc := range descriptions {
 		workshop, branch, actor, num := w, b1, users[0], i+1
 		if i > 5 {
@@ -142,12 +143,12 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 		if i == 1 {
 			km = 42500
 		}
-		brand, cat := brands[i], cats[i]
+		brand, cat, partKey := brands[i], cats[i], parts[i]
 		price := []string{"25.00", "25.00", "45.00", "55.00", "40.00", "175.00", "120.00", "25.00"}[i]
 		cost := []string{"12.00", "12.00", "22.00", "30.00", "20.00", "90.00", "60.00", "12.00"}[i]
 		notes := "Revisar en próximo servicio"
 		qty := 1.0
-		items, err := json.Marshal([]history.Item{{Kind: "trabajo", Description: desc, Category: &cat, Price: &price, InternalCost: &cost, MechanicNotes: &notes}, {Kind: "pieza", Description: desc, Name: &desc, Brand: &brand, Quantity: &qty, Price: &price, InternalCost: &cost}})
+		items, err := json.Marshal([]history.Item{{Kind: "trabajo", Description: desc, Category: &cat, Part: &partKey, Price: &price, InternalCost: &cost, MechanicNotes: &notes}, {Kind: "pieza", Description: desc, Name: &desc, Brand: &brand, Quantity: &qty, Price: &price, InternalCost: &cost}})
 		if err != nil {
 			return err
 		}
@@ -156,7 +157,7 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 			args []any
 		}{
 			{"INSERT INTO work_order(id,workshop_id,branch_id,vehicle_id,number,status,reason,odometer_km,received_at,completed_at,created_by,internal_notes,public_notes) VALUES($1,$2,$3,$4,$5,'listo',$6,$7,$8,$8,$9,'Costo interno y seguimiento','Servicio realizado y revisado')", []any{order, workshop, branch, vehicle, num, desc, km, date, actor}},
-			{"INSERT INTO job(id,work_order_id,position,description,category,labor_price,internal_cost,mechanic_notes) VALUES($1,$2,1,$3,$4,$6,$7,$5)", []any{job, order, desc, cat, notes, price, cost}},
+			{"INSERT INTO job(id,work_order_id,position,description,category,labor_price,internal_cost,mechanic_notes,part) VALUES($1,$2,1,$3,$4,$6,$7,$5,$8)", []any{job, order, desc, cat, notes, price, cost, partKey}},
 			{"INSERT INTO part(job_id,name,brand,unit_price,internal_cost) VALUES($1,$2,$3,$4,$5)", []any{job, desc, brand, price, cost}},
 			{"INSERT INTO history_record(id,vehicle_id,workshop_id,work_order_id,source,performed_on,odometer_km,summary,items,total,workshop_notes,internal_cost,internal_notes,created_by) VALUES($1,$2,$3,$4,'taller',$5,$6,$7,$8,($10::numeric * 2),'Servicio realizado y revisado',($11::numeric * 2),'Costo interno y seguimiento',$9)", []any{rec, vehicle, workshop, order, date, km, desc, items, actor, price, cost}},
 			{"INSERT INTO odometer_reading(vehicle_id,km,read_at,source,work_order_id,recorded_by) VALUES($1,$2,$3,'orden',$4,$5)", []any{vehicle, km, date, order, actor}},
@@ -205,10 +206,10 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 				outcome = "acepto"
 			}
 			quoteID := uuid.New()
-			if err = exec("INSERT INTO quote(id,work_order_id,workshop_id,branch_id,number,total,outcome,shared_at,share_expires_at,created_by,outcome_at,outcome_by) VALUES($1,$2,$3,$4,$5,90,$6,now(),now()+interval '15 days',$7::uuid,CASE WHEN $6::quote_outcome='acepto' THEN now() END,CASE WHEN $6::quote_outcome='acepto' THEN $7::uuid END)", quoteID, o, w, b2, i+1, outcome, users[0]); err != nil {
+			if err = exec("INSERT INTO quote(id,work_order_id,workshop_id,branch_id,number,total,outcome,shared_at,share_expires_at,created_by,outcome_at,outcome_by) VALUES($1,$2,$3,$4,$5,110,$6,now(),now()+interval '15 days',$7::uuid,CASE WHEN $6::quote_outcome='acepto' THEN now() END,CASE WHEN $6::quote_outcome='acepto' THEN $7::uuid END)", quoteID, o, w, b2, i+1, outcome, users[0]); err != nil {
 				return err
 			}
-			if err = exec("INSERT INTO quote_item(quote_id,position,kind,description,quantity,unit_price) VALUES($1,1,'mano_de_obra','Revisión y reparación',1,90)", quoteID); err != nil {
+			if err = exec("INSERT INTO quote_item(quote_id,position,kind,description,quantity,unit_price,part) VALUES($1,1,'repuesto','Pastillas de freno traseras',1,45,'pastillas_traseras'),($1,2,'repuesto','Cambio de refrigerante',1,40,'refrigerante'),($1,3,'mano_de_obra','Alineación y balanceo',1,25,'alineacion_balanceo')", quoteID); err != nil {
 				return err
 			}
 		}

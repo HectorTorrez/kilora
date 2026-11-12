@@ -1,5 +1,5 @@
 -- name: CreateJob :one
-INSERT INTO job (work_order_id, position, description, category, labor_price, internal_cost, mechanic_notes, currency) SELECT wo.id, sqlc.arg(position), sqlc.arg(description), sqlc.narg(category), sqlc.narg(labor_price), sqlc.narg(internal_cost), sqlc.narg(mechanic_notes), sqlc.arg(currency) FROM work_order wo WHERE wo.id = sqlc.arg(work_order_id) AND wo.workshop_id = sqlc.arg(workshop_id) RETURNING *;
+INSERT INTO job (work_order_id, position, description, category, part, labor_price, internal_cost, mechanic_notes, currency) SELECT wo.id, sqlc.arg(position), sqlc.arg(description), sqlc.narg(category), sqlc.narg(part), sqlc.narg(labor_price), sqlc.narg(internal_cost), sqlc.narg(mechanic_notes), sqlc.arg(currency) FROM work_order wo WHERE wo.id = sqlc.arg(work_order_id) AND wo.workshop_id = sqlc.arg(workshop_id) RETURNING *;
 
 -- name: ListJobsByWorkOrder :many
 SELECT j.* FROM job j JOIN work_order wo ON wo.id = j.work_order_id WHERE wo.id = sqlc.arg(work_order_id) AND wo.workshop_id = sqlc.arg(workshop_id) ORDER BY j.position;

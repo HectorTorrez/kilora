@@ -13,13 +13,14 @@ import (
 )
 
 const createJob = `-- name: CreateJob :one
-INSERT INTO job (work_order_id, position, description, category, labor_price, internal_cost, mechanic_notes, currency) SELECT wo.id, $1, $2, $3, $4, $5, $6, $7 FROM work_order wo WHERE wo.id = $8 AND wo.workshop_id = $9 RETURNING id, work_order_id, position, description, category, labor_price, internal_cost, mechanic_notes, currency, created_at
+INSERT INTO job (work_order_id, position, description, category, part, labor_price, internal_cost, mechanic_notes, currency) SELECT wo.id, $1, $2, $3, $4, $5, $6, $7, $8 FROM work_order wo WHERE wo.id = $9 AND wo.workshop_id = $10 RETURNING id, work_order_id, position, description, category, labor_price, internal_cost, mechanic_notes, currency, created_at, part
 `
 
 type CreateJobParams struct {
 	Position      int32          `json:"position"`
 	Description   string         `json:"description"`
 	Category      *PartCategory  `json:"category"`
+	Part          *string        `json:"part"`
 	LaborPrice    pgtype.Numeric `json:"labor_price"`
 	InternalCost  pgtype.Numeric `json:"internal_cost"`
 	MechanicNotes *string        `json:"mechanic_notes"`
@@ -33,6 +34,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		arg.Position,
 		arg.Description,
 		arg.Category,
+		arg.Part,
 		arg.LaborPrice,
 		arg.InternalCost,
 		arg.MechanicNotes,
@@ -52,6 +54,7 @@ func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, erro
 		&i.MechanicNotes,
 		&i.Currency,
 		&i.CreatedAt,
+		&i.Part,
 	)
 	return i, err
 }
@@ -136,7 +139,7 @@ func (q *Queries) DeletePart(ctx context.Context, arg DeletePartParams) (int64, 
 }
 
 const getJob = `-- name: GetJob :one
-SELECT j.id, j.work_order_id, j.position, j.description, j.category, j.labor_price, j.internal_cost, j.mechanic_notes, j.currency, j.created_at FROM job j JOIN work_order wo ON wo.id = j.work_order_id WHERE j.id = $1 AND j.work_order_id = $2 AND wo.workshop_id = $3
+SELECT j.id, j.work_order_id, j.position, j.description, j.category, j.labor_price, j.internal_cost, j.mechanic_notes, j.currency, j.created_at, j.part FROM job j JOIN work_order wo ON wo.id = j.work_order_id WHERE j.id = $1 AND j.work_order_id = $2 AND wo.workshop_id = $3
 `
 
 type GetJobParams struct {
@@ -159,12 +162,13 @@ func (q *Queries) GetJob(ctx context.Context, arg GetJobParams) (Job, error) {
 		&i.MechanicNotes,
 		&i.Currency,
 		&i.CreatedAt,
+		&i.Part,
 	)
 	return i, err
 }
 
 const listJobsByWorkOrder = `-- name: ListJobsByWorkOrder :many
-SELECT j.id, j.work_order_id, j.position, j.description, j.category, j.labor_price, j.internal_cost, j.mechanic_notes, j.currency, j.created_at FROM job j JOIN work_order wo ON wo.id = j.work_order_id WHERE wo.id = $1 AND wo.workshop_id = $2 ORDER BY j.position
+SELECT j.id, j.work_order_id, j.position, j.description, j.category, j.labor_price, j.internal_cost, j.mechanic_notes, j.currency, j.created_at, j.part FROM job j JOIN work_order wo ON wo.id = j.work_order_id WHERE wo.id = $1 AND wo.workshop_id = $2 ORDER BY j.position
 `
 
 type ListJobsByWorkOrderParams struct {
@@ -192,6 +196,7 @@ func (q *Queries) ListJobsByWorkOrder(ctx context.Context, arg ListJobsByWorkOrd
 			&i.MechanicNotes,
 			&i.Currency,
 			&i.CreatedAt,
+			&i.Part,
 		); err != nil {
 			return nil, err
 		}

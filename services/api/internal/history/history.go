@@ -14,6 +14,7 @@ type Item struct {
 	Description   string   `json:"description"`
 	Name          *string  `json:"name,omitempty"`
 	Category      *string  `json:"category,omitempty"`
+	Part          *string  `json:"part,omitempty"`
 	Brand         *string  `json:"brand,omitempty"`
 	Model         *string  `json:"model,omitempty"`
 	Quantity      *float64 `json:"quantity,omitempty"`

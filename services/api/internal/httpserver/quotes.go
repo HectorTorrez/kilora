@@ -35,12 +35,14 @@ type quoteInputItem struct {
 	Description string             `json:"description"`
 	Quantity    json.RawMessage    `json:"quantity"`
 	UnitPrice   json.RawMessage    `json:"unit_price"`
+	Part        *string            `json:"part"`
 }
 
 type parsedQuoteItem struct {
 	kind            sqlc.QuoteItemKind
 	description     string
 	quantity, price pgtype.Numeric
+	part            *string
 }
 
 func parseQuoteItems(raw []quoteInputItem) ([]parsedQuoteItem, pgtype.Numeric, error) {
@@ -56,8 +58,12 @@ func parseQuoteItems(raw []quoteInputItem) ([]parsedQuoteItem, pgtype.Numeric, e
 		if !okQuantity || !okPrice || description == "" || !v.Kind.Valid() {
 			return nil, pgtype.Numeric{}, badRequest("Datos de cotización inválidos")
 		}
+		part, _, err := resolvePart(v.Part, nil)
+		if err != nil {
+			return nil, pgtype.Numeric{}, err
+		}
 		total = total.Add(values.LineTotal(amount(quantity), amount(price)))
-		items = append(items, parsedQuoteItem{v.Kind, description, quantity, price})
+		items = append(items, parsedQuoteItem{v.Kind, description, quantity, price, part})
 	}
 	return items, dbNumeric(total), nil
 }
@@ -67,7 +73,7 @@ func replaceQuoteItems(ctx context.Context, q *sqlc.Queries, id uuid.UUID, items
 		return err
 	}
 	for i, v := range items {
-		if err := q.CreateQuoteItem(ctx, sqlc.CreateQuoteItemParams{QuoteID: id, Position: int32(i), Kind: v.kind, Description: v.description, Quantity: v.quantity, UnitPrice: v.price}); err != nil {
+		if err := q.CreateQuoteItem(ctx, sqlc.CreateQuoteItemParams{QuoteID: id, Position: int32(i), Kind: v.kind, Description: v.description, Quantity: v.quantity, UnitPrice: v.price, Part: v.part}); err != nil {
 			return err
 		}
 	}
@@ -77,7 +83,7 @@ func replaceQuoteItems(ctx context.Context, q *sqlc.Queries, id uuid.UUID, items
 func quoteItemsJSON(rows []sqlc.ListQuoteItemsRow) []any {
 	items := []any{}
 	for _, v := range rows {
-		items = append(items, map[string]any{"kind": v.Kind, "description": v.Description, "quantity": v.Quantity, "unit_price": v.UnitPrice})
+		items = append(items, map[string]any{"kind": v.Kind, "description": v.Description, "quantity": v.Quantity, "unit_price": v.UnitPrice, "part": v.Part})
 	}
 	return items
 }
@@ -288,7 +294,7 @@ func (s *server) publicQuote(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"workshop_name": public.Name, "verified_at": nullableTime(public.VerifiedAt), "plate": public.Plate, "make": public.Make, "model": public.Model, "year": public.Year, "order_number": public.OrderNumber, "quote_number": public.QuoteNumber, "customer_name": public.CustomerName, "notes": public.Notes, "valid_until": nullableDate(public.ValidUntil), "items": v.Items, "total": v.Total, "currency": v.Currency, "shared_at": nullableTime(public.SharedAt), "share_expires_at": nullableTime(public.ShareExpiresAt)})
+	writeJSON(w, http.StatusOK, map[string]any{"workshop_name": public.Name, "verified_at": nullableTime(public.VerifiedAt), "plate": public.Plate, "make": public.Make, "model": public.Model, "year": public.Year, "body_type": public.BodyType, "order_number": public.OrderNumber, "quote_number": public.QuoteNumber, "customer_name": public.CustomerName, "notes": public.Notes, "valid_until": nullableDate(public.ValidUntil), "items": v.Items, "total": v.Total, "currency": v.Currency, "shared_at": nullableTime(public.SharedAt), "share_expires_at": nullableTime(public.ShareExpiresAt)})
 	return nil
 }
 

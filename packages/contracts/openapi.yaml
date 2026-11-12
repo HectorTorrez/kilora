@@ -5707,6 +5707,16 @@
               }
             ]
           },
+          "part": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "labor_price": {
             "$ref": "#/components/schemas/DecimalInput"
           },
@@ -5752,6 +5762,16 @@
               }
             ]
           },
+          "part": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "labor_price": {
             "type": [
               "string",
@@ -5783,7 +5803,8 @@
           "labor_price",
           "internal_cost",
           "mechanic_notes",
-          "currency"
+          "currency",
+          "part"
         ]
       },
       "CreatePart": {
@@ -6090,6 +6111,16 @@
               }
             ]
           },
+          "part": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartKey"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "brand": {
             "type": "string"
           },
@@ -6369,6 +6400,16 @@
               },
               {
                 "type": "number"
+              }
+            ]
+          },
+          "part": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartKey"
+              },
+              {
+                "type": "null"
               }
             ]
           }
@@ -6918,7 +6959,8 @@
           "total",
           "currency",
           "shared_at",
-          "share_expires_at"
+          "share_expires_at",
+          "body_type"
         ],
         "properties": {
           "workshop_name": {
@@ -6947,6 +6989,16 @@
             "type": [
               "integer",
               "null"
+            ]
+          },
+          "body_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BodyType"
+              },
+              {
+                "type": "null"
+              }
             ]
           },
           "order_number": {
@@ -7976,6 +8028,58 @@
           "camion"
         ],
         "description": "Tipo de carrocería del vehículo."
+      },
+      "PartKey": {
+        "type": "string",
+        "enum": [
+          "aceite_motor",
+          "filtro_aceite",
+          "filtro_aire",
+          "bujias",
+          "correa_distribucion",
+          "banda_accesorios",
+          "inyectores",
+          "filtro_combustible",
+          "refrigerante",
+          "radiador",
+          "termostato",
+          "bomba_agua",
+          "gas_ac",
+          "compresor_ac",
+          "filtro_cabina",
+          "bateria",
+          "alternador",
+          "motor_arranque",
+          "faros",
+          "luces_traseras",
+          "aceite_transmision",
+          "embrague",
+          "flechas",
+          "cardan",
+          "diferencial",
+          "cremallera",
+          "terminales_direccion",
+          "liquido_direccion",
+          "pastillas_delanteras",
+          "pastillas_traseras",
+          "discos_delanteros",
+          "discos_traseros",
+          "zapatas_traseras",
+          "liquido_frenos",
+          "amortiguadores_delanteros",
+          "amortiguadores_traseros",
+          "ballestas",
+          "llantas_delanteras",
+          "llantas_traseras",
+          "alineacion_balanceo",
+          "catalizador",
+          "silenciador",
+          "parabrisas",
+          "plumillas",
+          "espejos",
+          "pintura"
+        ],
+        "description": "Pieza concreta del catálogo; define dónde se dibuja en el vehículo."
       }
     }
   }

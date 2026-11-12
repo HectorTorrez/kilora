@@ -5,15 +5,19 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { money } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
+import { isPartKey, partCatalog } from "@/lib/part-catalog";
 import { cn } from "@/lib/utils";
 import { NumberField, SelectField, TextField } from "./form-fields";
 import { moneyField, quantityField, requiredText } from "./form-schemas";
+import { PartField } from "./part-picker";
 
 export const quoteItemSchema = z.object({
 	kind: z.enum(["repuesto", "mano_de_obra"]),
 	description: requiredText("Ingresá la descripción"),
 	quantity: quantityField,
 	unit_price: moneyField(true),
+	/** Clave del catálogo o "" si no aplica. */
+	part: z.string(),
 });
 
 export const quoteItemsSchema = z
@@ -27,6 +31,7 @@ export function blankQuoteItem(unitPrice = ""): QuoteItemValues {
 		description: "",
 		quantity: "1",
 		unit_price: unitPrice,
+		part: "",
 	};
 }
 
@@ -34,9 +39,24 @@ export function quoteItemValues(
 	item: components["schemas"]["QuoteItem"],
 ): QuoteItemValues {
 	return {
-		...item,
+		kind: item.kind,
+		description: item.description,
 		quantity: String(item.quantity),
 		unit_price: String(item.unit_price),
+		part: item.part ?? "",
+	};
+}
+
+/** Ítem listo para la API. */
+export function quoteItemPayload(
+	item: QuoteItemValues,
+): components["schemas"]["QuoteItem"] {
+	return {
+		kind: item.kind,
+		description: item.description,
+		quantity: item.quantity,
+		unit_price: item.unit_price,
+		part: isPartKey(item.part) ? item.part : null,
 	};
 }
 
@@ -44,14 +64,16 @@ export function quoteItemValues(
 // contenedor: en tarjetas anchas es una tabla; en angostas, cada ítem es
 // una ficha con la descripción arriba.
 const table =
-	"@2xl:grid-cols-[150px_minmax(0,1fr)_84px_120px_96px_36px] @2xl:items-start";
+	"@2xl:grid-cols-[132px_minmax(0,1fr)_190px_76px_110px_90px_36px] @2xl:items-start";
 
 export function QuoteItemsFields({
 	initialUnitPrice = "",
 }: {
 	initialUnitPrice?: string;
 }) {
-	const { control, formState } = useFormContext<{ items: QuoteItemValues[] }>();
+	const { control, formState, getValues, setValue } = useFormContext<{
+		items: QuoteItemValues[];
+	}>();
 	const rows = useFieldArray({ control, name: "items" });
 	const watched = useWatch({ control, name: "items" });
 	let parts = 0;
@@ -76,6 +98,7 @@ export function QuoteItemsFields({
 			>
 				<span>Tipo</span>
 				<span>Descripción</span>
+				<span>Pieza en el vehículo</span>
 				<span>Cantidad</span>
 				<span>Precio unit.</span>
 				<span className="text-right">Subtotal</span>
@@ -106,6 +129,18 @@ export function QuoteItemsFields({
 							hiddenLabel,
 							"order-first col-span-full pr-10 @md:pr-0 @2xl:order-none @2xl:col-span-1",
 						)}
+					/>
+					<PartField
+						name={`items.${index}.part`}
+						label="Pieza en el vehículo"
+						className={cn(hiddenLabel, "col-span-full @2xl:col-span-1")}
+						onPick={(part) => {
+							const path = `items.${index}.description` as const;
+							if (!getValues(path))
+								setValue(path, partCatalog[part].label, {
+									shouldValidate: true,
+								});
+						}}
 					/>
 					<NumberField
 						name={`items.${index}.quantity`}

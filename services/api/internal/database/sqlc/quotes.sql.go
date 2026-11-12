@@ -151,7 +151,7 @@ func (q *Queries) CreateCounterQuote(ctx context.Context, arg CreateCounterQuote
 }
 
 const createQuoteItem = `-- name: CreateQuoteItem :exec
-INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price) VALUES ($1, $2, $3, $4, $5, $6)
+INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price, part) VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreateQuoteItemParams struct {
@@ -161,6 +161,7 @@ type CreateQuoteItemParams struct {
 	Description string         `json:"description"`
 	Quantity    pgtype.Numeric `json:"quantity"`
 	UnitPrice   pgtype.Numeric `json:"unit_price"`
+	Part        *string        `json:"part"`
 }
 
 func (q *Queries) CreateQuoteItem(ctx context.Context, arg CreateQuoteItemParams) error {
@@ -171,6 +172,7 @@ func (q *Queries) CreateQuoteItem(ctx context.Context, arg CreateQuoteItemParams
 		arg.Description,
 		arg.Quantity,
 		arg.UnitPrice,
+		arg.Part,
 	)
 	return err
 }
@@ -307,7 +309,8 @@ SELECT q.id, w.name, w.verified_at,
   q.notes,
   q.valid_until,
   q.shared_at,
-  q.share_expires_at
+  q.share_expires_at,
+  v.body_type
 FROM quote q
 JOIN workshop w ON w.id = q.workshop_id
 LEFT JOIN work_order o ON o.id = q.work_order_id
@@ -330,6 +333,7 @@ type GetPublicQuoteRow struct {
 	ValidUntil     pgtype.Date        `json:"valid_until"`
 	SharedAt       pgtype.Timestamptz `json:"shared_at"`
 	ShareExpiresAt pgtype.Timestamptz `json:"share_expires_at"`
+	BodyType       *BodyType          `json:"body_type"`
 }
 
 func (q *Queries) GetPublicQuote(ctx context.Context, shareTokenHash *string) (GetPublicQuoteRow, error) {
@@ -350,6 +354,7 @@ func (q *Queries) GetPublicQuote(ctx context.Context, shareTokenHash *string) (G
 		&i.ValidUntil,
 		&i.SharedAt,
 		&i.ShareExpiresAt,
+		&i.BodyType,
 	)
 	return i, err
 }
@@ -508,7 +513,7 @@ func (q *Queries) ListCounterQuotes(ctx context.Context, arg ListCounterQuotesPa
 }
 
 const listQuoteItems = `-- name: ListQuoteItems :many
-SELECT kind, description, quantity::text, unit_price::text FROM quote_item WHERE quote_id = $1 ORDER BY position
+SELECT kind, description, quantity::text, unit_price::text, part FROM quote_item WHERE quote_id = $1 ORDER BY position
 `
 
 type ListQuoteItemsRow struct {
@@ -516,6 +521,7 @@ type ListQuoteItemsRow struct {
 	Description string        `json:"description"`
 	Quantity    string        `json:"quantity"`
 	UnitPrice   string        `json:"unit_price"`
+	Part        *string       `json:"part"`
 }
 
 func (q *Queries) ListQuoteItems(ctx context.Context, quoteID uuid.UUID) ([]ListQuoteItemsRow, error) {
@@ -532,6 +538,7 @@ func (q *Queries) ListQuoteItems(ctx context.Context, quoteID uuid.UUID) ([]List
 			&i.Description,
 			&i.Quantity,
 			&i.UnitPrice,
+			&i.Part,
 		); err != nil {
 			return nil, err
 		}

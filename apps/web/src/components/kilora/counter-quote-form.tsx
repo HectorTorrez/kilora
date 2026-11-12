@@ -39,6 +39,7 @@ import {
 import {
 	blankQuoteItem,
 	QuoteItemsFields,
+	quoteItemPayload,
 	quoteItemsSchema,
 	quoteItemValues,
 } from "./quote-items-fields";
@@ -118,12 +119,7 @@ export function toCounterQuoteInput(
 		branch_id: values.branch_id,
 		notes: values.notes.trim() || null,
 		valid_days: Number(values.valid_days),
-		items: values.items.map((item) => ({
-			kind: item.kind,
-			description: item.description,
-			quantity: item.quantity,
-			unit_price: item.unit_price,
-		})),
+		items: values.items.map(quoteItemPayload),
 	};
 }
 

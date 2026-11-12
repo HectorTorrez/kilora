@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { orderActions } from "@/features/taller/orders";
-import { categoryLabels } from "@/lib/domain";
+import { isPartKey, partCatalog } from "@/lib/part-catalog";
 import { FormDialog } from "./form-dialog";
 import {
 	applyFormError,
@@ -16,7 +16,6 @@ import {
 	NumberField,
 	RequiredLegend,
 	RootError,
-	SelectField,
 	SubmitButton,
 	TextareaField,
 	TextField,
@@ -28,13 +27,9 @@ import {
 	quantityField,
 	requiredText,
 } from "./form-schemas";
+import { PartField, PartPreview } from "./part-picker";
 
 type S = components["schemas"];
-
-const categoryOptions = [
-	{ value: "none", label: "Sin categoría" },
-	...Object.entries(categoryLabels).map(([value, label]) => ({ value, label })),
-];
 
 function Cancel({ onClick }: { onClick: () => void }) {
 	return (
@@ -54,7 +49,7 @@ const jobSchema = z.object({
 		200,
 		"Usá como máximo 200 caracteres",
 	),
-	category: z.string(),
+	part: z.string(),
 	labor_price: moneyField(),
 });
 
@@ -102,7 +97,7 @@ function JobForm({
 	const form = useForm({
 		mode: "onChange",
 		resolver: zodResolver(jobSchema),
-		defaultValues: { description: "", category: "none", labor_price: "" },
+		defaultValues: { description: "", part: "", labor_price: "" },
 	});
 	const submit = form.handleSubmit(async (values) => {
 		form.clearErrors("root");
@@ -110,10 +105,8 @@ function JobForm({
 			await job.mutateAsync({
 				description: values.description,
 				labor_price: values.labor_price || "0",
-				category:
-					values.category === "none"
-						? null
-						: (values.category as S["PartCategory"]),
+				// La API deduce la categoría a partir de la pieza.
+				part: isPartKey(values.part) ? values.part : null,
 			});
 			toast.success("Trabajo agregado");
 			onDone();
@@ -143,17 +136,17 @@ function JobForm({
 						placeholder="0.00"
 						optional
 					/>
-					<SelectField
-						name="category"
-						label="Categoría"
-						options={categoryOptions}
-						optional
+					<PartField
+						name="part"
+						onPick={(part) => {
+							if (!form.getValues("description"))
+								form.setValue("description", partCatalog[part].label, {
+									shouldValidate: true,
+								});
+						}}
 					/>
 				</div>
-				<p className="-mt-2 text-xs text-ink-3">
-					La categoría sirve para que la ficha del vehículo recuerde el último
-					cambio de aceite, frenos, batería, etc.
-				</p>
+				<PartPreview name="part" />
 				<RootError />
 				<FormActions>
 					<Cancel onClick={onDone} />
