@@ -2897,7 +2897,7 @@ export interface paths {
         put?: never;
         /**
          * Pregunta al asistente de IA
-         * @description Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura.
+         * @description Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura. La respuesta es un stream SSE: cada evento `data:` es un AssistantEvent.
          */
         post: {
             parameters: {
@@ -2912,13 +2912,13 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Respuesta exitosa */
+                /** @description Stream de eventos (text/event-stream) */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["AssistantReply"];
+                        "text/event-stream": components["schemas"]["AssistantEvent"];
                     };
                 };
                 /** @description Mensajes inválidos */
@@ -2941,15 +2941,6 @@ export interface paths {
                 };
                 /** @description Demasiadas solicitudes */
                 429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description El modelo no respondió */
-                502: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5442,11 +5433,16 @@ export interface components {
             /** @description Ruta abierta, como contexto. */
             page?: string;
         };
-        AssistantReply: {
-            reply: string;
-            sources: {
-                title: string;
-            }[];
+        AssistantSource: {
+            title: string;
+        };
+        /** @description status: consulta en curso; delta: fragmento de texto; sources: fuentes de la ayuda; done: respuesta completa; error: fallo después de iniciar el stream. */
+        AssistantEvent: {
+            /** @enum {string} */
+            type: "status" | "delta" | "sources" | "done" | "error";
+            text?: string;
+            reply?: string;
+            sources?: components["schemas"]["AssistantSource"][];
         };
     };
     responses: never;

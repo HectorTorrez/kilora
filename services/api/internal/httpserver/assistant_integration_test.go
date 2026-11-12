@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -34,17 +35,20 @@ func TestAssistantUsesCallerPermissions(t *testing.T) {
 		defer mu.Unlock()
 		var body struct{ Messages []assistant.Message }
 		_ = json.NewDecoder(r.Body).Decode(&body)
-		var msg map[string]any
+		msg := assistant.Message{Role: "assistant"}
 		if step%2 == 0 {
-			args := fmt.Sprintf(`{"workshop_id":%q,"order_id":%q}`, workshopA, order["id"])
-			msg = map[string]any{"role": "assistant", "content": nil, "tool_calls": []any{map[string]any{"id": "c1", "type": "function", "function": map[string]any{"name": "get_work_order", "arguments": args}}}}
+			call := assistant.ToolCall{ID: "c1", Type: "function"}
+			call.Function.Name = "get_work_order"
+			call.Function.Arguments = fmt.Sprintf(`{"workshop_id":%q,"order_id":%q}`, workshopA, order["id"])
+			msg.ToolCalls = []assistant.ToolCall{call}
 		} else {
 			last := body.Messages[len(body.Messages)-1]
 			toolResults = append(toolResults, *last.Content)
-			msg = map[string]any{"role": "assistant", "content": "ok"}
+			reply := "La orden es por frenos."
+			msg.Content = &reply
 		}
 		step++
-		_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": msg}}})
+		assistant.StreamTestMessage(w, msg)
 	}))
 	t.Cleanup(fake.Close)
 	srv := httptest.NewServer(NewRouter(Deps{DB: base.db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: testOrigin, AI: &assistant.OpenAI{APIKey: "k", BaseURL: fake.URL, Model: "m"}}))
@@ -52,11 +56,17 @@ func TestAssistantUsesCallerPermissions(t *testing.T) {
 	ai := &testAPI{t: t, db: base.db, q: base.q, srv: srv}
 
 	body := `{"messages":[{"role":"user","content":"¿Qué tiene la orden?"}],"workshop_id":%q,"page":"/taller"}`
-	reply := ai.obj(a, "POST", "/api/v1/assistant/chat", fmt.Sprintf(body, workshopA), 200)
-	if reply["reply"] != "ok" {
-		t.Fatal(reply)
+	events := chatEvents(t, srv.URL, a, fmt.Sprintf(body, workshopA))
+	var streamed strings.Builder
+	for _, e := range events {
+		if e["type"] == "delta" {
+			streamed.WriteString(e["text"].(string))
+		}
 	}
-	ai.obj(b, "POST", "/api/v1/assistant/chat", fmt.Sprintf(body, workshopB), 200)
+	if events[0]["type"] != "status" || streamed.String() != "La orden es por frenos." || events[len(events)-1]["type"] != "done" {
+		t.Fatalf("eventos: %v", events)
+	}
+	chatEvents(t, srv.URL, b, fmt.Sprintf(body, workshopB))
 
 	if len(toolResults) != 2 {
 		t.Fatalf("resultados: %v", toolResults)
@@ -78,4 +88,32 @@ func TestAssistantDisabledWithoutKey(t *testing.T) {
 	c := api.client()
 	api.register(c)
 	api.req(c, "POST", "/api/v1/assistant/chat", `{"messages":[{"role":"user","content":"hola"}]}`, 503)
+}
+
+// chatEvents envía una pregunta y devuelve los eventos SSE recibidos.
+func chatEvents(t *testing.T, base string, c *http.Client, body string) []map[string]any {
+	t.Helper()
+	r, _ := http.NewRequest("POST", base+"/api/v1/assistant/chat", strings.NewReader(body))
+	r.Header.Set("Origin", testOrigin)
+	r.Header.Set("Content-Type", "application/json")
+	resp, err := c.Do(r)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 || !strings.HasPrefix(resp.Header.Get("Content-Type"), "text/event-stream") {
+		t.Fatalf("estado %d, tipo %s", resp.StatusCode, resp.Header.Get("Content-Type"))
+	}
+	var events []map[string]any
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		if data, ok := strings.CutPrefix(scanner.Text(), "data: "); ok {
+			var e map[string]any
+			if err := json.Unmarshal([]byte(data), &e); err != nil {
+				t.Fatal(err)
+			}
+			events = append(events, e)
+		}
+	}
+	return events
 }

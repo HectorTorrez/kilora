@@ -1,6 +1,7 @@
 package assistant
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -8,7 +9,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // OpenAI habla con la API de OpenAI (chat completions con herramientas y
@@ -59,22 +59,43 @@ func (c *OpenAI) url(path string) string {
 	return base + path
 }
 
-func (c *OpenAI) post(ctx context.Context, path string, body, out any) error {
+func (c *OpenAI) send(ctx context.Context, path string, body any) (*http.Response, error) {
 	payload, err := json.Marshal(body)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.url(path), bytes.NewReader(payload))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+c.APIKey)
 	req.Header.Set("Content-Type", "application/json")
 	client := c.HTTP
 	if client == nil {
-		client = &http.Client{Timeout: 90 * time.Second}
+		// Sin Timeout global: una respuesta en streaming puede durar; el
+		// contexto de la petición pone el límite.
+		client = &http.Client{}
 	}
 	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode >= 300 {
+		defer resp.Body.Close()
+		data, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+		var e struct {
+			Error struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		_ = json.Unmarshal(data, &e)
+		return nil, fmt.Errorf("openai %s: %d %s", path, resp.StatusCode, e.Error.Message)
+	}
+	return resp, nil
+}
+
+func (c *OpenAI) post(ctx context.Context, path string, body, out any) error {
+	resp, err := c.send(ctx, path, body)
 	if err != nil {
 		return err
 	}
@@ -83,39 +104,94 @@ func (c *OpenAI) post(ctx context.Context, path string, body, out any) error {
 	if err != nil {
 		return err
 	}
-	if resp.StatusCode >= 300 {
-		var e struct {
-			Error struct {
-				Message string `json:"message"`
-			} `json:"error"`
-		}
-		_ = json.Unmarshal(data, &e)
-		return fmt.Errorf("openai %s: %d %s", path, resp.StatusCode, e.Error.Message)
-	}
 	return json.Unmarshal(data, out)
 }
 
-// Chat pide una respuesta; puede devolver texto o llamadas a herramientas.
-func (c *OpenAI) Chat(ctx context.Context, messages []Message, tools []Tool) (Message, error) {
-	body := map[string]any{"model": c.Model, "messages": messages}
+// ChatStream pide una respuesta en streaming. Cada fragmento de texto se
+// entrega a onText en cuanto llega; las llamadas a herramientas se acumulan y
+// se devuelven completas en el mensaje final.
+func (c *OpenAI) ChatStream(ctx context.Context, messages []Message, tools []Tool, onText func(string)) (Message, error) {
+	body := map[string]any{"model": c.Model, "messages": messages, "stream": true}
 	if len(tools) > 0 {
 		body["tools"] = tools
 	}
 	if c.ReasoningEffort != "" {
 		body["reasoning_effort"] = c.ReasoningEffort
 	}
-	var out struct {
-		Choices []struct {
-			Message Message `json:"message"`
-		} `json:"choices"`
-	}
-	if err := c.post(ctx, "/chat/completions", body, &out); err != nil {
+	resp, err := c.send(ctx, "/chat/completions", body)
+	if err != nil {
 		return Message{}, err
 	}
-	if len(out.Choices) == 0 {
-		return Message{}, fmt.Errorf("openai: respuesta sin opciones")
+	defer resp.Body.Close()
+
+	var content strings.Builder
+	var calls []ToolCall
+	scanner := bufio.NewScanner(resp.Body)
+	scanner.Buffer(make([]byte, 64<<10), 4<<20)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if data == "[DONE]" {
+			break
+		}
+		var chunk struct {
+			Choices []struct {
+				Delta struct {
+					Content   *string `json:"content"`
+					ToolCalls []struct {
+						Index    int    `json:"index"`
+						ID       string `json:"id"`
+						Function struct {
+							Name      string `json:"name"`
+							Arguments string `json:"arguments"`
+						} `json:"function"`
+					} `json:"tool_calls"`
+				} `json:"delta"`
+			} `json:"choices"`
+			Error *struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		}
+		if err := json.Unmarshal([]byte(data), &chunk); err != nil {
+			return Message{}, fmt.Errorf("openai: fragmento inválido: %w", err)
+		}
+		if chunk.Error != nil {
+			return Message{}, fmt.Errorf("openai: %s", chunk.Error.Message)
+		}
+		for _, choice := range chunk.Choices {
+			if d := choice.Delta.Content; d != nil && *d != "" {
+				content.WriteString(*d)
+				if onText != nil {
+					onText(*d)
+				}
+			}
+			for _, tc := range choice.Delta.ToolCalls {
+				if tc.Index < 0 || tc.Index >= 32 {
+					continue
+				}
+				for len(calls) <= tc.Index {
+					calls = append(calls, ToolCall{Type: "function"})
+				}
+				call := &calls[tc.Index]
+				if tc.ID != "" {
+					call.ID = tc.ID
+				}
+				call.Function.Name += tc.Function.Name
+				call.Function.Arguments += tc.Function.Arguments
+			}
+		}
 	}
-	return out.Choices[0].Message, nil
+	if err := scanner.Err(); err != nil {
+		return Message{}, err
+	}
+	msg := Message{Role: "assistant", ToolCalls: calls}
+	if content.Len() > 0 {
+		msg.Content = text(content.String())
+	}
+	return msg, nil
 }
 
 // Embed devuelve un vector por cada texto, en el mismo orden.

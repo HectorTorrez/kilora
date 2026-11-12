@@ -104,7 +104,7 @@ function Layout() {
 				</div>
 			</header>
 			<Outlet />
-			<AssistantChat mode="propietario" />
+			<AssistantChat mode="propietario" userName={me.user.full_name} />
 		</div>
 	);
 }

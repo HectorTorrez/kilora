@@ -3,6 +3,8 @@ package httpserver
 import (
 	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -105,13 +107,27 @@ func (s *server) assistantChat(w http.ResponseWriter, r *http.Request) error {
 		session.Page = *in.Page
 	}
 
-	_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(assistantTimeout + 5*time.Second))
-	reply, err := s.assistant.Run(ctx, session, history, s.fetchAs(r))
+	// A partir de aquí la respuesta es un stream de eventos (SSE); los errores
+	// viajan como evento "error" porque el estado HTTP ya se envió.
+	rc := http.NewResponseController(w)
+	_ = rc.SetWriteDeadline(time.Now().Add(assistantTimeout + 5*time.Second))
+	h := w.Header()
+	h.Set("Content-Type", "text/event-stream; charset=utf-8")
+	h.Set("Cache-Control", "no-cache, no-transform")
+	h.Set("X-Accel-Buffering", "no")
+	w.WriteHeader(http.StatusOK)
+	send := func(e any) {
+		data, _ := json.Marshal(e)
+		_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
+		_ = rc.Flush()
+	}
+	reply, err := s.assistant.Run(ctx, session, history, s.fetchAs(r), func(e assistant.Event) { send(e) })
 	if err != nil {
 		s.logger.Error("asistente", "user", user.ID, "error", err)
-		return httpError{http.StatusBadGateway, "El asistente no pudo responder. Intenta de nuevo."}
+		send(map[string]string{"type": "error", "text": "El asistente no pudo responder. Intenta de nuevo."})
+		return nil
 	}
-	writeJSON(w, http.StatusOK, reply)
+	send(map[string]any{"type": "done", "reply": reply.Text})
 	return nil
 }
 

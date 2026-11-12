@@ -3013,7 +3013,7 @@
     "/api/v1/assistant/chat": {
       "post": {
         "summary": "Pregunta al asistente de IA",
-        "description": "Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura.",
+        "description": "Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura. La respuesta es un stream SSE: cada evento `data:` es un AssistantEvent.",
         "requestBody": {
           "required": true,
           "content": {
@@ -3026,11 +3026,11 @@
         },
         "responses": {
           "200": {
-            "description": "Respuesta exitosa",
+            "description": "Stream de eventos (text/event-stream)",
             "content": {
-              "application/json": {
+              "text/event-stream": {
                 "schema": {
-                  "$ref": "#/components/schemas/AssistantReply"
+                  "$ref": "#/components/schemas/AssistantEvent"
                 }
               }
             }
@@ -3057,16 +3057,6 @@
           },
           "429": {
             "description": "Demasiadas solicitudes",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Error"
-                }
-              }
-            }
-          },
-          "502": {
-            "description": "El modelo no respondió",
             "content": {
               "application/json": {
                 "schema": {
@@ -8210,30 +8200,46 @@
           "messages"
         ]
       },
-      "AssistantReply": {
+      "AssistantSource": {
         "type": "object",
         "properties": {
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ]
+      },
+      "AssistantEvent": {
+        "type": "object",
+        "description": "status: consulta en curso; delta: fragmento de texto; sources: fuentes de la ayuda; done: respuesta completa; error: fallo después de iniciar el stream.",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "status",
+              "delta",
+              "sources",
+              "done",
+              "error"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
           "reply": {
             "type": "string"
           },
           "sources": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "title": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "title"
-              ]
+              "$ref": "#/components/schemas/AssistantSource"
             }
           }
         },
         "required": [
-          "reply",
-          "sources"
+          "type"
         ]
       }
     }

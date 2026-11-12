@@ -308,7 +308,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 						{children}
 					</BranchProvider>
 				</WorkshopProvider>
-				<AssistantChat mode="taller" workshopId={active?.workshop_id} />
+				<AssistantChat
+					mode="taller"
+					userName={me.user.full_name}
+					workshopId={active?.workshop_id}
+				/>
 			</div>
 		</div>
 	);

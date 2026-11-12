@@ -121,7 +121,7 @@ func (f *fakeOpenAI) server(t *testing.T) *httptest.Server {
 			f.requests = append(f.requests, body.Messages)
 			msg := f.replies[0]
 			f.replies = f.replies[1:]
-			_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": msg}}})
+			StreamTestMessage(w, msg)
 		default:
 			http.NotFound(w, r)
 		}
@@ -150,12 +150,26 @@ func TestAgentRunsDataTools(t *testing.T) {
 		return 200, []byte(`{"records":[]}`), nil
 	}
 	msg := "¿Cuándo cambié el aceite?"
-	reply, err := agent.Run(context.Background(), Session{UserName: "Ana"}, []Message{{Role: "user", Content: &msg}}, fetch)
+	var events []Event
+	reply, err := agent.Run(context.Background(), Session{UserName: "Ana"}, []Message{{Role: "user", Content: &msg}}, fetch, func(e Event) { events = append(events, e) })
 	if err != nil {
 		t.Fatal(err)
 	}
 	if reply.Text != "Tu último cambio de aceite fue el 3 de marzo." {
 		t.Fatalf("%+v", reply)
+	}
+	var streamed strings.Builder
+	statuses := 0
+	for _, e := range events {
+		switch e.Type {
+		case "delta":
+			streamed.WriteString(e.Text)
+		case "status":
+			statuses++
+		}
+	}
+	if streamed.String() != reply.Text || statuses != 2 {
+		t.Fatalf("eventos: %+v", events)
 	}
 	if len(fetched) != 1 || fetched[0] != "/api/v1/me/vehicles/"+v+"/history?limit=50" {
 		t.Fatalf("consultas: %v", fetched)
@@ -181,11 +195,18 @@ func TestAgentStopsAfterMaxSteps(t *testing.T) {
 	srv := fake.server(t)
 	agent := &Agent{Client: &OpenAI{APIKey: "test", BaseURL: srv.URL, Model: "m"}}
 	msg := "hola"
-	reply, err := agent.Run(context.Background(), Session{}, []Message{{Role: "user", Content: &msg}}, func(context.Context, string) (int, []byte, error) { return 200, []byte(`[]`), nil })
+	reply, err := agent.Run(context.Background(), Session{}, []Message{{Role: "user", Content: &msg}}, func(context.Context, string) (int, []byte, error) { return 200, []byte(`[]`), nil }, nil)
 	if err != nil || reply.Text != "listo" {
 		t.Fatalf("%+v %v", reply, err)
 	}
 	if len(fake.requests) != maxSteps+1 {
 		t.Fatalf("%d llamadas", len(fake.requests))
+	}
+}
+
+func TestPromptLimitsScopeToKilora(t *testing.T) {
+	prompt := systemPrompt(Session{UserName: "Ana"})
+	if !strings.Contains(prompt, "Alcance") || !strings.Contains(prompt, OffTopicReply) {
+		t.Fatal("el prompt no limita el alcance a Kilora")
 	}
 }
