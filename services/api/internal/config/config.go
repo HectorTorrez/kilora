@@ -3,6 +3,7 @@ package config
 
 import (
 	"fmt"
+	"net/netip"
 	"os"
 	"strings"
 
@@ -10,15 +11,16 @@ import (
 )
 
 type Config struct {
-	Addr         string
-	DatabaseURL  string
-	WebOrigin    string
-	SessionKey   string
-	ResendAPIKey string
-	EmailFrom    string
-	Env          string
-	DemoMode     bool
-	OpenAI       OpenAIConfig
+	Addr           string
+	DatabaseURL    string
+	WebOrigin      string
+	SessionKey     string
+	ResendAPIKey   string
+	EmailFrom      string
+	Env            string
+	DemoMode       bool
+	TrustedProxies []netip.Prefix
+	OpenAI         OpenAIConfig
 }
 
 // OpenAIConfig configura el asistente de IA; sin APIKey el asistente queda desactivado.
@@ -54,6 +56,17 @@ func Load() (Config, error) {
 			EmbeddingModel:  env("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
 			ReasoningEffort: envOr("OPENAI_REASONING_EFFORT", "low"),
 		},
+	}
+
+	for _, cidr := range strings.Split(os.Getenv("TRUSTED_PROXY_CIDRS"), ",") {
+		if strings.TrimSpace(cidr) == "" {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(strings.TrimSpace(cidr))
+		if err != nil {
+			return Config{}, fmt.Errorf("TRUSTED_PROXY_CIDRS inválido: %w", err)
+		}
+		cfg.TrustedProxies = append(cfg.TrustedProxies, prefix)
 	}
 
 	if cfg.DatabaseURL == "" {

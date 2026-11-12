@@ -4,6 +4,7 @@ package httpserver
 import (
 	"log/slog"
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -15,12 +16,13 @@ import (
 )
 
 type Deps struct {
-	Logger        *slog.Logger
-	DB            *pgxpool.Pool
-	WebOrigin     string
-	Mailer        auth.Mailer
-	SecureCookies bool
-	DemoMode      bool
+	Logger         *slog.Logger
+	DB             *pgxpool.Pool
+	WebOrigin      string
+	Mailer         auth.Mailer
+	SecureCookies  bool
+	TrustedProxies []netip.Prefix
+	DemoMode       bool
 	// AI activa el asistente; nil lo deja desactivado.
 	AI *assistant.OpenAI
 }
@@ -56,7 +58,7 @@ func NewRouter(d Deps) http.Handler {
 	s.router = r
 
 	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
+	r.Use(trustedClientIP(d.TrustedProxies))
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger(d.Logger))
 	r.Use(timeouts(30*time.Second, map[string]time.Duration{assistantChatPath: assistantTimeout}, aiPaths, aiTimeout))
