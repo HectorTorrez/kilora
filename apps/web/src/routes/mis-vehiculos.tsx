@@ -5,6 +5,7 @@ import {
 	redirect,
 	useNavigate,
 } from "@tanstack/react-router";
+import { AssistantChat } from "@/components/kilora/assistant-chat";
 import { DemoBanner } from "@/components/kilora/demo";
 import { Button } from "@/components/ui/button";
 import {
@@ -103,6 +104,7 @@ function Layout() {
 				</div>
 			</header>
 			<Outlet />
+			<AssistantChat mode="propietario" />
 		</div>
 	);
 }

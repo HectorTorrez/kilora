@@ -2886,6 +2886,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/assistant/chat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pregunta al asistente de IA
+         * @description Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AssistantChatInput"];
+                };
+            };
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AssistantReply"];
+                    };
+                };
+                /** @description Mensajes inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Sin sesión */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Demasiadas solicitudes */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description El modelo no respondió */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Asistente no configurado */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/me/vehicles": {
         parameters: {
             query?: never;
@@ -5339,6 +5427,27 @@ export interface components {
          * @enum {string}
          */
         PartKey: "aceite_motor" | "filtro_aceite" | "filtro_aire" | "bujias" | "correa_distribucion" | "banda_accesorios" | "inyectores" | "filtro_combustible" | "refrigerante" | "radiador" | "termostato" | "bomba_agua" | "gas_ac" | "compresor_ac" | "filtro_cabina" | "bateria" | "alternador" | "motor_arranque" | "faros" | "luces_traseras" | "aceite_transmision" | "embrague" | "flechas" | "cardan" | "diferencial" | "cremallera" | "terminales_direccion" | "liquido_direccion" | "pastillas_delanteras" | "pastillas_traseras" | "discos_delanteros" | "discos_traseros" | "zapatas_traseras" | "liquido_frenos" | "amortiguadores_delanteros" | "amortiguadores_traseros" | "ballestas" | "llantas_delanteras" | "llantas_traseras" | "alineacion_balanceo" | "catalizador" | "silenciador" | "parabrisas" | "plumillas" | "espejos" | "pintura";
+        AssistantMessage: {
+            /** @enum {string} */
+            role: "user" | "assistant";
+            content: string;
+        };
+        AssistantChatInput: {
+            messages: components["schemas"]["AssistantMessage"][];
+            /**
+             * Format: uuid
+             * @description Taller activo en pantalla.
+             */
+            workshop_id?: string;
+            /** @description Ruta abierta, como contexto. */
+            page?: string;
+        };
+        AssistantReply: {
+            reply: string;
+            sources: {
+                title: string;
+            }[];
+        };
     };
     responses: never;
     parameters: never;

@@ -3010,6 +3010,89 @@
         ]
       }
     },
+    "/api/v1/assistant/chat": {
+      "post": {
+        "summary": "Pregunta al asistente de IA",
+        "description": "Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssistantChatInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantReply"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Mensajes inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Sin sesión",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Demasiadas solicitudes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "El modelo no respondió",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Asistente no configurado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
     "/api/v1/me/vehicles": {
       "parameters": [],
       "get": {
@@ -8080,6 +8163,78 @@
           "pintura"
         ],
         "description": "Pieza concreta del catálogo; define dónde se dibuja en el vehículo."
+      },
+      "AssistantMessage": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ]
+          },
+          "content": {
+            "type": "string",
+            "maxLength": 4000
+          }
+        },
+        "required": [
+          "role",
+          "content"
+        ]
+      },
+      "AssistantChatInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "messages": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "$ref": "#/components/schemas/AssistantMessage"
+            }
+          },
+          "workshop_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Taller activo en pantalla."
+          },
+          "page": {
+            "type": "string",
+            "description": "Ruta abierta, como contexto."
+          }
+        },
+        "required": [
+          "messages"
+        ]
+      },
+      "AssistantReply": {
+        "type": "object",
+        "properties": {
+          "reply": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "title": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "title"
+              ]
+            }
+          }
+        },
+        "required": [
+          "reply",
+          "sources"
+        ]
       }
     }
   }

@@ -84,6 +84,15 @@ pnpm start
 
 The web app runs at [localhost:3300](http://localhost:3300), and the API at [localhost:8080](http://localhost:8080). During development, the frontend proxies `/api` requests to the API; leave `VITE_API_URL` empty to use this setup.
 
+## AI assistant
+
+Signed-in workshop staff and owners get an **Asistente** button. It answers two kinds of questions:
+
+- **How Kilora works**, using retrieval (RAG) over the help articles in [`services/api/internal/assistant/knowledge`](services/api/internal/assistant/knowledge). The API embeds each section with OpenAI, stores the vectors in `assistant_knowledge_chunk`, and recalculates only sections that changed. To teach it something new, add or edit a Markdown file there and restart the API.
+- **The user's own data** (orders, vehicles, quotes, customers, history), through read-only tools. Each tool becomes a `GET` on this same API with the user's session, so the assistant applies the same branch permissions and history projection as the app. It cannot see another workshop's prices or notes and cannot change anything.
+
+Set `OPENAI_API_KEY` in `.env` to turn it on. Without it, the assistant replies with a 503 and the rest of the app still works.
+
 ## Development reference
 
 Kilora uses React and TanStack Start for the web app, Go for the API, and PostgreSQL for storage.

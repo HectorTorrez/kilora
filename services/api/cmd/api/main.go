@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"kilora/api/internal/assistant"
 	"kilora/api/internal/auth"
 	"kilora/api/internal/config"
 	"kilora/api/internal/database"
@@ -44,6 +45,12 @@ func run(logger *slog.Logger) error {
 	if cfg.ResendAPIKey != "" {
 		mailer = auth.ResendMailer{APIKey: cfg.ResendAPIKey, From: cfg.EmailFrom}
 	}
+	var ai *assistant.OpenAI
+	if cfg.OpenAI.APIKey != "" {
+		ai = &assistant.OpenAI{APIKey: cfg.OpenAI.APIKey, BaseURL: cfg.OpenAI.BaseURL, Model: cfg.OpenAI.Model, EmbeddingModel: cfg.OpenAI.EmbeddingModel, ReasoningEffort: cfg.OpenAI.ReasoningEffort}
+	} else {
+		logger.Info("asistente de IA desactivado: falta OPENAI_API_KEY")
+	}
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: httpserver.NewRouter(httpserver.Deps{
@@ -53,6 +60,7 @@ func run(logger *slog.Logger) error {
 			Mailer:        mailer,
 			SecureCookies: cfg.IsProduction(),
 			DemoMode:      cfg.DemoMode,
+			AI:            ai,
 		}),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,

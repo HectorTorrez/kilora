@@ -634,6 +634,16 @@ type AppUser struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type AssistantKnowledgeChunk struct {
+	ID        string             `json:"id"`
+	Source    string             `json:"source"`
+	Title     string             `json:"title"`
+	Content   string             `json:"content"`
+	Model     string             `json:"model"`
+	Embedding []float32          `json:"embedding"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
 type AuditEvent struct {
 	ID          int64              `json:"id"`
 	ActorUserID *uuid.UUID         `json:"actor_user_id"`

@@ -18,6 +18,16 @@ type Config struct {
 	EmailFrom    string
 	Env          string
 	DemoMode     bool
+	OpenAI       OpenAIConfig
+}
+
+// OpenAIConfig configura el asistente de IA; sin APIKey el asistente queda desactivado.
+type OpenAIConfig struct {
+	APIKey          string
+	BaseURL         string
+	Model           string
+	EmbeddingModel  string
+	ReasoningEffort string
 }
 
 func Load() (Config, error) {
@@ -37,6 +47,13 @@ func Load() (Config, error) {
 		EmailFrom:    env("EMAIL_FROM", "no-reply@kilora.com"),
 		Env:          env("APP_ENV", "development"),
 		DemoMode:     strings.EqualFold(os.Getenv("DEMO_MODE"), "true"),
+		OpenAI: OpenAIConfig{
+			APIKey:          os.Getenv("OPENAI_API_KEY"),
+			BaseURL:         env("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+			Model:           env("OPENAI_MODEL", "gpt-5-mini"),
+			EmbeddingModel:  env("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small"),
+			ReasoningEffort: envOr("OPENAI_REASONING_EFFORT", "low"),
+		},
 	}
 
 	if cfg.DatabaseURL == "" {
@@ -55,6 +72,14 @@ func (c Config) IsProduction() bool {
 
 func env(key, fallback string) string {
 	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
+}
+
+// envOr es como env, pero respeta un valor vacío definido explícitamente.
+func envOr(key, fallback string) string {
+	if v, ok := os.LookupEnv(key); ok {
 		return v
 	}
 	return fallback

@@ -9,7 +9,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"kilora/api/internal/assistant"
 	"kilora/api/internal/auth"
+	"kilora/api/internal/database/sqlc"
 )
 
 type Deps struct {
@@ -19,6 +21,8 @@ type Deps struct {
 	Mailer        auth.Mailer
 	SecureCookies bool
 	DemoMode      bool
+	// AI activa el asistente; nil lo deja desactivado.
+	AI *assistant.OpenAI
 }
 
 type server struct {
@@ -29,6 +33,9 @@ type server struct {
 	mailer   auth.Mailer
 	limiter  limiter
 	demoMode bool
+	// router es el propio router: el asistente lo usa para consultar el API como el usuario.
+	router    http.Handler
+	assistant *assistant.Agent
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -39,13 +46,17 @@ func NewRouter(d Deps) http.Handler {
 		d.Mailer = auth.LogMailer{Logger: d.Logger}
 	}
 	s := &server{db: d.DB, logger: d.Logger, origin: d.WebOrigin, secure: d.SecureCookies, mailer: d.Mailer, demoMode: d.DemoMode, limiter: limiter{attempts: make(map[string][]time.Time)}}
+	if d.AI != nil {
+		s.assistant = &assistant.Agent{Client: d.AI, Knowledge: &assistant.Knowledge{Queries: sqlc.New(d.DB), Client: d.AI}}
+	}
 	r := chi.NewRouter()
+	s.router = r
 
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger(d.Logger))
-	r.Use(middleware.Timeout(30 * time.Second))
+	r.Use(timeouts(30*time.Second, map[string]time.Duration{assistantChatPath: assistantTimeout}))
 	r.Use(cors(d.WebOrigin))
 	r.Use(security(d.WebOrigin))
 	r.Use(s.loadSession)
@@ -68,6 +79,7 @@ func NewRouter(d Deps) http.Handler {
 			r.Get("/auth/me", s.handle(s.me))
 			r.Post("/invitations/{token}/accept", s.handle(s.acceptInvitation))
 			r.Post("/workshops", s.handle(s.createWorkshop))
+			r.Post("/assistant/chat", s.handle(s.assistantChat))
 			r.Get("/me/vehicles", s.handle(s.listOwnerVehicles))
 			r.Post("/me/vehicles", s.handle(s.createOwnerVehicle))
 			r.Get("/me/vehicles/{vehicleID}", s.handle(s.getOwnerVehicle))

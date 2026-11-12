@@ -21,6 +21,7 @@ import { type ReactNode, useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { AssistantChat } from "@/components/kilora/assistant-chat";
 import { DemoBanner } from "@/components/kilora/demo";
 import { FormDialog } from "@/components/kilora/form-dialog";
 import {
@@ -307,6 +308,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 						{children}
 					</BranchProvider>
 				</WorkshopProvider>
+				<AssistantChat mode="taller" workshopId={active?.workshop_id} />
 			</div>
 		</div>
 	);
