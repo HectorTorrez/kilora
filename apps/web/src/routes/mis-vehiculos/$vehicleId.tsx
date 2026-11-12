@@ -34,6 +34,7 @@ import {
 import { HistoryItems } from "@/components/kilora/history-record";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { ReceiptScan } from "@/components/kilora/receipt-scan";
+import { ServiceExplanation } from "@/components/kilora/service-explanation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -277,6 +278,11 @@ function Page() {
 										Notas del taller: {r.workshop_notes}
 									</p>
 								)}
+								<ServiceExplanation
+									vehicleID={id}
+									recordID={r.id}
+									corrections={r.corrections?.length}
+								/>
 								{r.corrections?.map((c) => (
 									<p
 										key={c.id}

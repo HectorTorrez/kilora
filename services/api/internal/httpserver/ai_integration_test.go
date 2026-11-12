@@ -2,6 +2,8 @@ package httpserver
 
 import (
 	"encoding/base64"
+	"fmt"
+	"github.com/google/uuid"
 	"io"
 	"log/slog"
 	"net/http"
@@ -146,5 +148,85 @@ func TestReceiptRejectsFutureDates(t *testing.T) {
 	got := api.obj(owner, "POST", "/api/v1/me/vehicles/"+v["id"].(string)+"/ai/receipt", `{"image":"data:image/png;base64,iVBORw0KGgo="}`, 200)
 	if got["performed_on"] != nil {
 		t.Fatalf("aceptó una fecha futura: %v", got)
+	}
+}
+
+// publishedForOwner crea un taller con un servicio publicado (con costos y
+// notas internas) en un vehículo ya vinculado a su propietario.
+func publishedForOwner(t *testing.T, api *testAPI) (workshop, owner *http.Client, path, vehicleID, orderPath string) {
+	t.Helper()
+	workshop, owner = api.client(), api.client()
+	path, _, branch, _ := api.workshop(workshop)
+	_, email := api.register(owner)
+	v := api.obj(workshop, "POST", path+"/vehicles", `{"plate":"P123","make":"Toyota","model":"Corolla","year":2015,"customer":{"full_name":"Ana López","phone":"7100-0004"}}`, 201)
+	vehicleID = v["id"].(string)
+	o := api.obj(workshop, "POST", path+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Servicio","internal_notes":"secreto_interno"}`, vehicleID, branch), 201)
+	orderPath = path + "/work-orders/" + o["id"].(string)
+	api.req(workshop, "POST", orderPath+"/jobs", `{"description":"Cambio de aceite","labor_price":"12.50","internal_cost":"3.00","mechanic_notes":"secreto_mecanico"}`, 201)
+	for _, status := range []string{"diagnostico", "en_reparacion", "listo"} {
+		api.req(workshop, "PATCH", orderPath+"/status", fmt.Sprintf(`{"status":%q}`, status), 200)
+	}
+	inv := api.obj(workshop, "POST", path+"/vehicles/"+vehicleID+"/invitations", fmt.Sprintf(`{"email":%q}`, email), 201)
+	parts := strings.Split(inv["url"].(string), "/")
+	api.req(owner, "POST", "/api/v1/invitations/"+parts[len(parts)-1]+"/accept", `{"consent":true}`, 200)
+	return workshop, owner, path, vehicleID, orderPath
+}
+
+func TestExplainRecordSendsOnlyTheOwnerProjection(t *testing.T) {
+	api, fake := newAITestAPI(t, func(string) any {
+		return map[string]any{"explanation": " Le cambiaron el aceite al motor. "}
+	})
+	workshop, owner, _, vid, _ := publishedForOwner(t, api)
+	hist := api.obj(owner, "GET", "/api/v1/me/vehicles/"+vid+"/history", "", 200)
+	rid := hist["records"].([]any)[0].(map[string]any)["id"].(string)
+	path := "/api/v1/me/vehicles/" + vid + "/history/" + rid + "/ai/explain"
+
+	got := api.obj(owner, "POST", path, "", 200)
+	if got["explanation"] != "Le cambiaron el aceite al motor." {
+		t.Fatalf("explicación: %v", got)
+	}
+	prompt := fake.last()
+	if !strings.Contains(prompt, "Cambio de aceite") || !strings.Contains(prompt, "Toyota Corolla 2015") {
+		t.Fatalf("faltan datos: %s", prompt)
+	}
+	for _, secret := range []string{"secreto_interno", "secreto_mecanico", "internal_cost", rid} {
+		if strings.Contains(prompt, secret) {
+			t.Fatalf("el modelo recibió %q: %s", secret, prompt)
+		}
+	}
+	api.req(workshop, "POST", path, "", 404)
+	api.req(owner, "POST", "/api/v1/me/vehicles/"+vid+"/history/"+uuid.NewString()+"/ai/explain", "", 404)
+}
+
+func TestQuoteMessageUsesTheSavedQuote(t *testing.T) {
+	api, fake := newAITestAPI(t, func(string) any {
+		return map[string]any{"message": "Hola, le enviamos la cotización."}
+	})
+	admin := api.client()
+	path, workshop, branch, _ := api.workshop(admin)
+	v := api.obj(admin, "POST", path+"/vehicles", `{"make":"Kia","model":"Rio","year":2019,"customer":{"full_name":"Ana López","phone":"7777-8888"}}`, 201)
+	o := api.obj(admin, "POST", path+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Frenos"}`, v["id"], branch), 201)
+	op := path + "/work-orders/" + o["id"].(string)
+	api.req(admin, "POST", op+"/quote/ai/message", "", 404)
+	api.req(admin, "PUT", op+"/quote", `{"items":[{"kind":"repuesto","description":"Pastillas delanteras","quantity":"2","unit_price":"20.25","part":"pastillas_delanteras"}]}`, 200)
+
+	got := api.obj(admin, "POST", op+"/quote/ai/message", "", 200)
+	if got["message"] != "Hola, le enviamos la cotización." {
+		t.Fatalf("mensaje: %v", got)
+	}
+	prompt := fake.last()
+	for _, want := range []string{"Pastillas delanteras", "40.50", "Kia Rio 2019"} {
+		if !strings.Contains(prompt, want) {
+			t.Fatalf("falta %q: %s", want, prompt)
+		}
+	}
+	mechanic := api.client()
+	api.member(mechanic, workshop, branch, sqlc.MembershipRoleMecanico)
+	api.req(mechanic, "POST", op+"/quote/ai/message", "", 403)
+
+	q := api.obj(admin, "POST", path+"/quotes", fmt.Sprintf(`{"customer_name":"Luis Pérez","customer_phone":"7000-1111","vehicle_model":"Hilux","branch_id":%q,"items":[{"kind":"mano_de_obra","description":"Alineación","quantity":"1","unit_price":"15.00"}]}`, branch), 201)
+	api.obj(admin, "POST", path+"/quotes/"+q["id"].(string)+"/ai/message", "", 200)
+	if prompt := fake.last(); !strings.Contains(prompt, "Luis Pérez") || !strings.Contains(prompt, "Alineación") || !strings.Contains(prompt, "valida_hasta") {
+		t.Fatalf("mostrador: %s", prompt)
 	}
 }

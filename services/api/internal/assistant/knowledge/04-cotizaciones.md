@@ -20,6 +20,10 @@ En "Cotizaciones" se pueden crear cotizaciones sin orden, por ejemplo para un cl
 
 Cada cotización se puede compartir como un enlace de solo lectura, por ejemplo por WhatsApp. El enlace muestra la fecha y la hora y es válido durante 15 días. El cliente no necesita cuenta.
 
+## Mensaje con IA
+
+Junto al botón de WhatsApp, "Mensaje con IA" redacta un mensaje cordial para el cliente que explica cada ítem en palabras simples y el total. El mensaje se puede editar; al enviarlo se comparte la cotización como siempre y el enlace se agrega al final. La cotización debe estar guardada.
+
 ## Resultado de la cotización
 
 El recepcionista marca a mano el resultado: Aceptó, Rechazó o No respondió. Mientras no se marque, queda Pendiente. Es la constancia de lo que el cliente decidió.

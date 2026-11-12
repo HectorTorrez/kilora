@@ -5254,6 +5254,305 @@
           }
         ]
       }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/history/{recordID}/ai/explain": {
+      "post": {
+        "summary": "Explicar un servicio con IA",
+        "description": "Resume en lenguaje sencillo un registro del historial. El modelo recibe solo la proyección que el propietario ya ve. Solo el propietario del vehículo.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceExplanation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "recordID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote/ai/message": {
+      "post": {
+        "summary": "Redactar mensaje de WhatsApp con IA",
+        "description": "Redacta un mensaje cordial que explica la cotización de una orden en lenguaje sencillo, a partir de la cotización guardada. No comparte ni guarda nada.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "orderID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workshops/{workshopID}/quotes/{quoteID}/ai/message": {
+      "post": {
+        "summary": "Redactar mensaje de WhatsApp con IA",
+        "description": "Redacta un mensaje cordial que explica una cotización de mostrador en lenguaje sencillo, a partir de la cotización guardada. No comparte ni guarda nada.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteMessage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "quoteID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -8604,6 +8903,29 @@
           "summary",
           "items",
           "total"
+        ]
+      },
+      "ServiceExplanation": {
+        "type": "object",
+        "properties": {
+          "explanation": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "explanation"
+        ]
+      },
+      "QuoteMessage": {
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Mensaje de WhatsApp sin el enlace; la web lo agrega al final."
+          }
+        },
+        "required": [
+          "message"
         ]
       }
     }

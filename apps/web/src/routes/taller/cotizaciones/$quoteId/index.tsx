@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AIQuoteMessage } from "@/components/kilora/ai-quote-message";
 import {
 	CounterQuoteForm,
 	counterQuoteFormValues,
@@ -54,6 +55,7 @@ import {
 	rememberQuoteShare,
 } from "@/features/taller/quotes";
 import { useTallerContext, useWorkshopId } from "@/features/taller/session";
+import { api, unwrap } from "@/lib/api";
 import { date, day, money, phone, quoteCode } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 
@@ -192,6 +194,21 @@ function QuoteDetailPage() {
 							<MessageCircle className="size-4" />
 							WhatsApp
 						</Button>
+						<AIQuoteMessage
+							generate={async () =>
+								unwrap(
+									await api.POST(
+										"/api/v1/workshops/{workshopID}/quotes/{quoteID}/ai/message",
+										{ params: { path: { workshopID, quoteID: quote.id } } },
+									),
+								)
+							}
+							share={() => share.mutateAsync()}
+							onShared={(link) => {
+								rememberQuoteShare(quote.id, link);
+								setUrl(link);
+							}}
+						/>
 						{editable ? (
 							<Button
 								type="button"
