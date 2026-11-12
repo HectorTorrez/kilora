@@ -5150,6 +5150,110 @@
           }
         ]
       }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/ai/receipt": {
+      "post": {
+        "summary": "Leer un recibo con IA",
+        "description": "Lee la foto de un recibo o factura de taller y devuelve los datos para prellenar un servicio manual. La imagen no se guarda y no se escribe nada. Solo el propietario del vehículo.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptScanInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -8417,6 +8521,89 @@
         },
         "required": [
           "items"
+        ]
+      },
+      "ReceiptScanInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "image": {
+            "type": "string",
+            "description": "Data URL (image/jpeg, image/png o image/webp) de hasta 4 MB."
+          }
+        },
+        "required": [
+          "image"
+        ]
+      },
+      "ReceiptItem": {
+        "type": "object",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "description",
+          "price"
+        ]
+      },
+      "ReceiptDraft": {
+        "type": "object",
+        "properties": {
+          "readable": {
+            "type": "boolean",
+            "description": "false si la imagen no es un recibo legible."
+          },
+          "performed_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "odometer_km": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "workshop_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptItem"
+            }
+          },
+          "total": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "readable",
+          "performed_on",
+          "odometer_km",
+          "workshop_name",
+          "summary",
+          "items",
+          "total"
         ]
       }
     }

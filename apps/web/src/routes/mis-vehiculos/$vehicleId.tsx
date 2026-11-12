@@ -33,6 +33,7 @@ import {
 } from "@/components/kilora/history-parts";
 import { HistoryItems } from "@/components/kilora/history-record";
 import { ListPagination } from "@/components/kilora/list-pagination";
+import { ReceiptScan } from "@/components/kilora/receipt-scan";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -191,6 +192,7 @@ function Page() {
 				</Button>
 			</div>
 			<ManualDialog
+				vehicleID={id}
 				open={manualOpen}
 				pending={manual.isPending}
 				onOpenChange={setManualOpen}
@@ -419,11 +421,13 @@ function allowDatePopover(event: {
 }
 
 function ManualDialog({
+	vehicleID,
 	open,
 	pending,
 	onOpenChange,
 	onSave,
 }: {
+	vehicleID: string;
 	open: boolean;
 	pending: boolean;
 	onOpenChange: (open: boolean) => void;
@@ -495,6 +499,32 @@ function ManualDialog({
 				</DialogHeader>
 				<Form {...form}>
 					<form onSubmit={submit} className="grid gap-5" noValidate>
+						<ReceiptScan
+							vehicleID={vehicleID}
+							onDraft={(draft) => {
+								const items = draft.items.map((item) => ({
+									description: item.description,
+									price: item.price ?? "",
+								}));
+								form.reset(
+									{
+										date: draft.performed_on ?? "",
+										km:
+											draft.odometer_km == null
+												? ""
+												: String(draft.odometer_km),
+										summary: draft.summary,
+										items: items.length
+											? items
+											: [{ description: "", price: "" }],
+										total: draft.total ?? "",
+										where: draft.workshop_name ?? "",
+									},
+									{ keepDefaultValues: true },
+								);
+								void form.trigger();
+							}}
+						/>
 						<RequiredLegend />
 						<DateField name="date" label="Fecha" autoFocus required />
 						<NumberField

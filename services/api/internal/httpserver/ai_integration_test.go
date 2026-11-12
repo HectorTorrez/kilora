@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/base64"
 	"io"
 	"log/slog"
 	"net/http"
@@ -94,3 +95,56 @@ func TestAIRoutesDisabledWithoutKey(t *testing.T) {
 	api.req(c, "POST", path+"/ai/quote-draft", `{"text":"frenos"}`, 503)
 }
 
+func TestReceiptIsOwnerOnlyAndValidated(t *testing.T) {
+	api, fake := newAITestAPI(t, func(string) any {
+		return map[string]any{
+			"readable": true, "performed_on": "2024-03-15", "odometer_km": 85210.4, "workshop_name": " Taller El Pino ",
+			"summary": "Cambio de aceite", "total": 45,
+			"items": []any{
+				map[string]any{"description": "Aceite 5W-30", "price": 30},
+				map[string]any{"description": "Filtro", "price": -2},
+				map[string]any{"description": " ", "price": 1},
+			},
+		}
+	})
+	owner := api.client()
+	api.register(owner)
+	v := api.obj(owner, "POST", "/api/v1/me/vehicles", `{"make":"Kia","model":"Rio"}`, 201)
+	path := "/api/v1/me/vehicles/" + v["id"].(string) + "/ai/receipt"
+	// Una foto de ~2 MB supera el límite general de 1 MB pero cabe en el del recibo.
+	photo := "data:image/jpeg;base64," + base64.StdEncoding.EncodeToString(make([]byte, 2<<20))
+
+	got := api.obj(owner, "POST", path, `{"image":"`+photo+`"}`, 200)
+	if got["performed_on"] != "2024-03-15" || got["odometer_km"] != float64(85210) || got["workshop_name"] != "Taller El Pino" || got["total"] != "45.00" {
+		t.Fatalf("recibo: %v", got)
+	}
+	items := got["items"].([]any)
+	if len(items) != 2 || items[0].(map[string]any)["price"] != "30.00" || items[1].(map[string]any)["price"] != nil {
+		t.Fatalf("ítems: %v", items)
+	}
+	if !strings.Contains(fake.last(), `"image_url"`) {
+		t.Fatal("la foto no llegó al modelo")
+	}
+
+	api.req(owner, "POST", path, `{"image":"data:text/html;base64,PGI+"}`, 400)
+	api.req(owner, "POST", path, `{"image":"data:image/png;base64,***"}`, 400)
+	stranger := api.client()
+	api.register(stranger)
+	api.req(stranger, "POST", path, `{"image":"`+photo+`"}`, 404)
+	if n := len(fake.requests); n != 1 {
+		t.Fatalf("%d llamadas al modelo, esperaba 1", n)
+	}
+}
+
+func TestReceiptRejectsFutureDates(t *testing.T) {
+	api, _ := newAITestAPI(t, func(string) any {
+		return map[string]any{"readable": true, "performed_on": "2999-01-01", "odometer_km": nil, "workshop_name": nil, "summary": "x", "total": nil, "items": []any{}}
+	})
+	owner := api.client()
+	api.register(owner)
+	v := api.obj(owner, "POST", "/api/v1/me/vehicles", `{"make":"Kia","model":"Rio"}`, 201)
+	got := api.obj(owner, "POST", "/api/v1/me/vehicles/"+v["id"].(string)+"/ai/receipt", `{"image":"data:image/png;base64,iVBORw0KGgo="}`, 200)
+	if got["performed_on"] != nil {
+		t.Fatalf("aceptó una fecha futura: %v", got)
+	}
+}

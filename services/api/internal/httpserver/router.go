@@ -91,6 +91,7 @@ func NewRouter(d Deps) http.Handler {
 			r.Post("/me/vehicles/{vehicleID}/odometer", s.handle(s.addOdometer))
 			r.Put("/me/vehicles/{vehicleID}/body-type", s.handle(s.setOwnerBodyType))
 			r.Get("/me/vehicles/{vehicleID}/history", s.handle(s.ownerHistory))
+			r.Post("/me/vehicles/{vehicleID}/ai/receipt", s.handle(s.readReceipt))
 			r.Route("/workshops/{workshopID}", func(r chi.Router) {
 				r.Use(s.requireWorkshop)
 				r.Get("/", s.inWorkshop(s.getWorkshop))

@@ -4763,6 +4763,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/vehicles/{vehicleID}/ai/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Leer un recibo con IA
+         * @description Lee la foto de un recibo o factura de taller y devuelve los datos para prellenar un servicio manual. La imagen no se guarda y no se escribe nada. Solo el propietario del vehículo.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ReceiptScanInput"];
+                };
+            };
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReceiptDraft"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5561,6 +5660,25 @@ export interface components {
         };
         QuoteDraft: {
             items: components["schemas"]["QuoteDraftItem"][];
+        };
+        ReceiptScanInput: {
+            /** @description Data URL (image/jpeg, image/png o image/webp) de hasta 4 MB. */
+            image: string;
+        };
+        ReceiptItem: {
+            description: string;
+            price: string | null;
+        };
+        ReceiptDraft: {
+            /** @description false si la imagen no es un recibo legible. */
+            readable: boolean;
+            /** Format: date */
+            performed_on: string | null;
+            odometer_km: number | null;
+            workshop_name: string | null;
+            summary: string;
+            items: components["schemas"]["ReceiptItem"][];
+            total: string | null;
         };
     };
     responses: never;

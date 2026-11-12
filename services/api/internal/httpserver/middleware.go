@@ -76,7 +76,7 @@ func cors(origin string) func(http.Handler) http.Handler {
 func security(origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+			r.Body = http.MaxBytesReader(w, r.Body, bodyLimit(r))
 			if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions {
 				o := r.Header.Get("Origin")
 				if o == "" && r.Header.Get("Referer") != "" {

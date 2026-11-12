@@ -3,7 +3,6 @@ package assistant
 import (
 	"context"
 	"fmt"
-	"math"
 	"slices"
 	"strings"
 	"unicode/utf8"
@@ -103,10 +102,7 @@ func (c *OpenAI) DraftQuote(ctx context.Context, note, vehicle string, parts []s
 		if q := decimal.NewFromFloat(v.Quantity).Round(2); q.IsPositive() && q.LessThan(decimal.NewFromInt(100_000_000)) {
 			item.Quantity = q.String()
 		}
-		if p := v.UnitPrice; p != nil && !math.IsNaN(*p) && *p >= 0 && *p < 10_000_000_000 {
-			s := decimal.NewFromFloat(*p).StringFixed(2)
-			item.UnitPrice = &s
-		}
+		item.UnitPrice = money(v.UnitPrice)
 		if v.Part != nil && slices.Contains(parts, *v.Part) {
 			part := *v.Part
 			item.Part = &part
