@@ -1,6 +1,7 @@
 package httpserver
 
 import (
+	"encoding/base64"
 	"net/http"
 	"slices"
 	"strings"
@@ -8,6 +9,8 @@ import (
 	"unicode/utf8"
 
 	"kilora/api/internal/assistant"
+	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/values"
 )
 
 const (
@@ -19,7 +22,23 @@ var errAIDisabled = httpError{http.StatusServiceUnavailable, "La IA no está con
 
 // aiPaths son las rutas que llaman al modelo y necesitan más tiempo que el
 // límite general. Se reconocen por el final de la ruta.
-var aiPaths = []string{"/ai/quote-draft"}
+var aiPaths = []string{"/ai/quote-draft", receiptPath}
+
+const (
+	receiptPath = "/ai/receipt"
+	// maxReceiptBody admite la foto en base64; la web la reduce antes de enviarla.
+	maxReceiptBody  = 6 << 20
+	maxReceiptImage = 4 << 20
+)
+
+// bodyLimit es el tamaño máximo del cuerpo de una petición: 1 MB, salvo la
+// foto de un recibo.
+func bodyLimit(r *http.Request) int64 {
+	if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, receiptPath) {
+		return maxReceiptBody
+	}
+	return 1 << 20
+}
 
 func (s *server) aiAllowed(r *http.Request) error {
 	if s.ai == nil {
@@ -74,5 +93,47 @@ func (s *server) quoteDraft(w http.ResponseWriter, r *http.Request, wc workshopA
 		return httpError{http.StatusBadGateway, "La IA no pudo generar el borrador. Intenta de nuevo."}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+	return nil
+}
+
+// receiptImageURL valida que image sea una data URL de una foto (JPEG, PNG o
+// WebP) de tamaño razonable.
+func receiptImageURL(image string) (string, bool) {
+	for _, prefix := range []string{"data:image/jpeg;base64,", "data:image/png;base64,", "data:image/webp;base64,"} {
+		if data, ok := strings.CutPrefix(image, prefix); ok {
+			raw, err := base64.StdEncoding.DecodeString(data)
+			return image, err == nil && len(raw) > 0 && len(raw) <= maxReceiptImage
+		}
+	}
+	return "", false
+}
+
+// readReceipt lee la foto de un recibo para prellenar un servicio manual del
+// propietario. La imagen no se guarda y nada se escribe: el propietario
+// revisa los datos y guarda el servicio él mismo.
+func (s *server) readReceipt(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		Image string `json:"image"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	ctx := r.Context()
+	if _, err := ownedVehicle(ctx, sqlc.New(s.db), r, currentUser(ctx).ID); err != nil {
+		return err
+	}
+	image, ok := receiptImageURL(in.Image)
+	if !ok {
+		return badRequest("La foto no es válida. Usá una imagen JPG, PNG o WebP de hasta 4 MB.")
+	}
+	if err := s.aiAllowed(r); err != nil {
+		return err
+	}
+	draft, err := s.ai.ReadReceipt(ctx, image, values.Today())
+	if err != nil {
+		s.logger.Error("lectura de recibo", "error", err)
+		return httpError{http.StatusBadGateway, "La IA no pudo leer el recibo. Intenta de nuevo."}
+	}
+	writeJSON(w, http.StatusOK, draft)
 	return nil
 }

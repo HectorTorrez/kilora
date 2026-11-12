@@ -8,6 +8,10 @@ En "Mis vehículos" aparecen los vehículos vinculados a tu cuenta. En cada uno 
 
 Si te hicieron un servicio fuera de Kilora, puedes agregarlo a mano en el historial de tu vehículo con fecha, kilometraje y lo que se hizo. Queda marcado como registrado por el propietario.
 
+## Escanear un recibo
+
+Al agregar un servicio manual, el botón "Escanear recibo" permite tomar o subir una foto del recibo o factura del taller. La IA lee la fecha, el kilometraje, el taller, los trabajos con sus precios y el total, y llena el formulario. Solo usa lo que se lee con claridad; lo demás queda vacío. La foto no se guarda en Kilora, y nada se registra hasta que revisas los datos y presionas "Guardar servicio".
+
 ## Corregir un registro
 
 Los registros no se editan ni se borran. Si algo está mal, agrega una corrección con el motivo; queda fechada y el registro original se conserva.

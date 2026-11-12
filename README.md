@@ -98,6 +98,7 @@ Set `OPENAI_API_KEY` in `.env` to turn it on. Without it, the assistant replies 
 Besides the chat, the same key enables AI helpers inside the forms. They follow one rule: **the AI drafts, a person confirms.** No AI endpoint writes data, and the model only sees what the user could already see.
 
 - **Quote from a note.** In any quote editor, *Describir con IA* turns a typed or dictated note ("cambio de aceite 5W-30 con filtro, pastillas delanteras…") into quote items matched to the part catalog. Prices are filled only when the note states them.
+- **Receipt to history.** Owners adding a manual service can tap *Escanear recibo* and photograph an old receipt or invoice. A vision model reads the date, mileage, workshop, line items and total into the form. The browser downsizes the photo, which also strips EXIF metadata, and the API never stores it.
 
 ## Development reference
 
