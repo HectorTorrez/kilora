@@ -6974,7 +6974,8 @@
             ]
           },
           "brand": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 100
           },
           "model": {
             "type": "string"
@@ -7225,6 +7226,10 @@
           "unit_price"
         ],
         "properties": {
+          "brand": {
+            "type": ["string", "null"],
+            "maxLength": 100
+          },
           "kind": {
             "type": "string",
             "enum": [

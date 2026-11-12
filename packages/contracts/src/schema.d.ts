@@ -5759,6 +5759,7 @@ export interface components {
             internal_notes?: string | null;
         };
         QuoteItem: {
+            brand?: string | null;
             /** @enum {string} */
             kind: "repuesto" | "mano_de_obra";
             description: string;

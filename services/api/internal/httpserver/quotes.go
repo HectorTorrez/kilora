@@ -36,6 +36,7 @@ type quoteInputItem struct {
 	Quantity    json.RawMessage    `json:"quantity"`
 	UnitPrice   json.RawMessage    `json:"unit_price"`
 	Part        *string            `json:"part"`
+	Brand       *string            `json:"brand"`
 }
 
 type parsedQuoteItem struct {
@@ -43,6 +44,7 @@ type parsedQuoteItem struct {
 	description     string
 	quantity, price pgtype.Numeric
 	part            *string
+	brand           *string
 }
 
 func parseQuoteItems(raw []quoteInputItem) ([]parsedQuoteItem, pgtype.Numeric, error) {
@@ -62,8 +64,15 @@ func parseQuoteItems(raw []quoteInputItem) ([]parsedQuoteItem, pgtype.Numeric, e
 		if err != nil {
 			return nil, pgtype.Numeric{}, err
 		}
+		brand := values.OptionalText(v.Brand)
+		if brand != nil && len([]rune(*brand)) > 100 {
+			return nil, pgtype.Numeric{}, badRequest("La marca debe tener como máximo 100 caracteres")
+		}
+		if v.Kind == sqlc.QuoteItemKindManoDeObra {
+			brand = nil
+		}
 		total = total.Add(values.LineTotal(amount(quantity), amount(price)))
-		items = append(items, parsedQuoteItem{v.Kind, description, quantity, price, part})
+		items = append(items, parsedQuoteItem{v.Kind, description, quantity, price, part, brand})
 	}
 	return items, dbNumeric(total), nil
 }
@@ -73,7 +82,7 @@ func replaceQuoteItems(ctx context.Context, q *sqlc.Queries, id uuid.UUID, items
 		return err
 	}
 	for i, v := range items {
-		if err := q.CreateQuoteItem(ctx, sqlc.CreateQuoteItemParams{QuoteID: id, Position: int32(i), Kind: v.kind, Description: v.description, Quantity: v.quantity, UnitPrice: v.price, Part: v.part}); err != nil {
+		if err := q.CreateQuoteItem(ctx, sqlc.CreateQuoteItemParams{QuoteID: id, Position: int32(i), Kind: v.kind, Description: v.description, Quantity: v.quantity, UnitPrice: v.price, Part: v.part, Brand: v.brand}); err != nil {
 			return err
 		}
 	}
@@ -83,7 +92,7 @@ func replaceQuoteItems(ctx context.Context, q *sqlc.Queries, id uuid.UUID, items
 func quoteItemsJSON(rows []sqlc.ListQuoteItemsRow) []any {
 	items := []any{}
 	for _, v := range rows {
-		items = append(items, map[string]any{"kind": v.Kind, "description": v.Description, "quantity": v.Quantity, "unit_price": v.UnitPrice, "part": v.Part})
+		items = append(items, map[string]any{"kind": v.Kind, "description": v.Description, "quantity": v.Quantity, "unit_price": v.UnitPrice, "part": v.Part, "brand": v.Brand})
 	}
 	return items
 }

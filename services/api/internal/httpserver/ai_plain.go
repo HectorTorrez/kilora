@@ -113,7 +113,7 @@ func quoteLines(rows []sqlc.ListQuoteItemsRow) []assistant.QuoteLine {
 		if v.Kind == sqlc.QuoteItemKindManoDeObra {
 			kind = "mano de obra"
 		}
-		lines = append(lines, assistant.QuoteLine{Kind: kind, Description: v.Description, Quantity: quantity.String(), Subtotal: values.LineTotal(quantity, price).StringFixed(2)})
+		lines = append(lines, assistant.QuoteLine{Kind: kind, Description: v.Description, Brand: v.Brand, Quantity: quantity.String(), Subtotal: values.LineTotal(quantity, price).StringFixed(2)})
 	}
 	return lines
 }

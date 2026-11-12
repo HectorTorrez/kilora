@@ -32,6 +32,7 @@ const quoteDraftPrompt = `Conviertes la nota de un recepcionista de taller autom
 Reglas:
 - Cada repuesto o insumo es un ítem "repuesto"; cada trabajo o servicio es un ítem "mano_de_obra". Un servicio como "cambio de aceite con filtro" produce el aceite y el filtro como repuestos y el cambio como mano de obra.
 - description: corta y clara en español, con la marca, viscosidad o medida si la nota la menciona (ej. "Aceite 5W-30 sintético", "Cambio de pastillas delanteras"). No repitas el tipo ("mano de obra", "repuesto") en la descripción.
+- Nunca inventes marcas, viscosidades, medidas ni especificaciones: inclúyelas solo si la nota las dice explícitamente. La marca del vehículo no es la marca del repuesto.
 - quantity: la cantidad mencionada (ej. "4 litros" = 4); si no se menciona, 1.
 - unit_price: solo si la nota dice el precio de ese ítem de forma explícita, en dólares; si no, null. Nunca inventes ni estimes precios.
 - part: la clave del catálogo que corresponde a la pieza del vehículo afectada, o null si ninguna aplica. Usa solo claves de la lista.

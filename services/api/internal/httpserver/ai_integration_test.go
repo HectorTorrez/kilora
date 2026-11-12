@@ -208,14 +208,14 @@ func TestQuoteMessageUsesTheSavedQuote(t *testing.T) {
 	o := api.obj(admin, "POST", path+"/work-orders", fmt.Sprintf(`{"vehicle_id":%q,"branch_id":%q,"reason":"Frenos"}`, v["id"], branch), 201)
 	op := path + "/work-orders/" + o["id"].(string)
 	api.req(admin, "POST", op+"/quote/ai/message", "", 404)
-	api.req(admin, "PUT", op+"/quote", `{"items":[{"kind":"repuesto","description":"Pastillas delanteras","quantity":"2","unit_price":"20.25","part":"pastillas_delanteras"}]}`, 200)
+	api.req(admin, "PUT", op+"/quote", `{"items":[{"kind":"repuesto","description":"Pastillas delanteras","brand":"Bosch","quantity":"2","unit_price":"20.25","part":"pastillas_delanteras"}]}`, 200)
 
 	got := api.obj(admin, "POST", op+"/quote/ai/message", "", 200)
 	if got["message"] != "Hola, le enviamos la cotización." {
 		t.Fatalf("mensaje: %v", got)
 	}
 	prompt := fake.last()
-	for _, want := range []string{"Pastillas delanteras", "40.50", "Kia Rio 2019"} {
+	for _, want := range []string{"Pastillas delanteras", "Bosch", "40.50", "Kia Rio 2019"} {
 		if !strings.Contains(prompt, want) {
 			t.Fatalf("falta %q: %s", want, prompt)
 		}

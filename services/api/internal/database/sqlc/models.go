@@ -813,6 +813,7 @@ type QuoteItem struct {
 	Quantity    pgtype.Numeric `json:"quantity"`
 	UnitPrice   pgtype.Numeric `json:"unit_price"`
 	Part        *string        `json:"part"`
+	Brand       *string        `json:"brand"`
 }
 
 type Recommendation struct {

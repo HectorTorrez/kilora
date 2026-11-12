@@ -1,20 +1,32 @@
 import type { components } from "@kilora/contracts";
 import { Plus, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import { money } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 import { isPartKey, partCatalog } from "@/lib/part-catalog";
 import { cn } from "@/lib/utils";
 import { AIQuoteDraft, type QuoteDraftItem } from "./ai-quote-draft";
 import { NumberField, SelectField, TextField } from "./form-fields";
-import { moneyField, quantityField, requiredText } from "./form-schemas";
+import {
+	moneyField,
+	optionalText,
+	quantityField,
+	requiredText,
+} from "./form-schemas";
 import { PartField } from "./part-picker";
 
 export const quoteItemSchema = z.object({
 	kind: z.enum(["repuesto", "mano_de_obra"]),
 	description: requiredText("Ingresá la descripción"),
+	brand: optionalText.max(100, "Usá como máximo 100 caracteres"),
 	quantity: quantityField,
 	unit_price: moneyField(true),
 	/** Clave del catálogo o "" si no aplica. */
@@ -30,6 +42,7 @@ export function blankQuoteItem(unitPrice = ""): QuoteItemValues {
 	return {
 		kind: "repuesto",
 		description: "",
+		brand: "",
 		quantity: "1",
 		unit_price: unitPrice,
 		part: "",
@@ -42,6 +55,7 @@ export function quoteItemValues(
 	return {
 		kind: item.kind,
 		description: item.description,
+		brand: item.brand ?? "",
 		quantity: String(item.quantity),
 		unit_price: String(item.unit_price),
 		part: item.part ?? "",
@@ -55,6 +69,7 @@ export function quoteItemPayload(
 	return {
 		kind: item.kind,
 		description: item.description,
+		brand: item.kind === "repuesto" ? item.brand.trim() || null : null,
 		quantity: item.quantity,
 		unit_price: item.unit_price,
 		part: isPartKey(item.part) ? item.part : null,
@@ -75,6 +90,7 @@ function draftItemValues(
 	return {
 		kind: item.kind,
 		description: item.description,
+		brand: "",
 		quantity: item.quantity,
 		unit_price: item.unit_price ?? unitPrice,
 		part: item.part && isPartKey(item.part) ? item.part : "",
@@ -108,7 +124,7 @@ export function QuoteItemsFields({
 		const next = draft.map((item) => draftItemValues(item, initialUnitPrice));
 		// Si solo hay ítems vacíos, el borrador los reemplaza; si no, se suma.
 		const empty = getValues("items").every(
-			(item) => !item.description.trim() && !item.part,
+			(item) => !item.description.trim() && !item.part && !item.brand.trim(),
 		);
 		if (empty) rows.replace(next);
 		else rows.append(next);
@@ -157,15 +173,23 @@ export function QuoteItemsFields({
 							{ value: "mano_de_obra", label: "Mano de obra" },
 						]}
 					/>
-					<TextField
-						name={`items.${index}.description`}
-						label="Descripción"
-						placeholder="Ej. Pastillas de freno delanteras"
-						className={cn(
-							hiddenLabel,
-							"order-first col-span-full pr-10 @md:pr-0 @2xl:order-none @2xl:col-span-1",
+					<div className="order-first col-span-full min-w-0 space-y-2 pr-10 @md:pr-0 @2xl:order-none @2xl:col-span-1">
+						<TextField
+							name={`items.${index}.description`}
+							label="Descripción"
+							placeholder="Ej. Pastillas de freno delanteras"
+							className={hiddenLabel}
+						/>
+						{watched?.[index]?.kind === "repuesto" && (
+							<TextField
+								name={`items.${index}.brand`}
+								label="Marca"
+								placeholder="Sin registrar"
+								maxLength={100}
+								optional
+							/>
 						)}
-					/>
+					</div>
 					<PartField
 						name={`items.${index}.part`}
 						label="Pieza en el vehículo"
@@ -208,19 +232,17 @@ export function QuoteItemsFields({
 							)}
 						</p>
 					</div>
-					<Button
-						type="button"
-						variant="ghost"
-						size="icon"
-						aria-label={`Quitar ítem ${index + 1}`}
-						title="Quitar ítem"
-						// En tarjeta angosta va arriba a la derecha, junto a "Descripción".
-						className="absolute top-1.5 right-1.5 size-10 text-ink-3 hover:text-destructive @md:static @md:self-end @md:justify-self-end"
+					<RemoveItemButton
+						index={index}
 						disabled={rows.fields.length === 1}
-						onClick={() => rows.remove(index)}
-					>
-						<Trash2 className="size-4" />
-					</Button>
+						// Un ítem sin datos se quita sin preguntar.
+						confirm={Boolean(
+							watched?.[index]?.description?.trim() ||
+								watched?.[index]?.part ||
+								watched?.[index]?.brand?.trim(),
+						)}
+						onRemove={() => rows.remove(index)}
+					/>
 				</div>
 			))}
 			{error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -251,5 +273,65 @@ export function QuoteItemsFields({
 				</dl>
 			</div>
 		</div>
+	);
+}
+
+/** Botón para quitar un ítem; pide confirmación si el ítem tiene datos. */
+function RemoveItemButton({
+	index,
+	disabled,
+	confirm,
+	onRemove,
+}: {
+	index: number;
+	disabled: boolean;
+	confirm: boolean;
+	onRemove: () => void;
+}) {
+	const [open, setOpen] = useState(false);
+	const trigger = (
+		<Button
+			type="button"
+			variant="ghost"
+			size="icon"
+			aria-label={`Quitar ítem ${index + 1}`}
+			title="Quitar ítem"
+			// En tarjeta angosta va arriba a la derecha, junto a "Descripción".
+			className="absolute top-1.5 right-1.5 size-10 text-ink-3 hover:text-destructive @md:static @md:self-end @md:justify-self-end"
+			disabled={disabled}
+			onClick={confirm ? undefined : onRemove}
+		>
+			<Trash2 className="size-4" />
+		</Button>
+	);
+	if (!confirm) return trigger;
+	return (
+		<Popover open={open} onOpenChange={setOpen}>
+			<PopoverTrigger asChild>{trigger}</PopoverTrigger>
+			<PopoverContent align="end" className="w-60 space-y-3 p-3">
+				<p className="text-sm">¿Quitar este ítem de la cotización?</p>
+				<div className="flex justify-end gap-2">
+					<Button
+						type="button"
+						variant="outline"
+						size="sm"
+						onClick={() => setOpen(false)}
+					>
+						Cancelar
+					</Button>
+					<Button
+						type="button"
+						variant="destructive"
+						size="sm"
+						onClick={() => {
+							setOpen(false);
+							onRemove();
+						}}
+					>
+						Quitar
+					</Button>
+				</div>
+			</PopoverContent>
+		</Popover>
 	);
 }

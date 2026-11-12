@@ -31,6 +31,9 @@ export function HistoryItems({
 				>
 					<span className={categorized ? "min-w-0" : undefined}>
 						{categorized ? item.description || item.name : item.description}
+						{item.brand && (
+							<span className="ml-1 text-ink-3">· {item.brand}</span>
+						)}
 						{categorized && item.category && (
 							<span className="ml-2 rounded bg-secondary px-1.5 py-px text-[10.5px] font-medium text-ink-2">
 								{categoryLabels[item.category]}

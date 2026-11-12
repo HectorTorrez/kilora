@@ -125,11 +125,16 @@ function PrintQuotePage() {
 						return (
 							<tr
 								// biome-ignore lint/suspicious/noArrayIndexKey: Los ítems no tienen id.
-								key={`${item.description}-${index}`}
+								key={`${item.description}{item.brand && <span className="ml-1 text-ink-3">· {item.brand}</span>}-${index}`}
 								className="border-b border-black/30"
 							>
 								<td className="py-1 pr-2">{kindLabel(item.kind)}</td>
-								<td className="py-1 pr-2">{item.description}</td>
+								<td className="py-1 pr-2">
+									{item.description}
+									{item.brand && (
+										<span className="ml-1 text-ink-3">· {item.brand}</span>
+									)}
+								</td>
 								<td className="py-1 pr-2 text-right tabular-nums">
 									{item.quantity}
 								</td>

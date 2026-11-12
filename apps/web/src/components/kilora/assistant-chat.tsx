@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
 import {
 	ArrowUp,
@@ -18,6 +19,10 @@ import {
 	useRef,
 	useState,
 } from "react";
+import {
+	type ServiceQuestion,
+	useAssistantRequest,
+} from "@/components/kilora/assistant-context";
 import { Button } from "@/components/ui/button";
 import {
 	Sheet,
@@ -26,12 +31,13 @@ import {
 	SheetDescription,
 	SheetTitle,
 } from "@/components/ui/sheet";
-import { errorMessage } from "@/lib/api";
+import { api, errorMessage, unwrap } from "@/lib/api";
 import { type AssistantSource, streamAssistant } from "@/lib/assistant";
 import { cn } from "@/lib/utils";
 
 type ChatMessage = {
 	role: "user" | "assistant";
+	service?: ServiceQuestion;
 	content: string;
 	/** Consultas que hizo el asistente para responder, en orden. */
 	steps?: string[];
@@ -296,6 +302,9 @@ export function AssistantChat({
 	userName: string;
 	workshopId?: string;
 }) {
+	const assistant = useAssistantRequest();
+	const queryClient = useQueryClient();
+	const handledRequest = useRef<ServiceQuestion | null>(null);
 	const [open, setOpen] = useState(false);
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [draft, setDraft] = useState("");
@@ -332,7 +341,26 @@ export function AssistantChat({
 		if (!el) return;
 		el.style.height = "auto";
 		el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-	}, [draft]);
+	}, [draft, open]);
+
+	const fitViewport = useCallback((sheet: HTMLDivElement | null) => {
+		const viewport = window.visualViewport;
+		if (!viewport || !sheet) return;
+		const resize = () => {
+			sheet.style.height = `${viewport.height}px`;
+			sheet.style.top = `${viewport.offsetTop}px`;
+			if (stickRef.current && scrollRef.current) {
+				scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+			}
+		};
+		resize();
+		viewport.addEventListener("resize", resize);
+		viewport.addEventListener("scroll", resize);
+		return () => {
+			viewport.removeEventListener("resize", resize);
+			viewport.removeEventListener("scroll", resize);
+		};
+	}, []);
 
 	const updateLast = useCallback(
 		(fn: (m: ChatMessage) => ChatMessage) =>
@@ -344,61 +372,125 @@ export function AssistantChat({
 		[],
 	);
 
-	const run = async (history: ChatMessage[]) => {
-		const controller = new AbortController();
-		abortRef.current = controller;
-		stickRef.current = true;
-		setMessages([
-			...history,
-			{ role: "assistant", content: "", steps: [], streaming: true },
-		]);
-		try {
-			await streamAssistant(
-				{
-					messages: history
-						.filter((m) => !m.error && m.content)
-						.slice(-MAX_HISTORY)
-						.map(({ role, content }) => ({ role, content })),
-					workshop_id: workshopId || undefined,
-					page,
-				},
-				(event) => {
-					if (event.type === "status" && event.text) {
-						const step = event.text;
-						updateLast((m) => ({ ...m, steps: [...(m.steps ?? []), step] }));
-					} else if (event.type === "delta" && event.text) {
-						const delta = event.text;
-						updateLast((m) => ({ ...m, content: m.content + delta }));
-					} else if (event.type === "sources") {
-						updateLast((m) => ({ ...m, sources: event.sources }));
-					}
-				},
-				controller.signal,
-			);
-			updateLast((m) => ({ ...m, streaming: false }));
-		} catch (error) {
-			if (controller.signal.aborted) {
-				updateLast((m) =>
-					m.content
-						? { ...m, streaming: false }
-						: { ...m, streaming: false, content: "Respuesta detenida." },
+	const run = useCallback(
+		async (history: ChatMessage[]) => {
+			abortRef.current?.abort();
+			const controller = new AbortController();
+			abortRef.current = controller;
+			stickRef.current = true;
+			setMessages([
+				...history,
+				{ role: "assistant", content: "", steps: [], streaming: true },
+			]);
+			const update = (fn: (m: ChatMessage) => ChatMessage) => {
+				if (abortRef.current === controller) updateLast(fn);
+			};
+			try {
+				const service = history.at(-1)?.service;
+				if (service) {
+					update((m) => ({ ...m, steps: ["Leyendo el servicio"] }));
+					const result = await queryClient.fetchQuery({
+						queryKey: [
+							"owner",
+							"explain",
+							service.vehicleID,
+							service.recordID,
+							service.corrections,
+						],
+						queryFn: async () =>
+							unwrap(
+								await api.POST(
+									"/api/v1/me/vehicles/{vehicleID}/history/{recordID}/ai/explain",
+									{
+										params: {
+											path: {
+												vehicleID: service.vehicleID,
+												recordID: service.recordID,
+											},
+										},
+									},
+								),
+							),
+						staleTime: Number.POSITIVE_INFINITY,
+						retry: false,
+					});
+					update((m) => ({
+						...m,
+						content: result.explanation,
+						streaming: false,
+					}));
+					return;
+				}
+				await streamAssistant(
+					{
+						messages: history
+							.filter((m) => !m.error && m.content)
+							.slice(-MAX_HISTORY)
+							.map(({ role, content, service }) => ({
+								role,
+								content: service
+									? `${content}\nContexto del servicio: vehicle_id=${service.vehicleID}, record_id=${service.recordID}.`
+									: content,
+							})),
+						workshop_id: workshopId || undefined,
+						page,
+					},
+					(event) => {
+						if (event.type === "status" && event.text) {
+							const step = event.text;
+							update((m) => ({ ...m, steps: [...(m.steps ?? []), step] }));
+						} else if (event.type === "delta" && event.text) {
+							const delta = event.text;
+							update((m) => ({ ...m, content: m.content + delta }));
+						} else if (event.type === "sources") {
+							update((m) => ({ ...m, sources: event.sources }));
+						}
+					},
+					controller.signal,
 				);
-			} else {
-				updateLast((m) => ({
-					...m,
-					streaming: false,
-					error: true,
-					content: errorMessage(error),
-				}));
+				update((m) => ({ ...m, streaming: false }));
+			} catch (error) {
+				if (controller.signal.aborted) {
+					update((m) =>
+						m.content
+							? { ...m, streaming: false }
+							: { ...m, streaming: false, content: "Respuesta detenida." },
+					);
+				} else {
+					update((m) => ({
+						...m,
+						streaming: false,
+						error: true,
+						content: errorMessage(error),
+					}));
+				}
+			} finally {
+				if (abortRef.current === controller) abortRef.current = null;
 			}
-		} finally {
-			if (abortRef.current === controller) abortRef.current = null;
-		}
-	};
+		},
+		[page, queryClient, updateLast, workshopId],
+	);
+
+	useEffect(() => {
+		const request = assistant?.request;
+		if (!request || handledRequest.current === request) return;
+		handledRequest.current = request;
+		setOpen(true);
+		setDraft("");
+		const history = messages.filter((m) => !m.streaming && !m.error);
+		void run([
+			...history,
+			{
+				role: "user",
+				content: `¿Qué me hicieron en el servicio «${request.summary}» del ${request.performedOn}? Explícamelo en palabras simples.`,
+				service: request,
+			},
+		]);
+	}, [assistant?.request, messages, run]);
 
 	const send = (text: string) => {
 		const content = text.trim().slice(0, MAX_LENGTH);
-		if (!content || busy) return;
+		if (!content || abortRef.current) return;
 		setDraft("");
 		void run([...messages, { role: "user", content }]);
 	};
@@ -408,8 +500,19 @@ export function AssistantChat({
 		if (history[history.length - 1]?.role === "user") void run(history);
 	};
 
+	const stop = () => {
+		abortRef.current?.abort();
+		abortRef.current = null;
+		updateLast((m) => ({
+			...m,
+			streaming: false,
+			content: m.content || "Respuesta detenida.",
+		}));
+	};
+
 	const reset = () => {
 		abortRef.current?.abort();
+		abortRef.current = null;
 		setMessages([]);
 		inputRef.current?.focus();
 	};
@@ -420,7 +523,7 @@ export function AssistantChat({
 				<Button
 					type="button"
 					onClick={() => setOpen(true)}
-					className="fixed right-4 bottom-4 z-40 h-12 gap-2 rounded-full bg-seal px-4 text-white shadow-lg shadow-seal/25 transition-transform hover:scale-[1.03] hover:bg-seal/90 print:hidden sm:right-6 sm:bottom-6 sm:px-5"
+					className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 h-12 touch-manipulation select-none gap-2 rounded-full bg-seal px-4 text-white shadow-lg shadow-seal/25 transition-transform hover:scale-[1.03] hover:bg-seal/90 print:hidden sm:right-6 sm:bottom-6 sm:px-5"
 					aria-label="Abrir asistente"
 				>
 					<Sparkles className="size-4" aria-hidden />
@@ -431,20 +534,25 @@ export function AssistantChat({
 			)}
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetContent
+					ref={fitViewport}
 					side="right"
 					showCloseButton={false}
 					onOpenAutoFocus={(e) => {
 						e.preventDefault();
-						inputRef.current?.focus();
+						if (
+							window.matchMedia("(hover: hover) and (pointer: fine)").matches
+						) {
+							inputRef.current?.focus();
+						}
 					}}
-					className="flex w-full flex-col gap-0 p-0 sm:max-w-lg"
+					className="flex h-dvh w-full flex-col gap-0 overflow-hidden border-l-0 p-0 sm:max-w-lg sm:border-l"
 				>
-					<header className="flex items-center gap-3 border-b px-4 py-3">
+					<header className="flex shrink-0 items-center gap-2 border-b bg-card px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 sm:gap-3">
 						<AssistantAvatar className="size-9" />
 						<div className="min-w-0 flex-1">
 							<SheetTitle className="text-base">Asistente Kilora</SheetTitle>
 							<SheetDescription className="text-xs">
-								Ve solo lo que tú puedes ver · no modifica nada
+								Tu historial y tus dudas, en un solo lugar
 							</SheetDescription>
 						</div>
 						{messages.length > 0 && (
@@ -452,6 +560,7 @@ export function AssistantChat({
 								type="button"
 								variant="ghost"
 								size="icon-sm"
+								className="size-11 shrink-0 touch-manipulation"
 								aria-label="Nueva conversación"
 								title="Nueva conversación"
 								onClick={reset}
@@ -464,6 +573,7 @@ export function AssistantChat({
 								type="button"
 								variant="ghost"
 								size="icon-sm"
+								className="size-11 shrink-0 touch-manipulation"
 								aria-label="Cerrar"
 							>
 								<X className="size-4" />
@@ -478,10 +588,10 @@ export function AssistantChat({
 							stickRef.current =
 								el.scrollHeight - el.scrollTop - el.clientHeight < 48;
 						}}
-						className="flex-1 overflow-y-auto px-4 py-5 text-sm"
+						className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 text-[15px] [overflow-wrap:anywhere] sm:text-sm"
 					>
 						{messages.length === 0 ? (
-							<div className="flex min-h-full flex-col justify-center gap-6 pb-6">
+							<div className="flex min-h-full flex-col justify-center gap-5 pb-2">
 								<div className="space-y-2 text-center">
 									<AssistantAvatar className="mx-auto size-12 [&_svg]:size-5" />
 									<h2 className="font-display text-xl font-semibold">
@@ -493,13 +603,13 @@ export function AssistantChat({
 											: "Pregúntame por el historial de tus vehículos o cómo usar Kilora."}
 									</p>
 								</div>
-								<div className="grid gap-2 sm:grid-cols-2">
+								<div className="grid grid-cols-2 gap-2">
 									{suggestions[mode].map((s) => (
 										<button
 											key={s.prompt}
 											type="button"
 											onClick={() => send(s.prompt)}
-											className="group rounded-xl border bg-card p-3 text-left transition-colors hover:border-seal/40 hover:bg-seal-soft/40 focus-visible:outline-2 focus-visible:outline-ring"
+											className="group touch-manipulation rounded-xl border bg-card p-3 text-left transition-colors hover:border-seal/40 hover:bg-seal-soft/40 focus-visible:outline-2 focus-visible:outline-ring"
 										>
 											<span className="block text-xs font-medium text-seal">
 												{s.title}
@@ -538,7 +648,7 @@ export function AssistantChat({
 					</div>
 
 					<form
-						className="border-t bg-background p-3"
+						className="shrink-0 border-t bg-background px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
 						onSubmit={(e) => {
 							e.preventDefault();
 							send(draft);
@@ -559,20 +669,21 @@ export function AssistantChat({
 										send(draft);
 									}
 								}}
+								enterKeyHint="send"
 								maxLength={MAX_LENGTH}
 								rows={1}
 								placeholder="Escribe tu pregunta…"
 								aria-label="Pregunta para el asistente"
-								className="max-h-40 min-h-9 flex-1 resize-none bg-transparent py-2 text-sm outline-none placeholder:text-ink-3"
+								className="max-h-40 min-h-11 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base sm:text-sm outline-none placeholder:text-ink-3"
 							/>
 							{busy ? (
 								<Button
 									type="button"
 									size="icon-sm"
 									variant="secondary"
-									className="rounded-xl"
+									className="size-11 shrink-0 touch-manipulation rounded-xl"
 									aria-label="Detener respuesta"
-									onClick={() => abortRef.current?.abort()}
+									onClick={stop}
 								>
 									<Square className="size-3 fill-current" />
 								</Button>
@@ -580,7 +691,7 @@ export function AssistantChat({
 								<Button
 									type="submit"
 									size="icon-sm"
-									className="rounded-xl bg-seal text-white hover:bg-seal/90"
+									className="size-11 shrink-0 touch-manipulation rounded-xl bg-seal text-white hover:bg-seal/90"
 									aria-label="Enviar"
 									disabled={!draft.trim()}
 								>

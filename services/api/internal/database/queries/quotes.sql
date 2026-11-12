@@ -14,13 +14,13 @@ RETURNING id, outcome;
 DELETE FROM quote_item WHERE quote_id = $1;
 
 -- name: CreateQuoteItem :exec
-INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price, part) VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(part));
+INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price, part, brand) VALUES ($1, $2, $3, $4, $5, $6, sqlc.narg(part), sqlc.narg(brand));
 
 -- name: GetQuoteData :one
 SELECT total::text, currency, outcome, outcome_at, outcome_by, shared_at, share_expires_at FROM quote WHERE id = $1;
 
 -- name: ListQuoteItems :many
-SELECT kind, description, quantity::text, unit_price::text, part FROM quote_item WHERE quote_id = $1 ORDER BY position;
+SELECT kind, description, quantity::text, unit_price::text, part, brand FROM quote_item WHERE quote_id = $1 ORDER BY position;
 
 -- name: ShareQuote :one
 UPDATE quote SET share_token_hash = $1, shared_at = now(), share_expires_at = now() + interval '15 days' WHERE work_order_id = $2 AND workshop_id = $3 RETURNING id, share_expires_at, total::text;

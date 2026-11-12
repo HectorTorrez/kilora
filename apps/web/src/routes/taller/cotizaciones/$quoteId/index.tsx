@@ -306,11 +306,14 @@ function QuoteDetailPage() {
 							{items.rows.map((item, index) => (
 								<TableRow
 									// biome-ignore lint/suspicious/noArrayIndexKey: Los ítems no tienen id.
-									key={`${item.description}-${index}`}
+									key={`${item.description}{item.brand && <span className="ml-1 text-ink-3">· {item.brand}</span>}-${index}`}
 									className="hover:bg-transparent"
 								>
 									<TableCell className="pl-3 sm:pl-4 text-[13px] font-medium whitespace-normal sm:pl-5">
 										{item.description}
+										{item.brand && (
+											<span className="ml-1 text-ink-3">· {item.brand}</span>
+										)}
 									</TableCell>
 									<TableCell className="hidden text-[13px] text-ink-3 sm:table-cell">
 										{item.kind === "repuesto" ? "Repuesto" : "Mano de obra"}

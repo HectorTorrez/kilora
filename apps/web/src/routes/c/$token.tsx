@@ -80,7 +80,7 @@ function PublicQuote() {
 						{q.items.map((item, i) => (
 							<TableRow
 								// biome-ignore lint/suspicious/noArrayIndexKey: Items have no IDs.
-								key={`${item.description}-${i}`}
+								key={`${item.description}{item.brand && <span className="ml-1 text-ink-3">· {item.brand}</span>}-${i}`}
 								className="text-sm"
 							>
 								<TableCell className="whitespace-normal">
@@ -90,13 +90,16 @@ function PublicQuote() {
 												type="button"
 												className="w-44 shrink-0 cursor-pointer rounded-md focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none sm:w-32"
 												onClick={() => item.part && setPart(item.part)}
-												aria-label={`Ver dónde está: ${item.description}`}
+												aria-label={`Ver dónde está: ${item.description}{item.brand && <span className="ml-1 text-ink-3">· {item.brand}</span>}`}
 											>
 												<PartThumb part={item.part} bodyType={q.body_type} />
 											</button>
 										)}
 										<div className="min-w-0">
 											{item.description}
+											{item.brand && (
+												<span className="ml-1 text-ink-3">· {item.brand}</span>
+											)}
 											<p className="text-ink-3">
 												{item.kind === "repuesto" ? "Repuesto" : "Mano de obra"}{" "}
 												· {item.quantity} × {money(item.unit_price)}

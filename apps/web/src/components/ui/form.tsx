@@ -91,7 +91,10 @@ function FormItem({
 		<FormItemContext.Provider value={{ id, required }}>
 			<div
 				data-slot="form-item"
-				className={cn("grid min-w-0 content-start gap-2", className)}
+				className={cn(
+					"grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-2",
+					className,
+				)}
 				{...props}
 			/>
 		</FormItemContext.Provider>

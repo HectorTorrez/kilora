@@ -151,7 +151,7 @@ func (q *Queries) CreateCounterQuote(ctx context.Context, arg CreateCounterQuote
 }
 
 const createQuoteItem = `-- name: CreateQuoteItem :exec
-INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price, part) VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO quote_item(quote_id, position, kind, description, quantity, unit_price, part, brand) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 `
 
 type CreateQuoteItemParams struct {
@@ -162,6 +162,7 @@ type CreateQuoteItemParams struct {
 	Quantity    pgtype.Numeric `json:"quantity"`
 	UnitPrice   pgtype.Numeric `json:"unit_price"`
 	Part        *string        `json:"part"`
+	Brand       *string        `json:"brand"`
 }
 
 func (q *Queries) CreateQuoteItem(ctx context.Context, arg CreateQuoteItemParams) error {
@@ -173,6 +174,7 @@ func (q *Queries) CreateQuoteItem(ctx context.Context, arg CreateQuoteItemParams
 		arg.Quantity,
 		arg.UnitPrice,
 		arg.Part,
+		arg.Brand,
 	)
 	return err
 }
@@ -513,7 +515,7 @@ func (q *Queries) ListCounterQuotes(ctx context.Context, arg ListCounterQuotesPa
 }
 
 const listQuoteItems = `-- name: ListQuoteItems :many
-SELECT kind, description, quantity::text, unit_price::text, part FROM quote_item WHERE quote_id = $1 ORDER BY position
+SELECT kind, description, quantity::text, unit_price::text, part, brand FROM quote_item WHERE quote_id = $1 ORDER BY position
 `
 
 type ListQuoteItemsRow struct {
@@ -522,6 +524,7 @@ type ListQuoteItemsRow struct {
 	Quantity    string        `json:"quantity"`
 	UnitPrice   string        `json:"unit_price"`
 	Part        *string       `json:"part"`
+	Brand       *string       `json:"brand"`
 }
 
 func (q *Queries) ListQuoteItems(ctx context.Context, quoteID uuid.UUID) ([]ListQuoteItemsRow, error) {
@@ -539,6 +542,7 @@ func (q *Queries) ListQuoteItems(ctx context.Context, quoteID uuid.UUID) ([]List
 			&i.Quantity,
 			&i.UnitPrice,
 			&i.Part,
+			&i.Brand,
 		); err != nil {
 			return nil, err
 		}

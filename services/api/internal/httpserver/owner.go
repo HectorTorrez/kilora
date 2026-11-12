@@ -238,7 +238,7 @@ func (s *server) addOdometer(w http.ResponseWriter, r *http.Request) error {
 
 func validManualItems(items []history.Item, itemErr, priceErr error) error {
 	for _, item := range items {
-		if (item.Kind != "trabajo" && item.Kind != "pieza") || strings.TrimSpace(item.Description) == "" || item.InternalCost != nil || item.MechanicNotes != nil {
+		if (item.Kind != "trabajo" && item.Kind != "pieza") || strings.TrimSpace(item.Description) == "" || item.InternalCost != nil || item.MechanicNotes != nil || (item.Brand != nil && len([]rune(*item.Brand)) > 100) {
 			return itemErr
 		}
 		if item.Price != nil {

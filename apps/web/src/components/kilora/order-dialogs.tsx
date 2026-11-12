@@ -252,7 +252,8 @@ function PartForm({
 					<TextField
 						name="brand"
 						label="Marca"
-						placeholder="Ej. Bosch"
+						placeholder="Sin registrar"
+						description="Completá solo la marca confirmada del repuesto."
 						maxLength={100}
 						optional
 					/>

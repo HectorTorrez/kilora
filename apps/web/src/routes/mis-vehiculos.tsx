@@ -6,6 +6,7 @@ import {
 	useNavigate,
 } from "@tanstack/react-router";
 import { AssistantChat } from "@/components/kilora/assistant-chat";
+import { AssistantProvider } from "@/components/kilora/assistant-context";
 import { DemoBanner } from "@/components/kilora/demo";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,69 +43,71 @@ function Layout() {
 	const logout = useLogout();
 	const navigate = useNavigate();
 	return (
-		<div className="min-h-dvh bg-background">
-			<DemoBanner email={me.user.email} />
-			<header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
-				<div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-5 sm:h-16">
-					<Link
-						to="/mis-vehiculos"
-						className="font-display text-lg font-bold tracking-[0.22em] sm:text-xl"
-					>
-						KILORA
-					</Link>
-					<DropdownMenu>
-						<DropdownMenuTrigger asChild>
-							<Button
-								type="button"
-								variant="ghost"
-								className="ml-auto h-10 gap-2 px-1.5 sm:pr-2"
-							>
-								<span
-									aria-hidden
-									className="grid size-8 place-items-center rounded-full bg-seal text-[11px] font-semibold tracking-wide text-white"
+		<AssistantProvider>
+			<div className="min-h-dvh bg-background">
+				<DemoBanner email={me.user.email} />
+				<header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur-md supports-[backdrop-filter]:bg-card/70">
+					<div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-5 sm:h-16">
+						<Link
+							to="/mis-vehiculos"
+							className="font-display text-lg font-bold tracking-[0.22em] sm:text-xl"
+						>
+							KILORA
+						</Link>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									type="button"
+									variant="ghost"
+									className="ml-auto h-10 gap-2 px-1.5 sm:pr-2"
 								>
-									{initials(me.user.full_name)}
-								</span>
-								<span className="hidden max-w-40 truncate text-sm font-medium sm:inline">
-									{me.user.full_name}
-								</span>
-								<span className="sr-only sm:hidden">{me.user.full_name}</span>
-							</Button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent align="end" className="w-64">
-							<DropdownMenuLabel className="font-normal">
-								<span className="block truncate text-sm font-semibold text-foreground">
-									{me.user.full_name}
-								</span>
-								<span className="block truncate text-xs text-ink-3">
-									{me.user.email}
-								</span>
-							</DropdownMenuLabel>
-							{me.memberships.length > 0 && (
-								<DropdownMenuItem asChild>
-									<Link to="/taller">Panel del taller</Link>
+									<span
+										aria-hidden
+										className="grid size-8 place-items-center rounded-full bg-seal text-[11px] font-semibold tracking-wide text-white"
+									>
+										{initials(me.user.full_name)}
+									</span>
+									<span className="hidden max-w-40 truncate text-sm font-medium sm:inline">
+										{me.user.full_name}
+									</span>
+									<span className="sr-only sm:hidden">{me.user.full_name}</span>
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" className="w-64">
+								<DropdownMenuLabel className="font-normal">
+									<span className="block truncate text-sm font-semibold text-foreground">
+										{me.user.full_name}
+									</span>
+									<span className="block truncate text-xs text-ink-3">
+										{me.user.email}
+									</span>
+								</DropdownMenuLabel>
+								{me.memberships.length > 0 && (
+									<DropdownMenuItem asChild>
+										<Link to="/taller">Panel del taller</Link>
+									</DropdownMenuItem>
+								)}
+								<DropdownMenuSeparator />
+								<DropdownMenuItem
+									onSelect={() => {
+										void (async () => {
+											await logout.mutateAsync();
+											await navigate({
+												to: "/login",
+												search: { redirect: undefined },
+											});
+										})();
+									}}
+								>
+									Cerrar sesión
 								</DropdownMenuItem>
-							)}
-							<DropdownMenuSeparator />
-							<DropdownMenuItem
-								onSelect={() => {
-									void (async () => {
-										await logout.mutateAsync();
-										await navigate({
-											to: "/login",
-											search: { redirect: undefined },
-										});
-									})();
-								}}
-							>
-								Cerrar sesión
-							</DropdownMenuItem>
-						</DropdownMenuContent>
-					</DropdownMenu>
-				</div>
-			</header>
-			<Outlet />
-			<AssistantChat mode="propietario" userName={me.user.full_name} />
-		</div>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
+				</header>
+				<Outlet />
+				<AssistantChat mode="propietario" userName={me.user.full_name} />
+			</div>
+		</AssistantProvider>
 	);
 }

@@ -72,6 +72,9 @@ import type { PartKey } from "@/lib/part-catalog";
 import { cn } from "@/lib/utils";
 import { Route as OwnerLayout } from "../mis-vehiculos";
 
+// Mapa 3D oculto por ahora; poner en true para mostrarlo de nuevo.
+const SHOW_3D_MAP = false;
+
 type HistoryRecord = components["schemas"]["HistoryRecord"];
 type ManualBody = Parameters<typeof ownerActions.manual>[1];
 type CorrectionBody = Parameters<typeof ownerActions.correction>[1];
@@ -221,19 +224,20 @@ function Page() {
 					<AlertDescription>{warning}</AlertDescription>
 				</Alert>
 			)}
-			{partsMap.data ? (
-				<CarPartsMap
-					records={partsMap.data.records}
-					currentKm={v.last_odometer_km}
-					bodyType={v.body_type}
-					onBodyTypeChange={async (type) => {
-						await bodyType.mutateAsync(type);
-						toast.success("Tipo de vehículo actualizado");
-					}}
-				/>
-			) : (
-				<Skeleton className="h-80 rounded-xl" aria-label="Cargando mapa…" />
-			)}
+			{SHOW_3D_MAP &&
+				(partsMap.data ? (
+					<CarPartsMap
+						records={partsMap.data.records}
+						currentKm={v.last_odometer_km}
+						bodyType={v.body_type}
+						onBodyTypeChange={async (type) => {
+							await bodyType.mutateAsync(type);
+							toast.success("Tipo de vehículo actualizado");
+						}}
+					/>
+				) : (
+					<Skeleton className="h-80 rounded-xl" aria-label="Cargando mapa…" />
+				))}
 			<div className="grid gap-6 md:grid-cols-[1fr_260px]">
 				<section ref={historyRef} className="scroll-mt-6">
 					<h2 className="mb-4 font-display text-2xl font-bold">
@@ -283,7 +287,9 @@ function Page() {
 								<ServiceExplanation
 									vehicleID={id}
 									recordID={r.id}
-									corrections={r.corrections?.length}
+									corrections={r.corrections?.length ?? 0}
+									summary={r.summary}
+									performedOn={day(r.performed_on)}
 								/>
 								{r.corrections?.map((c) => (
 									<p
@@ -408,6 +414,7 @@ const manualSchema = z.object({
 	items: z.array(
 		z.object({
 			description: z.string(),
+			brand: optionalText.max(100, "Usá como máximo 100 caracteres"),
 			price: moneyField(false),
 		}),
 	),
@@ -448,7 +455,7 @@ function ManualDialog({
 			date: "",
 			km: "",
 			summary: "",
-			items: [{ description: "", price: "" }],
+			items: [{ description: "", brand: "", price: "" }],
 			total: "",
 			where: "",
 		},
@@ -475,6 +482,7 @@ function ManualDialog({
 						{
 							kind: "trabajo" as const,
 							description,
+							...(item.brand ? { brand: item.brand } : {}),
 							...(item.price ? { price: item.price } : {}),
 						},
 					];
@@ -512,6 +520,7 @@ function ManualDialog({
 							onDraft={(draft) => {
 								const items = draft.items.map((item) => ({
 									description: item.description,
+									brand: "",
 									price: item.price ?? "",
 								}));
 								form.reset(
@@ -524,7 +533,7 @@ function ManualDialog({
 										summary: draft.summary,
 										items: items.length
 											? items
-											: [{ description: "", price: "" }],
+											: [{ description: "", brand: "", price: "" }],
 										total: draft.total ?? "",
 										where: draft.workshop_name ?? "",
 									},
@@ -556,12 +565,19 @@ function ManualDialog({
 							{rows.fields.map((row, index) => (
 								<div
 									key={row.id}
-									className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+									className="grid gap-5 sm:grid-cols-2 sm:items-end"
 								>
 									<TextField
 										name={`items.${index}.description`}
 										label="Trabajo o pieza"
 										placeholder="Ej. Filtro de aceite"
+										optional
+									/>
+									<TextField
+										name={`items.${index}.brand`}
+										label="Marca del repuesto"
+										placeholder="Sin registrar"
+										maxLength={100}
 										optional
 									/>
 									<NumberField
@@ -587,7 +603,9 @@ function ManualDialog({
 								type="button"
 								variant="outline"
 								className="w-full sm:w-auto"
-								onClick={() => rows.append({ description: "", price: "" })}
+								onClick={() =>
+									rows.append({ description: "", brand: "", price: "" })
+								}
 							>
 								Agregar otro ítem
 							</Button>
@@ -718,6 +736,7 @@ const correctionSchema = z
 			z.object({
 				kind: z.enum(["trabajo", "pieza"]),
 				description: z.string(),
+				brand: optionalText.max(100, "Usá como máximo 100 caracteres"),
 				price: moneyField(false),
 			}),
 		),
@@ -757,6 +776,7 @@ function CorrectionDialog({
 			items: record.items.map((item) => ({
 				kind: item.kind === "pieza" ? ("pieza" as const) : ("trabajo" as const),
 				description: item.description,
+				brand: item.brand ?? "",
 				price: item.price ?? "",
 			})),
 		},
@@ -775,11 +795,14 @@ function CorrectionDialog({
 					...(values.km ? { odometer_km: Number(values.km) } : {}),
 					...(values.editItems
 						? {
-								items: values.items.map(({ kind, description, price }) => ({
-									kind,
-									description: description.trim(),
-									...(price ? { price } : {}),
-								})),
+								items: values.items.map(
+									({ kind, description, brand, price }) => ({
+										kind,
+										description: description.trim(),
+										...(brand ? { brand } : {}),
+										...(price ? { price } : {}),
+									}),
+								),
 							}
 						: {}),
 				},
@@ -850,12 +873,19 @@ function CorrectionDialog({
 								{rows.fields.map((row, index) => (
 									<div
 										key={row.id}
-										className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-end"
+										className="grid gap-5 sm:grid-cols-2 sm:items-end"
 									>
 										<TextField
 											name={`items.${index}.description`}
 											label="Descripción"
 											required
+										/>
+										<TextField
+											name={`items.${index}.brand`}
+											label="Marca del repuesto"
+											placeholder="Sin registrar"
+											maxLength={100}
+											optional
 										/>
 										<NumberField
 											name={`items.${index}.price`}
@@ -882,6 +912,7 @@ function CorrectionDialog({
 										rows.append({
 											kind: "trabajo",
 											description: "",
+											brand: "",
 											price: "",
 										})
 									}
