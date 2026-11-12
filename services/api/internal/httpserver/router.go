@@ -36,6 +36,8 @@ type server struct {
 	// router es el propio router: el asistente lo usa para consultar el API como el usuario.
 	router    http.Handler
 	assistant *assistant.Agent
+	// ai genera borradores (cotizaciones, recibos, resúmenes); nil la desactiva.
+	ai *assistant.OpenAI
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -47,6 +49,7 @@ func NewRouter(d Deps) http.Handler {
 	}
 	s := &server{db: d.DB, logger: d.Logger, origin: d.WebOrigin, secure: d.SecureCookies, mailer: d.Mailer, demoMode: d.DemoMode, limiter: limiter{attempts: make(map[string][]time.Time)}}
 	if d.AI != nil {
+		s.ai = d.AI
 		s.assistant = &assistant.Agent{Client: d.AI, Knowledge: &assistant.Knowledge{Queries: sqlc.New(d.DB), Client: d.AI}}
 	}
 	r := chi.NewRouter()
@@ -56,7 +59,7 @@ func NewRouter(d Deps) http.Handler {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(requestLogger(d.Logger))
-	r.Use(timeouts(30*time.Second, map[string]time.Duration{assistantChatPath: assistantTimeout}))
+	r.Use(timeouts(30*time.Second, map[string]time.Duration{assistantChatPath: assistantTimeout}, aiPaths, aiTimeout))
 	r.Use(cors(d.WebOrigin))
 	r.Use(security(d.WebOrigin))
 	r.Use(s.loadSession)
@@ -134,6 +137,7 @@ func NewRouter(d Deps) http.Handler {
 				r.Delete("/members/{membershipID}", s.inWorkshop(s.removeMember))
 				r.Get("/audit", s.inWorkshop(s.listAudit))
 				r.Get("/audit/page", s.inWorkshop(s.listAuditPage))
+				r.Post("/ai/quote-draft", s.inWorkshop(s.quoteDraft))
 			})
 		})
 		r.Get("/", func(w http.ResponseWriter, _ *http.Request) {

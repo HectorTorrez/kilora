@@ -7,6 +7,7 @@ import { money } from "@/lib/format";
 import { formatCents, lineCents } from "@/lib/money";
 import { isPartKey, partCatalog } from "@/lib/part-catalog";
 import { cn } from "@/lib/utils";
+import { AIQuoteDraft, type QuoteDraftItem } from "./ai-quote-draft";
 import { NumberField, SelectField, TextField } from "./form-fields";
 import { moneyField, quantityField, requiredText } from "./form-schemas";
 import { PartField } from "./part-picker";
@@ -66,10 +67,29 @@ export function quoteItemPayload(
 const table =
 	"@2xl:grid-cols-[132px_minmax(0,1fr)_190px_76px_110px_90px_36px] @2xl:items-start";
 
+/** Ítem del formulario a partir de un ítem propuesto por la IA. */
+function draftItemValues(
+	item: QuoteDraftItem,
+	unitPrice: string,
+): QuoteItemValues {
+	return {
+		kind: item.kind,
+		description: item.description,
+		quantity: item.quantity,
+		unit_price: item.unit_price ?? unitPrice,
+		part: item.part && isPartKey(item.part) ? item.part : "",
+	};
+}
+
 export function QuoteItemsFields({
 	initialUnitPrice = "",
+	workshopID,
+	vehicle,
 }: {
 	initialUnitPrice?: string;
+	/** Con taller, ofrece describir el trabajo con IA. */
+	workshopID?: string;
+	vehicle?: string;
 }) {
 	const { control, formState, getValues, setValue } = useFormContext<{
 		items: QuoteItemValues[];
@@ -84,11 +104,27 @@ export function QuoteItemsFields({
 		else parts += cents;
 	}
 	const add = () => rows.append(blankQuoteItem(initialUnitPrice));
+	const addDraft = (draft: QuoteDraftItem[]) => {
+		const next = draft.map((item) => draftItemValues(item, initialUnitPrice));
+		// Si solo hay ítems vacíos, el borrador los reemplaza; si no, se suma.
+		const empty = getValues("items").every(
+			(item) => !item.description.trim() && !item.part,
+		);
+		if (empty) rows.replace(next);
+		else rows.append(next);
+	};
 	const hiddenLabel = "@2xl:[&>[data-slot=form-label]]:sr-only";
 	const error =
 		formState.errors.items?.root?.message ?? formState.errors.items?.message;
 	return (
 		<div className="@container space-y-3">
+			{workshopID ? (
+				<AIQuoteDraft
+					workshopID={workshopID}
+					vehicle={vehicle}
+					onItems={addDraft}
+				/>
+			) : null}
 			<div
 				className={cn(
 					"hidden gap-2 px-0.5 text-[11.5px] font-medium text-ink-3 @2xl:grid",

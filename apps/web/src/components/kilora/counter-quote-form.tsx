@@ -420,7 +420,7 @@ export function CounterQuoteForm({
 							</StepTitle>
 						}
 					>
-						<QuoteItemsFields />
+						<QuoteItemsFields workshopID={workshopID} vehicle={vehicle} />
 					</SectionCard>
 					<SectionCard title={<StepTitle n={4}>Condiciones</StepTitle>}>
 						<div className="grid gap-5 sm:grid-cols-2">

@@ -280,7 +280,17 @@ function OrderDetail({
 			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
 				<div className="min-w-0 space-y-6">
 					<JobsCard workshopID={workshopID} order={order} locked={closed} />
-					<OrderQuoteCard workshopID={workshopID} order={order} />
+					<OrderQuoteCard
+						workshopID={workshopID}
+						order={order}
+						vehicle={
+							vehicle
+								? [vehicle.make, vehicle.model, vehicle.year]
+										.filter(Boolean)
+										.join(" ")
+								: undefined
+						}
+					/>
 				</div>
 				<div className="space-y-6">
 					<SectionCard

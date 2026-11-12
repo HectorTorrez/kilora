@@ -25,9 +25,12 @@ type S = components["schemas"];
 export function OrderQuoteCard({
 	workshopID,
 	order,
+	vehicle,
 }: {
 	workshopID: string;
 	order: S["WorkOrderDetail"];
+	/** Marca, modelo y año, como contexto para la IA. */
+	vehicle?: string;
 }) {
 	const a = orderActions(workshopID, order.id);
 	const quote = useWorkshopMutation(workshopID, a.quote);
@@ -62,7 +65,11 @@ export function OrderQuoteCard({
 		>
 			<Form {...form}>
 				<div className="space-y-4">
-					<QuoteItemsFields initialUnitPrice="0" />
+					<QuoteItemsFields
+						initialUnitPrice="0"
+						workshopID={workshopID}
+						vehicle={vehicle}
+					/>
 					<div className="flex flex-wrap gap-2">
 						<Button
 							disabled={quote.isPending || (!!order.quote && !isDirty)}

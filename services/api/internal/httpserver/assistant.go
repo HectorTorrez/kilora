@@ -29,11 +29,13 @@ var elSalvador = func() *time.Location {
 	return time.FixedZone("CST", -6*3600)
 }()
 
-// timeouts aplica el tiempo límite general y uno propio a rutas lentas, como
-// el asistente, que encadena varias llamadas al modelo.
-func timeouts(fallback time.Duration, overrides map[string]time.Duration) func(http.Handler) http.Handler {
+// timeouts aplica el tiempo límite general y uno propio a rutas lentas: el
+// asistente, que encadena varias llamadas al modelo, y las rutas de IA cuyo
+// final está en slowSuffixes.
+func timeouts(fallback time.Duration, overrides map[string]time.Duration, slowSuffixes []string, slow time.Duration) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		general := middleware.Timeout(fallback)(next)
+		slowHandler := middleware.Timeout(slow)(next)
 		special := make(map[string]http.Handler, len(overrides))
 		for path, d := range overrides {
 			special[path] = middleware.Timeout(d)(next)
@@ -42,6 +44,12 @@ func timeouts(fallback time.Duration, overrides map[string]time.Duration) func(h
 			if h, ok := special[r.URL.Path]; ok {
 				h.ServeHTTP(w, r)
 				return
+			}
+			for _, suffix := range slowSuffixes {
+				if strings.HasSuffix(r.URL.Path, suffix) {
+					slowHandler.ServeHTTP(w, r)
+					return
+				}
 			}
 			general.ServeHTTP(w, r)
 		})

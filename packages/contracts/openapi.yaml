@@ -5046,6 +5046,110 @@
           }
         ]
       }
+    },
+    "/api/v1/workshops/{workshopID}/ai/quote-draft": {
+      "post": {
+        "summary": "Borrador de cotización con IA",
+        "description": "Convierte una nota escrita o dictada en ítems de cotización. No guarda nada: el recepcionista revisa y guarda. Los precios solo se llenan si la nota los menciona.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteDraftInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QuoteDraft"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -8240,6 +8344,79 @@
         },
         "required": [
           "type"
+        ]
+      },
+      "QuoteDraftInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000,
+            "description": "Nota libre con el trabajo a cotizar."
+          },
+          "vehicle": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "Marca, modelo y año, como contexto."
+          }
+        },
+        "required": [
+          "text"
+        ]
+      },
+      "QuoteDraftItem": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "repuesto",
+              "mano_de_obra"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "string"
+          },
+          "unit_price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "null si la nota no menciona el precio."
+          },
+          "part": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Clave del catálogo de piezas."
+          }
+        },
+        "required": [
+          "kind",
+          "description",
+          "quantity",
+          "unit_price",
+          "part"
+        ]
+      },
+      "QuoteDraft": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QuoteDraftItem"
+            }
+          }
+        },
+        "required": [
+          "items"
         ]
       }
     }

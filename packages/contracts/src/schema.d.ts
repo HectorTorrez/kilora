@@ -4664,6 +4664,105 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workshops/{workshopID}/ai/quote-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Borrador de cotización con IA
+         * @description Convierte una nota escrita o dictada en ítems de cotización. No guarda nada: el recepcionista revisa y guarda. Los precios solo se llenan si la nota los menciona.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["QuoteDraftInput"];
+                };
+            };
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["QuoteDraft"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5443,6 +5542,25 @@ export interface components {
             text?: string;
             reply?: string;
             sources?: components["schemas"]["AssistantSource"][];
+        };
+        QuoteDraftInput: {
+            /** @description Nota libre con el trabajo a cotizar. */
+            text: string;
+            /** @description Marca, modelo y año, como contexto. */
+            vehicle?: string;
+        };
+        QuoteDraftItem: {
+            /** @enum {string} */
+            kind: "repuesto" | "mano_de_obra";
+            description: string;
+            quantity: string;
+            /** @description null si la nota no menciona el precio. */
+            unit_price: string | null;
+            /** @description Clave del catálogo de piezas. */
+            part: string | null;
+        };
+        QuoteDraft: {
+            items: components["schemas"]["QuoteDraftItem"][];
         };
     };
     responses: never;

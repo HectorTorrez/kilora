@@ -218,3 +218,64 @@ func (c *OpenAI) Embed(ctx context.Context, inputs []string) ([][]float32, error
 	}
 	return vectors, nil
 }
+
+// Part es un fragmento de contenido de un mensaje: texto o una imagen
+// (data URL o https).
+type Part struct {
+	Text     string
+	ImageURL string
+}
+
+// Structured pide una respuesta que cumple schema (JSON Schema estricto) y la
+// decodifica en out. No usa streaming: estas respuestas son cortas y se
+// validan completas antes de devolverlas.
+func (c *OpenAI) Structured(ctx context.Context, system string, user []Part, name string, schema map[string]any, out any) error {
+	content := make([]map[string]any, 0, len(user))
+	for _, p := range user {
+		if p.ImageURL != "" {
+			content = append(content, map[string]any{"type": "image_url", "image_url": map[string]any{"url": p.ImageURL}})
+		} else {
+			content = append(content, map[string]any{"type": "text", "text": p.Text})
+		}
+	}
+	body := map[string]any{
+		"model": c.Model,
+		"messages": []any{
+			map[string]any{"role": "system", "content": system},
+			map[string]any{"role": "user", "content": content},
+		},
+		"response_format": map[string]any{
+			"type":        "json_schema",
+			"json_schema": map[string]any{"name": name, "strict": true, "schema": schema},
+		},
+	}
+	if c.ReasoningEffort != "" {
+		body["reasoning_effort"] = c.ReasoningEffort
+	}
+	var resp struct {
+		Choices []struct {
+			Message struct {
+				Content *string `json:"content"`
+				Refusal *string `json:"refusal"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := c.post(ctx, "/chat/completions", body, &resp); err != nil {
+		return err
+	}
+	if len(resp.Choices) == 0 || resp.Choices[0].Message.Content == nil {
+		return fmt.Errorf("openai: respuesta vacía")
+	}
+	if err := json.Unmarshal([]byte(*resp.Choices[0].Message.Content), out); err != nil {
+		return fmt.Errorf("openai: respuesta no cumple el formato: %w", err)
+	}
+	return nil
+}
+
+// StructuredTestResponse escribe value como la respuesta no streaming de
+// chat completions con salida estructurada. Solo para pruebas.
+func StructuredTestResponse(w http.ResponseWriter, value any) {
+	data, _ := json.Marshal(value)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"choices": []any{map[string]any{"message": map[string]any{"role": "assistant", "content": string(data)}}}})
+}
