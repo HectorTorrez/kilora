@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { orderActions } from "@/features/taller/orders";
+import { api, unwrap } from "@/lib/api";
 import { date, money } from "@/lib/format";
+import { AIQuoteMessage } from "./ai-quote-message";
 import {
 	blankQuoteItem,
 	QuoteItemsFields,
@@ -110,6 +112,20 @@ export function OrderQuoteCard({
 							<MessageCircle className="size-4" />
 							Compartir por WhatsApp
 						</Button>
+						<AIQuoteMessage
+							disabled={!order.quote || isDirty}
+							disabledReason="Guardá la cotización antes de compartirla"
+							generate={async () =>
+								unwrap(
+									await api.POST(
+										"/api/v1/workshops/{workshopID}/work-orders/{orderID}/quote/ai/message",
+										{ params: { path: { workshopID, orderID: order.id } } },
+									),
+								)
+							}
+							share={() => share.mutateAsync()}
+							onShared={setUrl}
+						/>
 					</div>
 					{url && <CopyField value={url} label="Enlace de la cotización" />}
 					{order.quote && (

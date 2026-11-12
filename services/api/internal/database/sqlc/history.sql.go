@@ -118,6 +118,40 @@ func (q *Queries) CreateHistoryRecord(ctx context.Context, arg CreateHistoryReco
 	return i, err
 }
 
+const getHistoryRecordForOwner = `-- name: GetHistoryRecordForOwner :one
+SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.id = $1 AND h.vehicle_id = $2 AND v.owner_user_id = $3
+`
+
+type GetHistoryRecordForOwnerParams struct {
+	ID          uuid.UUID  `json:"id"`
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
+}
+
+func (q *Queries) GetHistoryRecordForOwner(ctx context.Context, arg GetHistoryRecordForOwnerParams) (HistoryRecord, error) {
+	row := q.db.QueryRow(ctx, getHistoryRecordForOwner, arg.ID, arg.VehicleID, arg.OwnerUserID)
+	var i HistoryRecord
+	err := row.Scan(
+		&i.ID,
+		&i.VehicleID,
+		&i.WorkshopID,
+		&i.WorkOrderID,
+		&i.Source,
+		&i.PerformedOn,
+		&i.OdometerKm,
+		&i.Summary,
+		&i.Items,
+		&i.Total,
+		&i.Currency,
+		&i.WorkshopNotes,
+		&i.InternalCost,
+		&i.InternalNotes,
+		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const getHistoryTotalByWorkOrder = `-- name: GetHistoryTotalByWorkOrder :one
 SELECT total::text FROM history_record WHERE work_order_id = $1
 `

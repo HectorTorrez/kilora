@@ -27,3 +27,6 @@ SELECT h.* FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.v
 
 -- name: ListCorrectionsForRecords :many
 SELECT * FROM correction WHERE history_record_id = ANY(sqlc.arg(record_ids)::uuid[]) ORDER BY created_at DESC;
+
+-- name: GetHistoryRecordForOwner :one
+SELECT h.* FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.id = sqlc.arg(id) AND h.vehicle_id = sqlc.arg(vehicle_id) AND v.owner_user_id = sqlc.arg(owner_user_id);
