@@ -3,7 +3,9 @@ package config
 
 import (
 	"fmt"
+	"net/mail"
 	"net/netip"
+	"net/url"
 	"os"
 	"strings"
 
@@ -72,8 +74,26 @@ func Load() (Config, error) {
 	if cfg.DatabaseURL == "" {
 		return Config{}, fmt.Errorf("DATABASE_URL no está definida")
 	}
-	if cfg.IsProduction() && cfg.SessionKey == "" {
-		return Config{}, fmt.Errorf("SESSION_SECRET es obligatoria en producción")
+	if !strings.EqualFold(cfg.Env, "development") && !cfg.IsProduction() {
+		return Config{}, fmt.Errorf("APP_ENV debe ser development o production")
+	}
+	if cfg.IsProduction() {
+		if len(cfg.SessionKey) < 32 {
+			return Config{}, fmt.Errorf("SESSION_SECRET debe tener al menos 32 caracteres en producción")
+		}
+		if cfg.ResendAPIKey == "" {
+			return Config{}, fmt.Errorf("RESEND_API_KEY es obligatoria en producción")
+		}
+		if _, err := mail.ParseAddress(cfg.EmailFrom); err != nil {
+			return Config{}, fmt.Errorf("EMAIL_FROM inválido: %w", err)
+		}
+		origin, err := url.Parse(cfg.WebOrigin)
+		if err != nil || origin.Scheme != "https" || origin.Hostname() == "" || origin.User != nil || origin.RawQuery != "" || origin.Fragment != "" || origin.Path != "" {
+			return Config{}, fmt.Errorf("WEB_ORIGIN debe ser un origen HTTPS sin ruta en producción")
+		}
+		if cfg.DemoMode {
+			return Config{}, fmt.Errorf("DEMO_MODE debe estar desactivado en producción")
+		}
 	}
 
 	return cfg, nil
