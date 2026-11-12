@@ -230,3 +230,49 @@ func TestQuoteMessageUsesTheSavedQuote(t *testing.T) {
 		t.Fatalf("mostrador: %s", prompt)
 	}
 }
+
+func TestSuggestRecommendationsFromVisibleHistory(t *testing.T) {
+	api, fake := newAITestAPI(t, func(string) any {
+		return map[string]any{"suggestions": []any{map[string]any{"category": "frenos", "description": "Revisar pastillas delanteras: el último cambio fue hace casi 4 años"}}}
+	})
+	workshop, owner, path, vid, _ := publishedForOwner(t, api)
+	// Servicio viejo de frenos registrado por el propietario, sin categoría: se infiere del texto.
+	api.req(owner, "POST", "/api/v1/me/vehicles/"+vid+"/history", `{"performed_on":"2023-01-10","odometer_km":30000,"summary":"Pastillas delanteras","items":[{"kind":"pieza","description":"Pastillas delanteras","price":"40.00"}]}`, 201)
+	suggest := path + "/vehicles/" + vid + "/recommendations/suggest"
+
+	got := api.obj(workshop, "POST", suggest, "", 200)
+	list := got["suggestions"].([]any)
+	if len(list) != 1 {
+		t.Fatalf("sugerencias: %v", list)
+	}
+	brakes := list[0].(map[string]any)
+	if brakes["category"] != "frenos" || brakes["overdue"] != true || brakes["due_km"] != float64(60000) || brakes["due_date"] != "2025-01-10" || brakes["ai_worded"] != true || !strings.HasPrefix(brakes["description"].(string), "Revisar pastillas") {
+		t.Fatalf("frenos: %v", brakes)
+	}
+	if prompt := fake.last(); strings.Contains(prompt, "secreto") || !strings.Contains(prompt, "Pastillas delanteras") {
+		t.Fatalf("prompt: %s", prompt)
+	}
+
+	// Con una recomendación pendiente de frenos ya no se sugiere otra.
+	api.req(workshop, "POST", path+"/vehicles/"+vid+"/recommendations", `{"description":"Frenos","category":"frenos","due_km":60000}`, 201)
+	if list := api.obj(workshop, "POST", suggest, "", 200)["suggestions"].([]any); len(list) != 0 {
+		t.Fatalf("repitió la sugerencia: %v", list)
+	}
+	other := api.client()
+	otherPath, _, _, _ := api.workshop(other)
+	api.req(other, "POST", otherPath+"/vehicles/"+vid+"/recommendations/suggest", "", 404)
+}
+
+func TestSuggestRecommendationsWorksWithoutAI(t *testing.T) {
+	api := newTestAPI(t)
+	workshop, owner, path, vid, _ := publishedForOwner(t, api)
+	api.req(owner, "POST", "/api/v1/me/vehicles/"+vid+"/history", `{"performed_on":"2020-05-01","summary":"Cambio de batería","items":[]}`, 201)
+	list := api.obj(workshop, "POST", path+"/vehicles/"+vid+"/recommendations/suggest", "", 200)["suggestions"].([]any)
+	if len(list) != 1 {
+		t.Fatalf("sugerencias: %v", list)
+	}
+	battery := list[0].(map[string]any)
+	if battery["category"] != "bateria" || battery["ai_worded"] != false || !strings.HasPrefix(battery["description"].(string), "Revisar batería: último servicio hace") {
+		t.Fatalf("batería: %v", battery)
+	}
+}

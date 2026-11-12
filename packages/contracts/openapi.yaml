@@ -5553,6 +5553,79 @@
           }
         ]
       }
+    },
+    "/api/v1/workshops/{workshopID}/vehicles/{vehicleID}/recommendations/suggest": {
+      "post": {
+        "summary": "Sugerir recomendaciones",
+        "description": "Reglas fijas de mantenimiento (los mismos intervalos que el mapa del vehículo) deciden qué zonas tocan revisión según el historial visible para el taller y el último kilometraje; la IA, si está activa, solo redacta el texto. Omite categorías con una recomendación pendiente. No guarda nada.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecommendationSuggestions"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -8926,6 +8999,89 @@
         },
         "required": [
           "message"
+        ]
+      },
+      "RecommendationSuggestion": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/PartCategory"
+          },
+          "description": {
+            "type": "string"
+          },
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "due_km": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "overdue": {
+            "type": "boolean"
+          },
+          "last_performed_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "last_odometer_km": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "km_since": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "months_since": {
+            "type": "integer"
+          },
+          "ai_worded": {
+            "type": "boolean",
+            "description": "false si el texto es la plantilla (IA desactivada o sin respuesta)."
+          }
+        },
+        "required": [
+          "category",
+          "description",
+          "due_date",
+          "due_km",
+          "overdue",
+          "last_performed_on",
+          "last_odometer_km",
+          "km_since",
+          "months_since",
+          "ai_worded"
+        ]
+      },
+      "RecommendationSuggestions": {
+        "type": "object",
+        "properties": {
+          "suggestions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecommendationSuggestion"
+            }
+          },
+          "current_odometer_km": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "suggestions",
+          "current_odometer_km"
         ]
       }
     }

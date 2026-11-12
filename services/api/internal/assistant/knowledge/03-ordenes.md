@@ -23,3 +23,7 @@ Desde la orden se puede imprimir la hoja del mecánico. Incluye placa, marca, mo
 ## Recomendaciones
 
 Al atender un vehículo, el taller puede dejar recomendaciones (por ejemplo "cambiar pastillas de freno") con una fecha y/o un kilometraje objetivo. Quedan pendientes hasta que se marcan como hechas o descartadas, y aparecen en la ficha del vehículo y en la hoja del mecánico.
+
+## Sugerir recomendaciones
+
+En la tarjeta de recomendaciones, el botón "Sugerir" revisa el historial que el taller puede ver y el último kilometraje, y propone trabajos que ya tocan según intervalos de referencia (por ejemplo, aceite cada 5,000 km o 6 meses, frenos cada 30,000 km o 24 meses). Sugiere a partir del 80 % del intervalo y marca como vencido lo que ya lo pasó. Reglas fijas deciden qué sugerir; la IA solo redacta el texto. No se repite una categoría que ya tiene una recomendación pendiente, y nada se guarda hasta presionar "Agregar" en cada sugerencia.

@@ -100,6 +100,7 @@ Besides the chat, the same key enables AI helpers inside the forms. They follow 
 - **Quote from a note.** In any quote editor, *Describir con IA* turns a typed or dictated note ("cambio de aceite 5W-30 con filtro, pastillas delanteras…") into quote items matched to the part catalog. Prices are filled only when the note states them.
 - **Receipt to history.** Owners adding a manual service can tap *Escanear recibo* and photograph an old receipt or invoice. A vision model reads the date, mileage, workshop, line items and total into the form. The browser downsizes the photo, which also strips EXIF metadata, and the API never stores it.
 - **Plain-language explanations.** Owners can tap *¿Qué me hicieron?* on any service to get a short, jargon-free explanation. Workshops get *Mensaje con IA*, an editable WhatsApp message that explains each quote line before sharing the link. The model only receives the projection the viewer already sees (`history.Project` for owners, without internal IDs), so internal costs and private notes never reach a prompt.
+- **Suggested recommendations.** *Sugerir* on a vehicle's recommendations card proposes due maintenance. Deterministic rules in [`services/api/internal/maintenance`](services/api/internal/maintenance) decide what is due: the same reference intervals as the 3D parts map, applied to the history the workshop can see and the latest odometer reading. The model only writes the wording. Without a key, the suggestions still work with template text.
 
 ## Development reference
 

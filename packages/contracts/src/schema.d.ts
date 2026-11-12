@@ -5141,6 +5141,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workshops/{workshopID}/vehicles/{vehicleID}/recommendations/suggest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sugerir recomendaciones
+         * @description Reglas fijas de mantenimiento (los mismos intervalos que el mapa del vehículo) deciden qué zonas tocan revisión según el historial visible para el taller y el último kilometraje; la IA, si está activa, solo redacta el texto. Omite categorías con una recomendación pendiente. No guarda nada.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RecommendationSuggestions"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5965,6 +6034,25 @@ export interface components {
         QuoteMessage: {
             /** @description Mensaje de WhatsApp sin el enlace; la web lo agrega al final. */
             message: string;
+        };
+        RecommendationSuggestion: {
+            category: components["schemas"]["PartCategory"];
+            description: string;
+            /** Format: date */
+            due_date: string | null;
+            due_km: number | null;
+            overdue: boolean;
+            /** Format: date */
+            last_performed_on: string;
+            last_odometer_km: number | null;
+            km_since: number | null;
+            months_since: number;
+            /** @description false si el texto es la plantilla (IA desactivada o sin respuesta). */
+            ai_worded: boolean;
+        };
+        RecommendationSuggestions: {
+            suggestions: components["schemas"]["RecommendationSuggestion"][];
+            current_odometer_km: number | null;
         };
     };
     responses: never;
