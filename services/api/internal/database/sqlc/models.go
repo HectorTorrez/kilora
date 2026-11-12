@@ -63,6 +63,65 @@ func (e AuthTokenPurpose) Valid() bool {
 	return false
 }
 
+type BodyType string
+
+const (
+	BodyTypeSedan     BodyType = "sedan"
+	BodyTypeHatchback BodyType = "hatchback"
+	BodyTypeSuv       BodyType = "suv"
+	BodyTypePickup    BodyType = "pickup"
+	BodyTypeVan       BodyType = "van"
+	BodyTypeCamion    BodyType = "camion"
+)
+
+func (e *BodyType) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = BodyType(s)
+	case string:
+		*e = BodyType(s)
+	default:
+		return fmt.Errorf("unsupported scan type for BodyType: %T", src)
+	}
+	return nil
+}
+
+type NullBodyType struct {
+	BodyType BodyType `json:"body_type"`
+	Valid    bool     `json:"valid"` // Valid is true if BodyType is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullBodyType) Scan(value interface{}) error {
+	if value == nil {
+		ns.BodyType, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.BodyType.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullBodyType) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.BodyType), nil
+}
+
+func (e BodyType) Valid() bool {
+	switch e {
+	case BodyTypeSedan,
+		BodyTypeHatchback,
+		BodyTypeSuv,
+		BodyTypePickup,
+		BodyTypeVan,
+		BodyTypeCamion:
+		return true
+	}
+	return false
+}
+
 type HistorySource string
 
 const (
@@ -223,12 +282,20 @@ func (e OdometerSource) Valid() bool {
 type PartCategory string
 
 const (
-	PartCategoryAceite         PartCategory = "aceite"
-	PartCategoryFrenos         PartCategory = "frenos"
-	PartCategoryAmortiguadores PartCategory = "amortiguadores"
-	PartCategoryBateria        PartCategory = "bateria"
-	PartCategoryLlantas        PartCategory = "llantas"
-	PartCategoryOtro           PartCategory = "otro"
+	PartCategoryAceite            PartCategory = "aceite"
+	PartCategoryFrenos            PartCategory = "frenos"
+	PartCategoryAmortiguadores    PartCategory = "amortiguadores"
+	PartCategoryBateria           PartCategory = "bateria"
+	PartCategoryLlantas           PartCategory = "llantas"
+	PartCategoryMotor             PartCategory = "motor"
+	PartCategoryTransmision       PartCategory = "transmision"
+	PartCategoryRefrigeracion     PartCategory = "refrigeracion"
+	PartCategoryElectrico         PartCategory = "electrico"
+	PartCategoryAireAcondicionado PartCategory = "aire_acondicionado"
+	PartCategoryDireccion         PartCategory = "direccion"
+	PartCategoryEscape            PartCategory = "escape"
+	PartCategoryCarroceria        PartCategory = "carroceria"
+	PartCategoryOtro              PartCategory = "otro"
 )
 
 func (e *PartCategory) Scan(src interface{}) error {
@@ -273,6 +340,14 @@ func (e PartCategory) Valid() bool {
 		PartCategoryAmortiguadores,
 		PartCategoryBateria,
 		PartCategoryLlantas,
+		PartCategoryMotor,
+		PartCategoryTransmision,
+		PartCategoryRefrigeracion,
+		PartCategoryElectrico,
+		PartCategoryAireAcondicionado,
+		PartCategoryDireccion,
+		PartCategoryEscape,
+		PartCategoryCarroceria,
 		PartCategoryOtro:
 		return true
 	}
@@ -768,6 +843,7 @@ type Vehicle struct {
 	ArchivedAt          pgtype.Timestamptz `json:"archived_at"`
 	CreatedAt           pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	BodyType            *BodyType          `json:"body_type"`
 }
 
 type VehicleLink struct {

@@ -13,11 +13,19 @@ import (
 	"kilora/api/internal/values"
 )
 
-const invalidVehicle = "Marca, modelo, año o placa inválidos"
+const (
+	invalidVehicle  = "Marca, modelo, año o placa inválidos"
+	invalidBodyType = "Tipo de vehículo inválido"
+)
+
+// validBodyType acepta la ausencia de tipo (opcional) o un valor del enum.
+func validBodyType(b *sqlc.BodyType) bool {
+	return b == nil || b.Valid()
+}
 
 // vehicleDTO renders a vehicle; customer is the viewing workshop's customer and is nil for owners.
 func vehicleDTO(v sqlc.Vehicle, km *int32, customer *customerRef) map[string]any {
-	return map[string]any{"id": v.ID, "status": v.Status, "plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year, "vin": v.Vin, "customer": customer, "last_odometer_km": km, "last_activity_at": v.LastActivityAt.Time, "created_at": v.CreatedAt.Time}
+	return map[string]any{"id": v.ID, "status": v.Status, "plate": v.Plate, "make": v.Make, "model": v.Model, "year": v.Year, "vin": v.Vin, "body_type": v.BodyType, "customer": customer, "last_odometer_km": km, "last_activity_at": v.LastActivityAt.Time, "created_at": v.CreatedAt.Time}
 }
 
 // createProvisionalVehicle is the one way a workshop's vehicle comes into existence,
@@ -43,11 +51,12 @@ func (s *server) createVehicle(w http.ResponseWriter, r *http.Request, wc worksh
 		return err
 	}
 	var in struct {
-		Plate        *string `json:"plate"`
-		Make         string  `json:"make"`
-		Model        string  `json:"model"`
-		Year         *int32  `json:"year"`
-		Vin          *string `json:"vin"`
+		Plate    *string        `json:"plate"`
+		Make     string         `json:"make"`
+		Model    string         `json:"model"`
+		Year     *int32         `json:"year"`
+		Vin      *string        `json:"vin"`
+		BodyType *sqlc.BodyType `json:"body_type"`
 		customerChoice
 	}
 	if err := decode(r, &in); err != nil {
@@ -56,6 +65,9 @@ func (s *server) createVehicle(w http.ResponseWriter, r *http.Request, wc worksh
 	in.Make, in.Model = strings.TrimSpace(in.Make), strings.TrimSpace(in.Model)
 	if !values.VehicleText(in.Make) || !values.VehicleText(in.Model) || !values.ValidYear(in.Year) || !values.ValidPlate(in.Plate) {
 		return badRequest(invalidVehicle)
+	}
+	if !validBodyType(in.BodyType) {
+		return badRequest(invalidBodyType)
 	}
 	if in.empty() {
 		return badRequest(customerRequired)
@@ -67,7 +79,7 @@ func (s *server) createVehicle(w http.ResponseWriter, r *http.Request, wc worksh
 		if c, err = resolveCustomer(r.Context(), q, wc, in.customerChoice); err != nil {
 			return err
 		}
-		v, err = createProvisionalVehicle(r.Context(), q, wc, sqlc.CreateVehicleParams{Plate: values.OptionalPlate(in.Plate), Make: in.Make, Model: in.Model, Year: in.Year, Vin: values.OptionalText(in.Vin)}, c.ID)
+		v, err = createProvisionalVehicle(r.Context(), q, wc, sqlc.CreateVehicleParams{Plate: values.OptionalPlate(in.Plate), Make: in.Make, Model: in.Model, Year: in.Year, Vin: values.OptionalText(in.Vin), BodyType: in.BodyType}, c.ID)
 		return err
 	})
 	if err != nil {

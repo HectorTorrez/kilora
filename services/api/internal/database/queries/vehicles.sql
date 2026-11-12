@@ -1,5 +1,5 @@
 -- name: CreateVehicle :one
-INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin) VALUES (sqlc.arg(owner_user_id), sqlc.arg(created_by_workshop_id), sqlc.arg(status), sqlc.arg(plate), sqlc.arg(make), sqlc.arg(model), sqlc.arg(year), sqlc.arg(vin)) RETURNING *;
+INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, body_type) VALUES (sqlc.arg(owner_user_id), sqlc.arg(created_by_workshop_id), sqlc.arg(status), sqlc.arg(plate), sqlc.arg(make), sqlc.arg(model), sqlc.arg(year), sqlc.arg(vin), sqlc.narg(body_type)) RETURNING *;
 
 -- name: GetVehicle :one
 SELECT v.* FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE v.id = sqlc.arg(id) AND l.workshop_id = sqlc.arg(workshop_id);
@@ -47,3 +47,6 @@ WHERE l.workshop_id = sqlc.arg(workshop_id) AND v.status <> 'archivado'
   AND (sqlc.narg(date_from)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date >= sqlc.narg(date_from)::date)
   AND (sqlc.narg(date_to)::date IS NULL OR (v.last_activity_at AT TIME ZONE 'America/El_Salvador')::date <= sqlc.narg(date_to)::date)
 GROUP BY v.status;
+
+-- name: SetOwnerVehicleBodyType :one
+UPDATE vehicle SET body_type = sqlc.narg(body_type), updated_at = now() WHERE id = sqlc.arg(id) AND owner_user_id = sqlc.arg(owner_user_id) RETURNING *;

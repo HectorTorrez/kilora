@@ -119,15 +119,15 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 		return err
 	}
 	vehicle := uuid.New()
-	if err = exec("INSERT INTO vehicle(id,owner_user_id,created_by_workshop_id,status,plate,make,model,year) VALUES($1,$2,$3,'vinculado','P512834','Toyota','Corolla',2018)", vehicle, users[2], w); err != nil {
+	if err = exec("INSERT INTO vehicle(id,owner_user_id,created_by_workshop_id,status,plate,make,model,year,body_type) VALUES($1,$2,$3,'vinculado','P512834','Toyota','Corolla',2018,'sedan')", vehicle, users[2], w); err != nil {
 		return err
 	}
 	if err = exec("INSERT INTO vehicle_link(vehicle_id,workshop_id,created_at,customer_id) VALUES($1,$2,now(),$4),($1,$3,now(),$5)", vehicle, w, c, customers[0], ceibaMaria); err != nil {
 		return err
 	}
-	descriptions := []string{"Cambio de aceite y filtro", "Cambio de aceite y filtro", "Pastillas de freno", "Cambio de batería", "Cambio de aceite y filtro", "Llantas y alineación", "Amortiguadores delanteros", "Cambio de aceite y filtro"}
-	brands := []string{"Mobil", "Mobil", "Bosch", "Bosch", "Mobil", "Michelin", "Monroe", "Mobil"}
-	cats := []string{"aceite", "aceite", "frenos", "bateria", "aceite", "llantas", "amortiguadores", "aceite"}
+	descriptions := []string{"Cambio de aceite y filtro", "Cambio de aceite y filtro", "Pastillas de freno delanteras", "Cambio de batería", "Cambio de refrigerante", "Llantas y alineación", "Amortiguadores delanteros", "Cambio de aceite y filtro"}
+	brands := []string{"Mobil", "Mobil", "Bosch", "Bosch", "Prestone", "Michelin", "Monroe", "Mobil"}
+	cats := []string{"aceite", "aceite", "frenos", "bateria", "refrigeracion", "llantas", "amortiguadores", "aceite"}
 	for i, desc := range descriptions {
 		workshop, branch, actor, num := w, b1, users[0], i+1
 		if i > 5 {
@@ -143,8 +143,8 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 			km = 42500
 		}
 		brand, cat := brands[i], cats[i]
-		price := []string{"25.00", "25.00", "45.00", "55.00", "25.00", "175.00", "120.00", "25.00"}[i]
-		cost := []string{"12.00", "12.00", "22.00", "30.00", "12.00", "90.00", "60.00", "12.00"}[i]
+		price := []string{"25.00", "25.00", "45.00", "55.00", "40.00", "175.00", "120.00", "25.00"}[i]
+		cost := []string{"12.00", "12.00", "22.00", "30.00", "20.00", "90.00", "60.00", "12.00"}[i]
 		notes := "Revisar en próximo servicio"
 		qty := 1.0
 		items, err := json.Marshal([]history.Item{{Kind: "trabajo", Description: desc, Category: &cat, Price: &price, InternalCost: &cost, MechanicNotes: &notes}, {Kind: "pieza", Description: desc, Name: &desc, Brand: &brand, Quantity: &qty, Price: &price, InternalCost: &cost}})

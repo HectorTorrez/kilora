@@ -42,6 +42,17 @@ export const ownerHistoryQuery = (vehicleID: string, page = 1) =>
 			),
 		placeholderData: keepPreviousData,
 	});
+/** Todo el historial (hasta el máximo de la API) para el mapa del vehículo. */
+export const ownerPartsMapQuery = (vehicleID: string) =>
+	queryOptions({
+		queryKey: ["owner", "history", vehicleID, "map"],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/me/vehicles/{vehicleID}/history", {
+					params: { path: { vehicleID }, query: { limit: 100, offset: 0 } },
+				}),
+			),
+	});
 export const invitationQuery = (token: string) =>
 	queryOptions({
 		queryKey: ["invitation", token],
@@ -75,6 +86,13 @@ export const ownerActions = {
 			await api.POST("/api/v1/me/vehicles/{vehicleID}/odometer", {
 				params: { path: { vehicleID } },
 				body: { km },
+			}),
+		),
+	bodyType: async (vehicleID: string, bodyType: S["BodyType"]) =>
+		unwrap(
+			await api.PUT("/api/v1/me/vehicles/{vehicleID}/body-type", {
+				params: { path: { vehicleID } },
+				body: { body_type: bodyType },
 			}),
 		),
 	accept: async (token: string) =>

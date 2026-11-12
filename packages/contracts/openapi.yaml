@@ -4923,6 +4923,56 @@
           }
         ]
       }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/body-type": {
+      "parameters": [
+        {
+          "name": "vehicleID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "put": {
+        "summary": "Indicar el tipo de carrocería del vehículo",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerVehicle"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "body_type": {
+                    "$ref": "#/components/schemas/BodyType"
+                  }
+                },
+                "required": [
+                  "body_type"
+                ]
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -5266,6 +5316,14 @@
           "amortiguadores",
           "bateria",
           "llantas",
+          "motor",
+          "transmision",
+          "refrigeracion",
+          "electrico",
+          "aire_acondicionado",
+          "direccion",
+          "escape",
+          "carroceria",
           "otro"
         ]
       },
@@ -5320,6 +5378,16 @@
             "oneOf": [
               {
                 "$ref": "#/components/schemas/CustomerInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "body_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BodyType"
               },
               {
                 "type": "null"
@@ -5398,6 +5466,16 @@
           },
           "owner_name": {
             "type": "string"
+          },
+          "body_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BodyType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -5411,7 +5489,8 @@
           "customer",
           "last_odometer_km",
           "last_activity_at",
-          "created_at"
+          "created_at",
+          "body_type"
         ]
       },
       "CreateWorkOrder": {
@@ -7052,6 +7131,16 @@
           },
           "year": {
             "type": "integer"
+          },
+          "body_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BodyType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -7116,6 +7205,16 @@
             "items": {
               "$ref": "#/components/schemas/LinkedWorkshop"
             }
+          },
+          "body_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BodyType"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -7125,7 +7224,8 @@
           "model",
           "year",
           "status",
-          "last_odometer_km"
+          "last_odometer_km",
+          "body_type"
         ]
       },
       "ManualItem": {
@@ -7864,6 +7964,18 @@
           "items",
           "total"
         ]
+      },
+      "BodyType": {
+        "type": "string",
+        "enum": [
+          "sedan",
+          "hatchback",
+          "suv",
+          "pickup",
+          "van",
+          "camion"
+        ],
+        "description": "Tipo de carrocería del vehículo."
       }
     }
   }

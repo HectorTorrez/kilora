@@ -4539,6 +4539,52 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/me/vehicles/{vehicleID}/body-type": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicleID: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Indicar el tipo de carrocería del vehículo */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        body_type: components["schemas"]["BodyType"];
+                    };
+                };
+            };
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OwnerVehicle"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4628,7 +4674,7 @@ export interface components {
         /** @enum {string} */
         WorkOrderStatus: "recibido" | "diagnostico" | "en_reparacion" | "listo" | "cancelado";
         /** @enum {string} */
-        PartCategory: "aceite" | "frenos" | "amortiguadores" | "bateria" | "llantas" | "otro";
+        PartCategory: "aceite" | "frenos" | "amortiguadores" | "bateria" | "llantas" | "motor" | "transmision" | "refrigeracion" | "electrico" | "aire_acondicionado" | "direccion" | "escape" | "carroceria" | "otro";
         DecimalInput: string | number | null;
         /** @description Requiere customer_id (cliente existente) o customer (cliente nuevo). */
         CreateVehicle: {
@@ -4640,6 +4686,7 @@ export interface components {
             /** Format: uuid */
             customer_id?: string | null;
             customer?: components["schemas"]["CustomerInput"] | null;
+            body_type?: components["schemas"]["BodyType"] | null;
         };
         Vehicle: {
             /** Format: uuid */
@@ -4659,6 +4706,7 @@ export interface components {
             created_at: string;
             owner_linked?: boolean;
             owner_name?: string;
+            body_type: components["schemas"]["BodyType"] | null;
         };
         CreateWorkOrder: {
             /** Format: uuid */
@@ -5069,6 +5117,7 @@ export interface components {
             make: string;
             model: string;
             year?: number;
+            body_type?: components["schemas"]["BodyType"] | null;
         };
         OwnerVehicle: {
             id: string;
@@ -5082,6 +5131,7 @@ export interface components {
             last_service?: components["schemas"]["LastService"] | null;
             odometer_readings?: components["schemas"]["OdometerReading"][];
             workshops?: components["schemas"]["LinkedWorkshop"][];
+            body_type: components["schemas"]["BodyType"] | null;
         };
         ManualItem: {
             /** @enum {string} */
@@ -5274,6 +5324,11 @@ export interface components {
             items: components["schemas"]["Customer"][];
             total: number;
         };
+        /**
+         * @description Tipo de carrocería del vehículo.
+         * @enum {string}
+         */
+        BodyType: "sedan" | "hatchback" | "suv" | "pickup" | "van" | "camion";
     };
     responses: never;
     parameters: never;

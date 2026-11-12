@@ -37,6 +37,7 @@ type ownerVehicleDTO struct {
 	Model            string             `json:"model"`
 	Year             *int32             `json:"year"`
 	Status           sqlc.VehicleStatus `json:"status"`
+	BodyType         *sqlc.BodyType     `json:"body_type"`
 	LastOdometerKm   *int32             `json:"last_odometer_km"`
 	HistoryCount     *int               `json:"history_count,omitempty"`
 	LastService      *ownerLastService  `json:"last_service"`
@@ -45,7 +46,7 @@ type ownerVehicleDTO struct {
 }
 
 func ownerBase(v sqlc.Vehicle) ownerVehicleDTO {
-	return ownerVehicleDTO{ID: v.ID, Plate: v.Plate, Make: v.Make, Model: v.Model, Year: v.Year, Status: v.Status}
+	return ownerVehicleDTO{ID: v.ID, Plate: v.Plate, Make: v.Make, Model: v.Model, Year: v.Year, Status: v.Status, BodyType: v.BodyType}
 }
 
 func ownedVehicle(ctx context.Context, q *sqlc.Queries, r *http.Request, user uuid.UUID) (sqlc.Vehicle, error) {
@@ -135,10 +136,11 @@ func (s *server) getOwnerVehicle(w http.ResponseWriter, r *http.Request) error {
 
 func (s *server) createOwnerVehicle(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
-		Plate *string `json:"plate"`
-		Make  string  `json:"make"`
-		Model string  `json:"model"`
-		Year  *int32  `json:"year"`
+		Plate    *string        `json:"plate"`
+		Make     string         `json:"make"`
+		Model    string         `json:"model"`
+		Year     *int32         `json:"year"`
+		BodyType *sqlc.BodyType `json:"body_type"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err
@@ -147,18 +149,50 @@ func (s *server) createOwnerVehicle(w http.ResponseWriter, r *http.Request) erro
 	if !values.VehicleText(in.Make) || !values.VehicleText(in.Model) || !values.ValidYear(in.Year) || !values.ValidPlate(in.Plate) {
 		return badRequest(invalidVehicle)
 	}
+	if !validBodyType(in.BodyType) {
+		return badRequest(invalidBodyType)
+	}
 	ctx := r.Context()
 	user := currentUser(ctx).ID
 	var v sqlc.Vehicle
 	err := s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
 		var err error
-		v, err = q.CreateVehicle(ctx, sqlc.CreateVehicleParams{OwnerUserID: &user, Status: sqlc.VehicleStatusVinculado, Plate: values.OptionalPlate(in.Plate), Make: in.Make, Model: in.Model, Year: in.Year})
+		v, err = q.CreateVehicle(ctx, sqlc.CreateVehicleParams{OwnerUserID: &user, Status: sqlc.VehicleStatusVinculado, Plate: values.OptionalPlate(in.Plate), Make: in.Make, Model: in.Model, Year: in.Year, BodyType: in.BodyType})
 		return ownerEvent(user, "vehicle", v.ID, "vehicle.create"), err
 	})
 	if err != nil {
 		return err
 	}
 	writeJSON(w, http.StatusCreated, ownerBase(v))
+	return nil
+}
+
+// setOwnerBodyType deja que el propietario indique (o corrija) el tipo de su vehículo.
+func (s *server) setOwnerBodyType(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		BodyType *sqlc.BodyType `json:"body_type"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	if in.BodyType == nil || !in.BodyType.Valid() {
+		return badRequest(invalidBodyType)
+	}
+	ctx := r.Context()
+	user := currentUser(ctx).ID
+	var v sqlc.Vehicle
+	err := s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
+		current, err := ownedVehicle(ctx, q, r, user)
+		if err != nil {
+			return auditEvent{}, err
+		}
+		v, err = q.SetOwnerVehicleBodyType(ctx, sqlc.SetOwnerVehicleBodyTypeParams{BodyType: in.BodyType, ID: current.ID, OwnerUserID: &user})
+		return ownerEvent(user, "vehicle", v.ID, "vehicle.body_type"), err
+	})
+	if err != nil {
+		return err
+	}
+	writeJSON(w, http.StatusOK, ownerBase(v))
 	return nil
 }
 

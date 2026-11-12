@@ -40,6 +40,16 @@ function apiProxy(): Plugin {
 
 const config = defineConfig({
 	resolve: { tsconfigPaths: true },
+	// El mapa 3D se carga aparte (lazy). Sin esto, Vite descubre three.js tarde,
+	// re-optimiza a mitad de sesión y el navegador recibe 504 "Outdated Optimize Dep".
+	optimizeDeps: {
+		include: [
+			"three",
+			"@react-three/fiber",
+			"@react-three/drei",
+			"@react-three/postprocessing",
+		],
+	},
 	plugins: [
 		apiProxy(),
 		devtools(),

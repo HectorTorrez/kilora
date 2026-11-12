@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import type { CustomerRef } from "@/features/taller/customers";
 import { useWorkshopMutation } from "@/features/taller/mutation";
 import { createVehicleAction } from "@/features/taller/vehicles";
+import { bodyTypeLabels } from "@/lib/domain";
 import {
 	CustomerPicker,
 	customerPickerDefaults,
@@ -19,6 +20,7 @@ import {
 	NumberField,
 	RequiredLegend,
 	RootError,
+	SelectField,
 	SubmitButton,
 	TextField,
 } from "./form-fields";
@@ -35,7 +37,12 @@ const schema = z.object({
 	model: vehicleText,
 	year: optionalYearField(),
 	plate: plateField,
+	bodyType: z.string(),
 });
+
+const bodyTypeOptions = Object.entries(bodyTypeLabels).map(
+	([value, label]) => ({ value, label }),
+);
 
 export function VehicleForm({
 	workshopID,
@@ -68,6 +75,7 @@ export function VehicleForm({
 			model: "",
 			year: "",
 			plate: "",
+			bodyType: "",
 		},
 	});
 	const submit = form.handleSubmit(async (values) => {
@@ -79,6 +87,9 @@ export function VehicleForm({
 				make: values.make,
 				model: values.model,
 				year: values.year ? Number(values.year) : null,
+				body_type: values.bodyType
+					? (values.bodyType as keyof typeof bodyTypeLabels)
+					: null,
 			});
 			toast.success("Vehículo registrado");
 			onCreated(vehicle);
@@ -115,6 +126,14 @@ export function VehicleForm({
 					optional
 					uppercase
 					placeholder="P123456"
+				/>
+				<SelectField
+					name="bodyType"
+					label="Tipo de vehículo"
+					options={bodyTypeOptions}
+					placeholder="Elegí el tipo"
+					description="Define el modelo 3D que ve el propietario."
+					optional
 				/>
 				<RootError className="sm:col-span-2" />
 				<FormActions>

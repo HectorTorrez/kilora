@@ -1,12 +1,13 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Gauge, Plus } from "lucide-react";
 import { useRef, useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
+import { CarPartsMap } from "@/components/kilora/car-parts-map";
 import {
 	applyFormError,
 	DateField,
@@ -48,11 +49,13 @@ import {
 } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { isNotFound } from "@/lib/api";
 import { date, day, km as formatKm, money, plural } from "@/lib/format";
 import {
 	OWNER_HISTORY_PAGE_SIZE,
 	ownerActions,
 	ownerHistoryQuery,
+	ownerPartsMapQuery,
 	ownerVehicleQuery,
 	useOwnerMutation,
 } from "@/lib/owner";
@@ -66,14 +69,43 @@ type CorrectionBody = Parameters<typeof ownerActions.correction>[1];
 const READINGS_PAGE_SIZE = 8;
 export const Route = createFileRoute("/mis-vehiculos/$vehicleId")({
 	loader: async ({ context, params }) => {
-		const [history, vehicle] = await Promise.all([
-			context.queryClient.ensureQueryData(ownerHistoryQuery(params.vehicleId)),
-			context.queryClient.ensureQueryData(ownerVehicleQuery(params.vehicleId)),
-		]);
-		return { history, vehicle };
+		try {
+			const [history, vehicle] = await Promise.all([
+				context.queryClient.ensureQueryData(
+					ownerHistoryQuery(params.vehicleId),
+				),
+				context.queryClient.ensureQueryData(
+					ownerVehicleQuery(params.vehicleId),
+				),
+			]);
+			return { history, vehicle };
+		} catch (error) {
+			// Vehículo borrado, de otra cuenta o enlace viejo: 404 amable, no un error.
+			if (isNotFound(error)) throw notFound();
+			throw error;
+		}
 	},
+	notFoundComponent: VehicleNotFound,
 	component: Page,
 });
+function VehicleNotFound() {
+	return (
+		<main className="mx-auto max-w-md space-y-4 px-5 py-16 text-center">
+			<p className="font-mono text-sm text-ink-3">404</p>
+			<h1 className="font-display text-2xl font-bold">
+				Vehículo no encontrado
+			</h1>
+			<p className="text-sm text-ink-2">
+				Puede que el enlace sea viejo o que el vehículo ya no esté vinculado a
+				tu cuenta.
+			</p>
+			<Button asChild>
+				<Link to="/mis-vehiculos">Ver mis vehículos</Link>
+			</Button>
+		</main>
+	);
+}
+
 function Page() {
 	const { vehicleId: id } = Route.useParams();
 	const { me } = OwnerLayout.useRouteContext();
@@ -88,6 +120,7 @@ function Page() {
 		...ownerVehicleQuery(id),
 		initialData: initial.vehicle,
 	});
+	const partsMap = useQuery(ownerPartsMapQuery(id));
 	const [manualOpen, setManualOpen] = useState(false);
 	const [kmOpen, setKmOpen] = useState(false);
 	const [warning, setWarning] = useState("");
@@ -99,6 +132,10 @@ function Page() {
 			ownerActions.manual(id, body),
 	);
 	const km = useOwnerMutation((n: number) => ownerActions.odometer(id, n));
+	const bodyType = useOwnerMutation(
+		(type: Parameters<typeof ownerActions.bodyType>[1]) =>
+			ownerActions.bodyType(id, type),
+	);
 	const correction = useOwnerMutation(
 		(body: Parameters<typeof ownerActions.correction>[1]) =>
 			ownerActions.correction(id, body),
@@ -168,6 +205,19 @@ function Page() {
 				<Alert>
 					<AlertDescription>{warning}</AlertDescription>
 				</Alert>
+			)}
+			{partsMap.data ? (
+				<CarPartsMap
+					records={partsMap.data.records}
+					currentKm={v.last_odometer_km}
+					bodyType={v.body_type}
+					onBodyTypeChange={async (type) => {
+						await bodyType.mutateAsync(type);
+						toast.success("Tipo de vehículo actualizado");
+					}}
+				/>
+			) : (
+				<Skeleton className="h-80 rounded-xl" aria-label="Cargando mapa…" />
 			)}
 			<div className="grid gap-6 md:grid-cols-[1fr_260px]">
 				<section ref={historyRef} className="scroll-mt-6">

@@ -19,6 +19,14 @@ export const categoryLabels: Record<S["PartCategory"], string> = {
 	amortiguadores: "Amortiguadores",
 	bateria: "Batería",
 	llantas: "Llantas",
+	motor: "Motor",
+	transmision: "Transmisión",
+	refrigeracion: "Refrigeración",
+	electrico: "Sistema eléctrico",
+	aire_acondicionado: "Aire acondicionado",
+	direccion: "Dirección",
+	escape: "Escape",
+	carroceria: "Carrocería",
 	otro: "Otro",
 };
 
@@ -42,3 +50,12 @@ export const quoteOutcomeLabels: Record<S["CounterQuote"]["outcome"], string> =
 export const quoteOutcomeActions = (
 	["acepto", "rechazo", "no_respondio"] as const
 ).map((value) => [value, quoteOutcomeLabels[value]] as const);
+
+export const bodyTypeLabels: Record<S["BodyType"], string> = {
+	sedan: "Sedán",
+	hatchback: "Hatchback",
+	suv: "SUV / Camioneta",
+	pickup: "Pickup",
+	van: "Microbús / Van",
+	camion: "Camión",
+};

@@ -61,7 +61,7 @@ func (q *Queries) CountVehiclesByStatus(ctx context.Context, arg CountVehiclesBy
 }
 
 const createVehicle = `-- name: CreateVehicle :one
-INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at
+INSERT INTO vehicle (owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, body_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at, body_type
 `
 
 type CreateVehicleParams struct {
@@ -73,6 +73,7 @@ type CreateVehicleParams struct {
 	Model               string        `json:"model"`
 	Year                *int32        `json:"year"`
 	Vin                 *string       `json:"vin"`
+	BodyType            *BodyType     `json:"body_type"`
 }
 
 func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (Vehicle, error) {
@@ -85,6 +86,7 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (V
 		arg.Model,
 		arg.Year,
 		arg.Vin,
+		arg.BodyType,
 	)
 	var i Vehicle
 	err := row.Scan(
@@ -101,12 +103,13 @@ func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (V
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.BodyType,
 	)
 	return i, err
 }
 
 const getVehicle = `-- name: GetVehicle :one
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE v.id = $1 AND l.workshop_id = $2
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, v.body_type FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id WHERE v.id = $1 AND l.workshop_id = $2
 `
 
 type GetVehicleParams struct {
@@ -131,12 +134,13 @@ func (q *Queries) GetVehicle(ctx context.Context, arg GetVehicleParams) (Vehicle
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.BodyType,
 	)
 	return i, err
 }
 
 const getVehicleForOwner = `-- name: GetVehicleForOwner :one
-SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE id = $1 AND owner_user_id = $2
+SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at, body_type FROM vehicle WHERE id = $1 AND owner_user_id = $2
 `
 
 type GetVehicleForOwnerParams struct {
@@ -161,6 +165,7 @@ func (q *Queries) GetVehicleForOwner(ctx context.Context, arg GetVehicleForOwner
 		&i.ArchivedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.BodyType,
 	)
 	return i, err
 }
@@ -180,7 +185,7 @@ func (q *Queries) LinkVehicleToWorkshop(ctx context.Context, arg LinkVehicleToWo
 }
 
 const listVehiclesByOwner = `-- name: ListVehiclesByOwner :many
-SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at FROM vehicle WHERE owner_user_id = $1 ORDER BY last_activity_at DESC
+SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at, body_type FROM vehicle WHERE owner_user_id = $1 ORDER BY last_activity_at DESC
 `
 
 func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID *uuid.UUID) ([]Vehicle, error) {
@@ -206,6 +211,7 @@ func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID *uuid.UUI
 			&i.ArchivedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.BodyType,
 		); err != nil {
 			return nil, err
 		}
@@ -218,7 +224,7 @@ func (q *Queries) ListVehiclesByOwner(ctx context.Context, ownerUserID *uuid.UUI
 }
 
 const listVehiclesForWorkshop = `-- name: ListVehiclesForWorkshop :many
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, v.body_type, c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
 FROM vehicle v
 JOIN vehicle_link l ON l.vehicle_id = v.id
 LEFT JOIN customer c ON c.id = l.customer_id
@@ -264,6 +270,7 @@ func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesF
 			&i.Vehicle.ArchivedAt,
 			&i.Vehicle.CreatedAt,
 			&i.Vehicle.UpdatedAt,
+			&i.Vehicle.BodyType,
 			&i.CustomerID,
 			&i.CustomerName,
 			&i.CustomerPhone,
@@ -279,7 +286,7 @@ func (q *Queries) ListVehiclesForWorkshop(ctx context.Context, arg ListVehiclesF
 }
 
 const listVehiclesPage = `-- name: ListVehiclesPage :many
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, v.body_type, c.id AS customer_id, c.full_name AS customer_name, c.phone AS customer_phone
 FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
 LEFT JOIN customer c ON c.id = l.customer_id
 WHERE l.workshop_id = $1 AND v.status <> 'archivado'
@@ -339,6 +346,7 @@ func (q *Queries) ListVehiclesPage(ctx context.Context, arg ListVehiclesPagePara
 			&i.Vehicle.ArchivedAt,
 			&i.Vehicle.CreatedAt,
 			&i.Vehicle.UpdatedAt,
+			&i.Vehicle.BodyType,
 			&i.CustomerID,
 			&i.CustomerName,
 			&i.CustomerPhone,
@@ -351,6 +359,38 @@ func (q *Queries) ListVehiclesPage(ctx context.Context, arg ListVehiclesPagePara
 		return nil, err
 	}
 	return items, nil
+}
+
+const setOwnerVehicleBodyType = `-- name: SetOwnerVehicleBodyType :one
+UPDATE vehicle SET body_type = $1, updated_at = now() WHERE id = $2 AND owner_user_id = $3 RETURNING id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at, body_type
+`
+
+type SetOwnerVehicleBodyTypeParams struct {
+	BodyType    *BodyType  `json:"body_type"`
+	ID          uuid.UUID  `json:"id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
+}
+
+func (q *Queries) SetOwnerVehicleBodyType(ctx context.Context, arg SetOwnerVehicleBodyTypeParams) (Vehicle, error) {
+	row := q.db.QueryRow(ctx, setOwnerVehicleBodyType, arg.BodyType, arg.ID, arg.OwnerUserID)
+	var i Vehicle
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerUserID,
+		&i.CreatedByWorkshopID,
+		&i.Status,
+		&i.Plate,
+		&i.Make,
+		&i.Model,
+		&i.Year,
+		&i.Vin,
+		&i.LastActivityAt,
+		&i.ArchivedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BodyType,
+	)
+	return i, err
 }
 
 const touchVehicleActivity = `-- name: TouchVehicleActivity :execrows

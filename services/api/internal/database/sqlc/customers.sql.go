@@ -158,7 +158,7 @@ func (q *Queries) LinkVehicleCustomerUser(ctx context.Context, arg LinkVehicleCu
 }
 
 const listCustomerVehicles = `-- name: ListCustomerVehicles :many
-SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
+SELECT v.id, v.owner_user_id, v.created_by_workshop_id, v.status, v.plate, v.make, v.model, v.year, v.vin, v.last_activity_at, v.archived_at, v.created_at, v.updated_at, v.body_type FROM vehicle v JOIN vehicle_link l ON l.vehicle_id = v.id
 WHERE l.workshop_id = $1 AND l.customer_id = $2
 ORDER BY v.status = 'archivado', v.last_activity_at DESC
 `
@@ -191,6 +191,7 @@ func (q *Queries) ListCustomerVehicles(ctx context.Context, arg ListCustomerVehi
 			&i.ArchivedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.BodyType,
 		); err != nil {
 			return nil, err
 		}
