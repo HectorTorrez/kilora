@@ -865,6 +865,17 @@ type VehicleLink struct {
 	CustomerID *uuid.UUID         `json:"customer_id"`
 }
 
+type VehicleReport struct {
+	ID        uuid.UUID          `json:"id"`
+	VehicleID uuid.UUID          `json:"vehicle_id"`
+	CreatedBy uuid.UUID          `json:"created_by"`
+	TokenHash string             `json:"token_hash"`
+	Summary   *string            `json:"summary"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
+}
+
 type WorkOrder struct {
 	ID            uuid.UUID          `json:"id"`
 	WorkshopID    uuid.UUID          `json:"workshop_id"`

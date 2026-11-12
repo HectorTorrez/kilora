@@ -34,6 +34,7 @@ import {
 import { HistoryItems } from "@/components/kilora/history-record";
 import { ListPagination } from "@/components/kilora/list-pagination";
 import { ReceiptScan } from "@/components/kilora/receipt-scan";
+import { ResaleReport } from "@/components/kilora/resale-report";
 import { ServiceExplanation } from "@/components/kilora/service-explanation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -191,6 +192,7 @@ function Page() {
 					<Gauge />
 					Actualizar kilometraje
 				</Button>
+				<ResaleReport vehicleID={id} />
 			</div>
 			<ManualDialog
 				vehicleID={id}

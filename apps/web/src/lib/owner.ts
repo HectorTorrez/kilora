@@ -64,7 +64,29 @@ export const invitationQuery = (token: string) =>
 			),
 		retry: false,
 	});
+export const ownerReportQuery = (vehicleID: string) =>
+	queryOptions({
+		queryKey: ["owner", "report", vehicleID],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/me/vehicles/{vehicleID}/report", {
+					params: { path: { vehicleID } },
+				}),
+			),
+	});
 export const ownerActions = {
+	createReport: async (vehicleID: string) =>
+		unwrap(
+			await api.POST("/api/v1/me/vehicles/{vehicleID}/report", {
+				params: { path: { vehicleID } },
+			}),
+		),
+	revokeReport: async (vehicleID: string) =>
+		unwrap(
+			await api.DELETE("/api/v1/me/vehicles/{vehicleID}/report", {
+				params: { path: { vehicleID } },
+			}),
+		),
 	create: async (body: S["OwnerVehicleInput"]) =>
 		unwrap(await api.POST("/api/v1/me/vehicles", { body })),
 	manual: async (vehicleID: string, body: S["ManualHistoryInput"]) =>

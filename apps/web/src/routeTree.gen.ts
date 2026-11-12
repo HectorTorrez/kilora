@@ -22,6 +22,7 @@ import { Route as CTokenRouteImport } from './routes/c/$token'
 import { Route as InvitacionTokenRouteImport } from './routes/invitacion/$token'
 import { Route as MisVehiculosIndexRouteImport } from './routes/mis-vehiculos/index'
 import { Route as MisVehiculosVehicleIdRouteImport } from './routes/mis-vehiculos/$vehicleId'
+import { Route as RTokenRouteImport } from './routes/r/$token'
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
 import { Route as TallerActividadRouteImport } from './routes/taller/actividad'
 import { Route as TallerConfiguracionRouteImport } from './routes/taller/configuracion'
@@ -102,6 +103,11 @@ const MisVehiculosVehicleIdRoute = MisVehiculosVehicleIdRouteImport.update({
   id: '/$vehicleId',
   path: '/$vehicleId',
   getParentRoute: () => MisVehiculosRoute,
+} as any)
+const RTokenRoute = RTokenRouteImport.update({
+  id: '/r/$token',
+  path: '/r/$token',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const TallerIndexRoute = TallerIndexRouteImport.update({
   id: '/',
@@ -197,6 +203,7 @@ export interface FileRoutesByFullPath {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/r/$token': typeof RTokenRoute
   '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/r/$token': typeof RTokenRoute
   '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos': typeof MisVehiculosIndexRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/r/$token': typeof RTokenRoute
   '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
   '/mis-vehiculos/': typeof MisVehiculosIndexRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/r/$token'
     | '/taller/actividad'
     | '/taller/configuracion'
     | '/mis-vehiculos/'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/r/$token'
     | '/taller/actividad'
     | '/taller/configuracion'
     | '/mis-vehiculos'
@@ -346,6 +357,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/r/$token'
     | '/taller/actividad'
     | '/taller/configuracion'
     | '/mis-vehiculos/'
@@ -376,6 +388,7 @@ export interface RootRouteChildren {
   VerificarRoute: typeof VerificarRoute
   CTokenRoute: typeof CTokenRoute
   InvitacionTokenRoute: typeof InvitacionTokenRoute
+  RTokenRoute: typeof RTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -470,6 +483,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/mis-vehiculos/$vehicleId'
       preLoaderRoute: typeof MisVehiculosVehicleIdRouteImport
       parentRoute: typeof MisVehiculosRoute
+    }
+    '/r/$token': {
+      id: '/r/$token'
+      path: '/r/$token'
+      fullPath: '/r/$token'
+      preLoaderRoute: typeof RTokenRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/taller/': {
       id: '/taller/'
@@ -645,6 +665,7 @@ const rootRouteChildren: RootRouteChildren = {
   VerificarRoute: VerificarRoute,
   CTokenRoute: CTokenRoute,
   InvitacionTokenRoute: InvitacionTokenRoute,
+  RTokenRoute: RTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

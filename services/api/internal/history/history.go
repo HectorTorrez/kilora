@@ -35,6 +35,10 @@ const (
 	ViewerOwner ViewerKind = iota
 	ViewerAuthorWorkshop
 	ViewerLinkedWorkshop
+	// ViewerReport es quien abre el reporte que el propietario comparte para
+	// vender el vehículo: ve el trabajo, las fechas, el kilometraje y el
+	// taller, pero ningún monto ni nota.
+	ViewerReport
 	ViewerNone
 )
 
@@ -119,6 +123,9 @@ func filterItems(items []Item, kind ViewerKind) []Item {
 			item.Quantity = nil
 			item.Price = nil
 		}
+		if kind == ViewerReport {
+			item.Price = nil
+		}
 		out[i] = item
 	}
 	return out
@@ -161,11 +168,15 @@ func filteredChanges(changes map[string]json.RawMessage, kind ViewerKind) map[st
 	return out
 }
 func Project(kind ViewerKind, rec Record) (Projected, bool) {
-	if kind != ViewerOwner && kind != ViewerAuthorWorkshop && kind != ViewerLinkedWorkshop {
+	if kind != ViewerOwner && kind != ViewerAuthorWorkshop && kind != ViewerLinkedWorkshop && kind != ViewerReport {
 		return Projected{}, false
 	}
 	p := Projected{ID: rec.ID, PerformedOn: rec.PerformedOn.Format(dateLayout), OdometerKm: rec.OdometerKm, Source: rec.Source, Summary: rec.Summary, Items: filterItems(rec.Items, kind)}
-	if kind != ViewerLinkedWorkshop {
+	if kind == ViewerReport {
+		p.WorkshopName = rec.WorkshopName
+		p.WorkshopVerifiedAt = rec.WorkshopVerifiedAt
+	}
+	if kind != ViewerLinkedWorkshop && kind != ViewerReport {
 		p.Total = rec.Total
 		p.Currency = &rec.Currency
 		p.WorkshopID = rec.WorkshopID
@@ -191,11 +202,11 @@ func Project(kind ViewerKind, rec Record) (Projected, bool) {
 			ck = ViewerAuthorWorkshop
 		}
 		changes := filteredChanges(c.Changes, ck)
-		if len(changes) == 0 && kind == ViewerLinkedWorkshop {
+		if len(changes) == 0 && (kind == ViewerLinkedWorkshop || kind == ViewerReport) {
 			continue
 		}
 		pc := ProjectedCorrection{ID: c.ID, Changes: changes, CreatedAt: c.CreatedAt}
-		if kind != ViewerLinkedWorkshop {
+		if kind != ViewerLinkedWorkshop && kind != ViewerReport {
 			pc.Reason = &c.Reason
 			pc.CreatedBy = &c.CreatedBy
 		}
