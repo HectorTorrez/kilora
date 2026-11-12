@@ -195,5 +195,10 @@ export const optionalNit = z
 	.refine((value) => {
 		if (!value) return true;
 		const digits = value.replace(/-/g, "");
-		return /^\d+$/.test(digits) && [9, 14].includes(digits.length);
-	}, "Usá 14 dígitos (o 9 si es tu DUI), con o sin guiones");
+		if (!/^\d+$/.test(digits)) return false;
+		if (digits.length === 14) return true;
+		if (digits.length !== 9) return false;
+		let sum = 0;
+		for (let i = 0; i < 8; i++) sum += Number(digits[i]) * (9 - i);
+		return Number(digits[8]) === (10 - (sum % 10)) % 10;
+	}, "Ingresá un NIT de 14 dígitos o un DUI válido, con o sin guiones");

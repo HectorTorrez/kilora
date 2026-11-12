@@ -114,6 +114,8 @@ func TestOptionalNIT(t *testing.T) {
 		" 0614 010190 101 1": "0614-010190-101-1",
 		"012345678":          "01234567-8",
 		"01234567-8":         "01234567-8",
+		"123456784":          "12345678-4",
+		"00000005-0":         "00000005-0",
 	} {
 		if got, ok := OptionalNIT(&input); !ok || got == nil || *got != want {
 			t.Fatal(input, got)
@@ -124,7 +126,7 @@ func TestOptionalNIT(t *testing.T) {
 			t.Fatal(input, got)
 		}
 	}
-	for _, input := range []string{"123", "0614-0101", "ABC123456", "0614-010190-101-12", "0614.010190.101.1"} {
+	for _, input := range []string{"123", "0614-0101", "ABC123456", "0614-010190-101-12", "0614.010190.101.1", "123456789", "01234567-9", "00000005-1"} {
 		if _, ok := OptionalNIT(&input); ok {
 			t.Fatal(input)
 		}

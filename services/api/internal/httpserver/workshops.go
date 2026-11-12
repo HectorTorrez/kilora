@@ -10,7 +10,7 @@ import (
 	"kilora/api/internal/values"
 )
 
-const invalidNIT = "NIT inválido: usá 14 dígitos (o 9 si es tu DUI)"
+const invalidNIT = "Ingresá un NIT de 14 dígitos o un DUI válido, con o sin guiones"
 
 func (s *server) createWorkshop(w http.ResponseWriter, r *http.Request) error {
 	var in struct {

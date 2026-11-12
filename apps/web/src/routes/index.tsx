@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
 	Audiences,
 	FaqSection,
+	Features,
 	FinalCta,
 	Hero,
 	HowItWorks,
@@ -61,7 +62,13 @@ const structuredData = {
 				"Invitaciones por correo, link y QR compartible por WhatsApp",
 				"Cotizaciones registradas como constancia",
 				"Registros append-only con correcciones fechadas",
-				"Sello de taller verificado",
+				"Catálogo de repuestos con registro de marcas",
+				"Asistente de IA para ayuda y consultas de datos con permisos",
+				"Borradores de cotización desde notas escritas o dictadas con IA",
+				"Registro manual de servicios desde una foto del recibo con IA",
+				"Explicaciones de servicios y mensajes de cotización con IA",
+				"Sugerencias de mantenimiento según historial y kilometraje",
+				"Reporte para venta sin montos ni notas, compartible por 30 días",
 			],
 			publisher: { "@id": `${SITE_URL}/#organization` },
 		},
@@ -134,6 +141,7 @@ function Landing() {
 				<Problem />
 				<HowItWorks />
 				<TwoLayers />
+				<Features />
 				<Audiences />
 				<FaqSection />
 				<FinalCta />

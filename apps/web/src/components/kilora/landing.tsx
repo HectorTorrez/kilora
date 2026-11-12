@@ -5,10 +5,16 @@ import {
 	Check,
 	ClipboardList,
 	EyeOff,
+	FileText,
 	History,
+	MessageCircle,
+	Package,
 	Plus,
 	QrCode,
+	ScanLine,
 	ShieldCheck,
+	Sparkles,
+	Wrench,
 	X,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -18,7 +24,7 @@ import { FAQS } from "@/lib/site";
 
 const NAV = [
 	{ href: "#como-funciona", label: "Cómo funciona" },
-	{ href: "#dos-capas", label: "Dos capas" },
+	{ href: "#funciones", label: "Funciones" },
 	{ href: "#talleres", label: "Talleres" },
 	{ href: "#preguntas", label: "Preguntas" },
 ];
@@ -121,9 +127,9 @@ export function Hero() {
 						<span className="text-seal">en el taller.</span>
 					</h1>
 					<p className="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-ink-2">
-						Kilora registra cada servicio, repuesto y kilometraje. El taller lo
-						hace en menos de 5 minutos y el propietario conserva el historial
-						completo aunque cambie de taller.
+						Registrá servicios, repuestos y kilometraje. Prepará cotizaciones
+						con IA, recuperá recibos y compartí un reporte al vender. El
+						historial viaja con vos aunque cambies de taller.
 					</p>
 					<div className="mt-9 flex flex-wrap items-center gap-3">
 						<a href="#como-funciona" className={buttonVariants({ size: "lg" })}>
@@ -158,7 +164,8 @@ const RECORDS = [
 		date: "14 oct 2026",
 		km: "84 210",
 		job: "Cambio de aceite y filtro",
-		parts: "Aceite 5W-30 · Filtro OEM",
+		parts: "Aceite 5W-30 · Filtro de aceite",
+		brand: "Toyota",
 		shop: "Taller Mecánico Ruiz",
 		cost: "$48.00",
 		note: "Revisar balatas en el próximo servicio",
@@ -168,6 +175,7 @@ const RECORDS = [
 		km: "79 040",
 		job: "Pastillas de freno delanteras",
 		parts: "Juego de pastillas cerámicas",
+		brand: "Brembo",
 		shop: "AutoServicio La Cima",
 		cost: "$65.00",
 		note: "Discos dentro de tolerancia",
@@ -177,6 +185,7 @@ const RECORDS = [
 		km: "72 655",
 		job: "Alineación y balanceo",
 		parts: "4 llantas",
+		brand: null,
 		shop: "Taller Mecánico Ruiz",
 		cost: "$30.00",
 		note: "Llanta trasera izq. con desgaste irregular",
@@ -280,6 +289,16 @@ function HistoryCard() {
 											</span>
 										</Field>
 									</dd>
+									<dt className="text-ink-3">Repuestos</dt>
+									<dd>{r.parts}</dd>
+									{r.brand && (
+										<>
+											<dt className="text-ink-3">Marca</dt>
+											<dd>
+												<Field hidden={blind}>{r.brand}</Field>
+											</dd>
+										</>
+									)}
 									<dt className="text-ink-3">Costo</dt>
 									<dd className="font-mono tabular-nums">
 										<Field hidden={blind}>{r.cost}</Field>
@@ -298,7 +317,7 @@ function HistoryCard() {
 				<EyeOff className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
 				{blind
 					? "Otro taller ve qué se hizo, cuándo y con qué kilometraje. Nada más."
-					: "El propietario ve todo: taller, costo, notas y fotos de cada servicio."}
+					: "El propietario ve el taller, los repuestos y sus marcas, el costo y las notas públicas."}
 			</figcaption>
 		</figure>
 	);
@@ -335,7 +354,7 @@ const SPECS = [
 	{ value: "≤ 5 min", label: "por orden de servicio" },
 	{ value: "2 capas", label: "de visibilidad del historial" },
 	{ value: "0 apps", label: "que instalar para el cliente" },
-	{ value: "100%", label: "append-only, sin reescrituras" },
+	{ value: "Con IA", label: "para cotizar y entender servicios" },
 ];
 
 function SpecStrip() {
@@ -462,7 +481,7 @@ export function HowItWorks() {
 		{
 			icon: ClipboardList,
 			title: "El taller registra la orden",
-			body: "Recepción captura vehículo, kilometraje, trabajos y repuestos con plantillas frecuentes. Incluye cotización y fotos.",
+			body: "Recepción registra vehículo y kilometraje. Una nota escrita o dictada puede convertirse en un borrador de cotización con IA.",
 			meta: "≤ 5 min",
 		},
 		{
@@ -475,7 +494,7 @@ export function HowItWorks() {
 			icon: History,
 			title: "El historial viaja con el carro",
 			body: "Cada servicio se suma a una línea de tiempo con fecha y kilometraje. Si cambia de taller, el historial sigue completo.",
-			meta: "Append-only",
+			meta: "Historial · Reporte para venta",
 		},
 	];
 	return (
@@ -520,12 +539,14 @@ export function HowItWorks() {
 
 const LAYERS: { field: string; owner: boolean; shop: boolean }[] = [
 	{ field: "Trabajo o pieza", owner: true, shop: true },
+	{ field: "Marca del repuesto", owner: true, shop: false },
 	{ field: "Fecha del servicio", owner: true, shop: true },
 	{ field: "Kilometraje", owner: true, shop: true },
 	{ field: "Taller que lo hizo", owner: true, shop: false },
 	{ field: "Costo y cotización", owner: true, shop: false },
 	{ field: "Fotos", owner: true, shop: false },
-	{ field: "Notas del taller", owner: true, shop: false },
+	{ field: "Notas públicas del servicio", owner: true, shop: false },
+	{ field: "Costos internos y notas privadas", owner: false, shop: false },
 ];
 
 export function TwoLayers() {
@@ -544,9 +565,10 @@ export function TwoLayers() {
 					invert
 				>
 					El mismo registro se muestra distinto según quién lo mira. El
-					propietario ve todo; otro taller vinculado ve solo qué se hizo, cuándo
-					y con qué kilometraje. La regla se aplica en el servidor, no en la
-					pantalla.
+					propietario ve sus cargos y las notas públicas; otro taller vinculado
+					ve los trabajos, las piezas, las fechas y el kilometraje. Los costos
+					internos y las notas privadas quedan solo en el taller que hizo el
+					servicio.
 				</SectionHead>
 				<div className="reveal mt-14 overflow-x-auto lg:ml-[15rem]">
 					<table className="w-full border-collapse text-left">
@@ -608,6 +630,100 @@ function Mark({ on }: { on: boolean }) {
 	);
 }
 
+const FEATURES = [
+	{
+		icon: ClipboardList,
+		label: "Para talleres",
+		title: "De una nota a una cotización",
+		body: "Escribí o dictá el trabajo y la IA prepara las líneas de la cotización con repuestos del catálogo. Revisás los conceptos y precios antes de guardar.",
+	},
+	{
+		icon: ScanLine,
+		label: "Para propietarios",
+		title: "Tus recibos también cuentan",
+		body: "Fotografiá un recibo o factura y completá un servicio manual con su fecha, kilometraje, trabajos y total. Confirmás los datos antes de sumarlo al historial.",
+	},
+	{
+		icon: MessageCircle,
+		label: "Para ambos",
+		title: "El mantenimiento, en palabras claras",
+		body: "Entendé qué le hicieron a tu carro con una explicación sin tecnicismos. El taller también puede preparar un mensaje editable para compartir la cotización por WhatsApp.",
+	},
+	{
+		icon: Wrench,
+		label: "Para talleres",
+		title: "El próximo servicio, con contexto",
+		body: "Recibí sugerencias de mantenimiento según el historial disponible, el último kilometraje y los intervalos de referencia. El taller revisa qué recomendar al propietario.",
+	},
+	{
+		icon: FileText,
+		label: "Para propietarios",
+		title: "Un historial listo para la venta",
+		body: "Compartí un reporte con servicios, talleres y kilometraje, sin montos ni notas. El enlace dura 30 días, se puede imprimir como PDF e incluye un resumen con IA.",
+	},
+	{
+		icon: Package,
+		label: "Para ambos",
+		title: "Sabé qué repuestos lleva tu carro",
+		body: "Registrá los repuestos y sus marcas en cotizaciones y servicios. El propietario conserva el detalle de qué se instaló en cada mantenimiento, aunque cambie de taller.",
+	},
+];
+
+export function Features() {
+	return (
+		<section
+			id="funciones"
+			aria-labelledby="funciones-title"
+			className="scroll-mt-14 border-b bg-surface"
+		>
+			<div className="frame px-5 py-20 md:px-8 md:py-28">
+				<SectionHead
+					index="04"
+					label="Más que un registro"
+					id="funciones-title"
+					title="Menos trabajo para registrar. Más claridad para decidir."
+				>
+					Desde la primera cotización hasta la venta del carro, aprovechá el
+					historial en cada paso. La IA prepara borradores; vos revisás y
+					confirmás.
+				</SectionHead>
+				<ul className="mt-14 grid gap-px overflow-hidden rounded-lg border bg-line md:grid-cols-2 lg:grid-cols-3">
+					{FEATURES.map((feature) => (
+						<li key={feature.title} className="reveal bg-card p-6 md:p-8">
+							<div className="flex items-center justify-between gap-4">
+								<feature.icon
+									className="size-5 shrink-0 text-seal"
+									aria-hidden="true"
+								/>
+								<p className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
+									{feature.label}
+								</p>
+							</div>
+							<h3 className="mt-6 font-display text-xl font-bold">
+								{feature.title}
+							</h3>
+							<p className="mt-3 leading-relaxed text-ink-2">{feature.body}</p>
+						</li>
+					))}
+				</ul>
+				<div className="mt-6 flex flex-col gap-4 rounded-lg border bg-seal-soft p-6 sm:flex-row sm:items-start md:p-8">
+					<Sparkles className="size-5 shrink-0 text-seal" aria-hidden="true" />
+					<div>
+						<h3 className="font-display text-xl font-bold">
+							Un asistente que conoce tu contexto
+						</h3>
+						<p className="mt-2 max-w-3xl leading-relaxed text-ink-2">
+							Preguntá cómo usar Kilora o consultá tus vehículos, órdenes y
+							cotizaciones. El asistente consulta solo los datos que tu cuenta
+							puede ver y no modifica registros.
+						</p>
+					</div>
+				</div>
+			</div>
+		</section>
+	);
+}
+
 export function Audiences() {
 	const groups = [
 		{
@@ -615,10 +731,10 @@ export function Audiences() {
 			label: "Para talleres",
 			title: "Menos papel, clientes que vuelven.",
 			points: [
-				"Órdenes de servicio con plantillas de trabajos frecuentes",
-				"Cotización registrada como constancia, sin firma digital",
+				"Órdenes de servicio y clientes organizados por sucursal",
+				"Cotizaciones desde notas con IA y mensajes para WhatsApp",
 				"Costos internos y notas del mecánico siempre privados",
-				"Sello de taller verificado en cada registro",
+				"Catálogo de repuestos con marcas y sugerencias de mantenimiento",
 				"Permisos por sucursal y auditoría de cada cambio",
 			],
 			cta: { to: "/registro" as const, text: "Registrar mi taller" },
@@ -628,11 +744,11 @@ export function Audiences() {
 			label: "Para propietarios",
 			title: "Todo el mantenimiento de tu carro, en tu teléfono.",
 			points: [
-				"Historial completo con fecha, kilometraje y fotos",
+				"Historial con fecha, kilometraje, repuestos y sus marcas",
 				"Lo conservás aunque cambies de taller",
-				"Recibís la cotización por WhatsApp antes del trabajo",
-				"Correcciones fechadas: nada se borra en silencio",
-				"Un respaldo real al momento de vender el carro",
+				"Servicios manuales desde una foto del recibo",
+				"Explicaciones claras del mantenimiento con IA",
+				"Reporte para venta compartible, sin montos ni notas",
 			],
 			cta: { to: "/login" as const, text: "Ver mis vehículos" },
 		},
@@ -648,7 +764,7 @@ export function Audiences() {
 						className={`reveal scroll-mt-14 px-5 py-20 md:px-8 md:py-24 ${i === 1 ? "border-t md:border-t-0 md:border-l" : ""}`}
 					>
 						<p className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
-							<span className="text-seal">[0{i + 4}]</span> {g.label}
+							<span className="text-seal">[0{i + 5}]</span> {g.label}
 						</p>
 						<h2
 							id={`${g.id}-title`}

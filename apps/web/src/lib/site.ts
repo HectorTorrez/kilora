@@ -8,7 +8,7 @@ export const SITE_TITLE =
 	"Kilora — Historial digital del vehículo para talleres en El Salvador";
 
 export const SITE_DESCRIPTION =
-	"Kilora es el historial digital de servicio de tu carro. Los talleres registran cada orden, trabajo y kilometraje en menos de 5 minutos, y el propietario conserva el historial completo aunque cambie de taller.";
+	"El historial de tu carro viaja con vos. Cotizaciones con IA, escaneo de recibos, registro de repuestos y reportes para venta para talleres y propietarios en El Salvador.";
 
 export const OG_IMAGE = `${SITE_URL}/og.png`;
 
@@ -27,7 +27,7 @@ export const FAQS: Faq[] = [
 	},
 	{
 		q: "¿Otro taller puede ver lo que cobré o mis notas?",
-		a: "No. Un taller vinculado solo ve una vista ciega: qué trabajo se hizo, la fecha y el kilometraje. Nunca ve el taller autor, los precios, las fotos ni las notas internas. Esa proyección se aplica en el servidor.",
+		a: "No. Un taller vinculado solo ve una vista ciega: qué trabajo se hizo, la fecha y el kilometraje. Nunca ve el taller autor, las marcas de los repuestos, los precios, las fotos ni las notas. Los costos internos y las notas privadas quedan solo en el taller que hizo el servicio. Esa proyección se aplica en el servidor.",
 	},
 	{
 		q: "¿Cuánto tarda registrar una orden de servicio?",
@@ -40,6 +40,18 @@ export const FAQS: Faq[] = [
 	{
 		q: "¿Se puede editar o borrar un registro del historial?",
 		a: "No se reescribe. El historial es append-only: si hay un error, el taller agrega una corrección fechada y el registro original queda visible. Así el historial es confiable al vender el carro.",
+	},
+	{
+		q: "¿Qué puedo hacer con la IA de Kilora?",
+		a: "Podés preparar cotizaciones desde notas, completar un servicio desde la foto de un recibo y obtener explicaciones claras del mantenimiento. El asistente también responde dudas de Kilora y consulta los datos que tu cuenta puede ver. Los borradores se revisan antes de guardar; el asistente no modifica registros.",
+	},
+	{
+		q: "¿Cómo comparto el historial al vender mi carro?",
+		a: "Desde tu vehículo, creá un Reporte para venta. Recibís un enlace de solo lectura válido por 30 días con los servicios, talleres y kilometraje, sin montos ni notas. Podés imprimirlo como PDF. Crear un nuevo enlace invalida el anterior; el reporte incluye un resumen con IA.",
+	},
+	{
+		q: "¿Las sugerencias de mantenimiento dependen de la IA?",
+		a: "No. Se calculan con intervalos de referencia, el historial disponible y el último kilometraje registrado. La IA ayuda a redactarlas. El taller revisa las sugerencias y decide cuáles recomendar.",
 	},
 	{
 		q: "¿En qué país funciona Kilora?",

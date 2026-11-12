@@ -160,6 +160,13 @@ func OptionalNIT(p *string) (*string, bool) {
 	case 0:
 		return nil, true
 	case 9:
+		sum := 0
+		for i := 0; i < 8; i++ {
+			sum += int(d[i]-'0') * (9 - i)
+		}
+		if int(d[8]-'0') != (10-sum%10)%10 {
+			return nil, false
+		}
 		v = d[:8] + "-" + d[8:]
 	case 14:
 		v = d[:4] + "-" + d[4:10] + "-" + d[10:13] + "-" + d[13:]
