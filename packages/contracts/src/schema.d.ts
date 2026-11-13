@@ -5810,6 +5810,177 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/vehicles/{vehicleID}/maintenance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicleID: string;
+            };
+            cookie?: never;
+        };
+        /** Plan de mantenimiento del propietario */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta exitosa */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OwnerMaintenancePlan"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Activar o desactivar recordatorios por email */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        email_reminders: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Respuesta exitosa */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/v1/me/vehicles/{vehicleID}/maintenance/intervals/{category}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                vehicleID: string;
+                category: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /** Personalizar un intervalo de mantenimiento */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                    category: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["MaintenanceIntervalInput"];
+                };
+            };
+            responses: {
+                /** @description Respuesta exitosa */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        /** Restaurar el intervalo de referencia */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                    category: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Respuesta exitosa */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me/email-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Permitir o bloquear correos de mantenimiento para toda la cuenta */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        maintenance_emails_enabled: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Preferencia guardada */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5825,6 +5996,8 @@ export interface components {
             /** Format: date-time */
             email_verified_at: string | null;
             phone?: string | null;
+            /** @description Permiso global para los recordatorios activados por vehículo. Desactivarlo bloquea todos los correos de mantenimiento. */
+            maintenance_emails_enabled: boolean;
         };
         Membership: {
             /** Format: uuid */
@@ -6729,6 +6902,32 @@ export interface components {
             filename: string;
             content_type: string;
             size_bytes: number;
+        };
+        OwnerMaintenanceItem: {
+            category: string;
+            label: string;
+            interval_km: number;
+            interval_months: number;
+            custom_interval: boolean;
+            /** @enum {string} */
+            status: "sin_historial" | "programado" | "proximo" | "vencido" | "sin_kilometraje";
+            last_performed_on: string | null;
+            last_summary: string | null;
+            last_odometer_km: number | null;
+            due_date: string | null;
+            due_km: number | null;
+        };
+        OwnerMaintenancePlan: {
+            items: components["schemas"]["OwnerMaintenanceItem"][];
+            email_reminders: boolean;
+            current_odometer_km: number | null;
+            last_odometer_at: string | null;
+            odometer_stale: boolean;
+        };
+        /** @description Al menos un intervalo debe ser mayor que cero. Cero desactiva ese límite. */
+        MaintenanceIntervalInput: {
+            km: number;
+            months: number;
         };
     };
     responses: never;

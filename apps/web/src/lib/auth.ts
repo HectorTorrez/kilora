@@ -138,3 +138,19 @@ export function useAccountCredentials() {
 		},
 	});
 }
+
+export function useUpdateEmailPreferences() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: async (enabled: boolean) => {
+			const { error, response } = await api.PATCH(
+				"/api/v1/auth/me/email-preferences",
+				{
+					body: { maintenance_emails_enabled: enabled },
+				},
+			);
+			if (!response.ok) throw apiError(error, response.status);
+		},
+		onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+	});
+}

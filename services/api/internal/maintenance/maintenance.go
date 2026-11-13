@@ -4,6 +4,8 @@
 package maintenance
 
 import (
+	"encoding/json"
+	"math"
 	"regexp"
 	"sort"
 	"strings"
@@ -15,8 +17,8 @@ import (
 // Interval es el intervalo de referencia de una categoría. Son los mismos que
 // usa el mapa del vehículo en la web (apps/web/src/lib/parts-map.ts).
 type Interval struct {
-	Km     int32
-	Months int
+	Km     int32 `json:"km"`
+	Months int   `json:"months"`
 }
 
 var Intervals = map[string]Interval{
@@ -133,12 +135,25 @@ func monthsBetween(from, to time.Time) int {
 // DueSoon revisa el historial visible y devuelve las categorías cuyo último
 // servicio consumió al menos SoonAt de su intervalo, la más urgente primero.
 func DueSoon(records []history.Projected, currentKm *int32, today time.Time) []Due {
+	out := []Due{}
+	for _, d := range Forecast(records, currentKm, today, nil) {
+		if d.Wear >= SoonAt {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// Forecast returns every category with a recorded service, including work that
+// is not due yet. Unknown history never becomes an invented maintenance date.
+func Forecast(records []history.Projected, currentKm *int32, today time.Time, overrides map[string]Interval) []Due {
 	type last struct {
 		on  time.Time
 		rec history.Projected
 	}
 	latest := map[string]last{}
 	for _, r := range records {
+		r = effectiveRecord(r)
 		on, err := time.Parse(time.DateOnly, r.PerformedOn)
 		if err != nil {
 			continue
@@ -152,23 +167,26 @@ func DueSoon(records []history.Projected, currentKm *int32, today time.Time) []D
 	var out []Due
 	for c, l := range latest {
 		iv := Intervals[c]
+		if custom, ok := overrides[c]; ok {
+			iv = custom
+		}
 		d := Due{Category: c, LastOn: l.on, LastKm: l.rec.OdometerKm, LastSummary: l.rec.Summary, MonthsSince: monthsBetween(l.on, today)}
 		if iv.Months > 0 {
-			d.Wear = float64(d.MonthsSince) / float64(iv.Months)
 			d.DueDate = l.on.AddDate(0, iv.Months, 0)
+			d.Wear = max(0, float64(today.Sub(l.on))/float64(d.DueDate.Sub(l.on)))
 		}
 		if iv.Km > 0 && l.rec.OdometerKm != nil {
-			due := *l.rec.OdometerKm + iv.Km
-			d.DueKm = &due
-			if currentKm != nil {
+			if sum := int64(*l.rec.OdometerKm) + int64(iv.Km); sum <= math.MaxInt32 {
+				due := int32(sum)
+				d.DueKm = &due
+			}
+			if currentKm != nil && *currentKm >= *l.rec.OdometerKm {
 				since := max(0, *currentKm-*l.rec.OdometerKm)
 				d.KmSince = &since
 				d.Wear = max(d.Wear, float64(since)/float64(iv.Km))
 			}
 		}
-		if d.Wear >= SoonAt {
-			out = append(out, d)
-		}
+		out = append(out, d)
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Wear != out[j].Wear {
@@ -177,4 +195,41 @@ func DueSoon(records []history.Projected, currentKm *int32, today time.Time) []D
 		return out[i].Category < out[j].Category
 	})
 	return out
+}
+
+func ValidInterval(category string, iv Interval) bool {
+	_, ok := Intervals[category]
+	return ok && iv.Km >= 0 && iv.Km <= 1000000 && iv.Months >= 0 && iv.Months <= 120 && (iv.Km > 0 || iv.Months > 0)
+}
+
+func effectiveRecord(r history.Projected) history.Projected {
+	corrections := append([]history.ProjectedCorrection(nil), r.Corrections...)
+	sort.SliceStable(corrections, func(i, j int) bool { return corrections[i].CreatedAt.Before(corrections[j].CreatedAt) })
+	for _, c := range corrections {
+		for key, raw := range c.Changes {
+			switch key {
+			case "performed_on":
+				var value *string
+				if json.Unmarshal(raw, &value) == nil && value != nil {
+					r.PerformedOn = *value
+				}
+			case "summary":
+				var value *string
+				if json.Unmarshal(raw, &value) == nil && value != nil {
+					r.Summary = *value
+				}
+			case "odometer_km":
+				var value *int32
+				if json.Unmarshal(raw, &value) == nil {
+					r.OdometerKm = value
+				}
+			case "items":
+				var value []history.Item
+				if json.Unmarshal(raw, &value) == nil {
+					r.Items = value
+				}
+			}
+		}
+	}
+	return r
 }

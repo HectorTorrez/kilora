@@ -27,6 +27,19 @@ func TestSeed(t *testing.T) {
 	if err = seed(ctx, tx, false); err != nil {
 		t.Fatal(err)
 	}
+	var enabled int
+	if err = tx.QueryRow(ctx, "SELECT count(*) FROM app_user WHERE email LIKE '%@demo.kilora.app' AND maintenance_emails_enabled").Scan(&enabled); err != nil || enabled != 0 {
+		t.Fatalf("demo email must default off: %d %v", enabled, err)
+	}
+	if _, err = tx.Exec(ctx, "UPDATE app_user SET maintenance_emails_enabled=true WHERE email LIKE '%@demo.kilora.app'"); err != nil {
+		t.Fatal(err)
+	}
+	if err = seed(ctx, tx, false); err != nil {
+		t.Fatal(err)
+	}
+	if err = tx.QueryRow(ctx, "SELECT count(*) FROM app_user WHERE email LIKE '%@demo.kilora.app' AND maintenance_emails_enabled").Scan(&enabled); err != nil || enabled != 0 {
+		t.Fatalf("existing demo email was not repaired: %d %v", enabled, err)
+	}
 	var count int
 	if err = tx.QueryRow(ctx, "SELECT count(*) FROM history_record h JOIN vehicle v ON v.id=h.vehicle_id WHERE v.plate='P512834'").Scan(&count); err != nil {
 		t.Fatal(err)

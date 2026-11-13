@@ -27,6 +27,8 @@ Kilora turns completed services into a lasting vehicle history. Owners can under
 
 - **Keep your history across workshops.** Find linked workshop services in one vehicle record.
 - **Understand your maintenance.** Review service dates, mileage, work performed, parts, and charges.
+- **Plan the next service.** See upcoming maintenance dates and mileage based on recorded services, with adjustable intervals for each vehicle.
+- **Choose email reminders.** Opt in per vehicle for maintenance digests and prompts to refresh an old mileage reading.
 - **Fill in the gaps.** Add services manually and record new odometer readings.
 - **Keep a traceable record.** Corrections are added as dated entries, preserving the original history.
 - **Share a resale report.** Create a read-only link valid for 30 days, with service dates, workshops, and mileage, and print it to PDF. Amounts and notes stay out of the report.
@@ -126,6 +128,45 @@ Besides the chat, the same key enables AI helpers inside the forms. They follow 
 - **Plain-language explanations.** Owners can tap *¿Qué me hicieron?* on any service to get a short, jargon-free explanation. Workshops get *Mensaje con IA*, an editable WhatsApp message that explains each quote line before sharing the link. The model only receives the projection the viewer already sees (`history.Project` for owners, without internal IDs), so internal costs and private notes never reach a prompt.
 - **Suggested recommendations.** *Sugerir* on a vehicle's recommendations card proposes due maintenance. Deterministic rules in [`services/api/internal/maintenance`](services/api/internal/maintenance) decide what is due using reference intervals, the history the workshop can see, and the latest odometer reading. The model only writes the wording. Without a key, the suggestions still work with template text.
 - **Resale report.** Owners can share *Reporte para venta*: a 30-day, read-only link (`/r/<token>`, printable to PDF) with the full history under a dedicated `history.ViewerReport` projection, which shows work, dates, mileage and workshops but no amounts or notes. When the link is created, the model writes a short summary of how complete and regular the history is. Creating a new link revokes the previous one, and only the token's hash is stored.
+
+## Owner maintenance plan and reminders
+
+Each owner's vehicle page includes **Próximo mantenimiento**. The API computes it
+from the complete owner-visible history, applying dated corrections before
+selecting the latest service in each category. Categories without recorded work
+show no invented due date. General reference intervals can be replaced per
+vehicle with the owner's manufacturer or workshop interval, or restored later.
+A zero or empty interval disables that limit; at least one of mileage or months
+must remain enabled. When both are enabled, whichever comes first applies.
+These are maintenance estimates, not diagnoses or manufacturer-specific schedules.
+
+Email reminders are **off by default** and can be enabled or disabled on the same
+card for each vehicle. **Mi cuenta → Correos y notificaciones** also includes a
+saved account-wide switch: disabling it pauses all maintenance emails while
+preserving each vehicle's selections. Re-enabling it permits only the previously
+selected vehicles; verification and password recovery emails remain available.
+Demo accounts always show this switch off and cannot opt in. Seeding and migration
+`00017_disable_demo_email.sql` disable existing demo preferences. Both mail adapters
+also discard every message addressed to `@demo.kilora.app`, including invitations
+and authentication messages, regardless of any saved preference.
+The API checks at startup and hourly while running. Only
+verified owners of linked, active vehicles receive messages; seeded demo accounts
+are excluded. Maintenance approaching 80% of its interval or overdue can trigger
+a digest, at most once every seven days per vehicle. If only the mileage needs
+updating (no reading, or a reading at least 30 days old), the limit is 30 days.
+The email links back to the vehicle page to update mileage or disable reminders.
+New services and interval changes are used on the next check.
+
+The worker uses the existing Resend configuration (or the development log mailer),
+PostgreSQL row locks to serialize delivery across replicas, and persisted delivery
+timestamps. Failed sends remain eligible for the next hourly check. Resend retries
+also use an [idempotency key](https://resend.com/docs/dashboard/emails/idempotency-keys),
+which the provider retains for 24 hours; this does not promise exactly-once
+email delivery across an arbitrarily long outage after a successful send but
+before its database commit.
+
+Apply migrations through `00017_disable_demo_email.sql` with `pnpm db:migrate` before starting
+the updated API. No additional cron service or AI API key is required.
 
 ## Development reference
 

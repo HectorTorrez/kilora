@@ -1,5 +1,5 @@
 -- name: CreateUser :one
-INSERT INTO app_user (email, password_hash, full_name, phone) VALUES (sqlc.arg(email), sqlc.arg(password_hash), sqlc.arg(full_name), sqlc.arg(phone)) RETURNING *;
+INSERT INTO app_user (email, password_hash, full_name, phone, maintenance_emails_enabled) VALUES (sqlc.arg(email)::text, sqlc.arg(password_hash), sqlc.arg(full_name), sqlc.arg(phone), lower(btrim(sqlc.arg(email)::text)) NOT LIKE '%@demo.kilora.app') RETURNING *;
 
 -- name: GetUserByID :one
 SELECT * FROM app_user WHERE id = sqlc.arg(id);
@@ -28,3 +28,6 @@ UPDATE vehicle SET owner_user_id = NULL, status = CASE WHEN status = 'vinculado'
 
 -- name: DeleteUserAuthTokens :exec
 DELETE FROM auth_token WHERE user_id = $1;
+
+-- name: SetMaintenanceEmailPreference :exec
+UPDATE app_user SET maintenance_emails_enabled = $2 WHERE id = $1;

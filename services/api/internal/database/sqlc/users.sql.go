@@ -22,7 +22,7 @@ func (q *Queries) AnonymizeUser(ctx context.Context, id uuid.UUID) error {
 }
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO app_user (email, password_hash, full_name, phone) VALUES ($1, $2, $3, $4) RETURNING id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at
+INSERT INTO app_user (email, password_hash, full_name, phone, maintenance_emails_enabled) VALUES ($1::text, $2, $3, $4, lower(btrim($1::text)) NOT LIKE '%@demo.kilora.app') RETURNING id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at, maintenance_emails_enabled
 `
 
 type CreateUserParams struct {
@@ -49,6 +49,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AppUser
 		&i.EmailVerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaintenanceEmailsEnabled,
 	)
 	return i, err
 }
@@ -63,7 +64,7 @@ func (q *Queries) DeleteUserAuthTokens(ctx context.Context, userID uuid.UUID) er
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at FROM app_user WHERE email = $1
+SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at, maintenance_emails_enabled FROM app_user WHERE email = $1
 `
 
 func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AppUser, error) {
@@ -78,12 +79,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (AppUser, er
 		&i.EmailVerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaintenanceEmailsEnabled,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at FROM app_user WHERE id = $1
+SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at, maintenance_emails_enabled FROM app_user WHERE id = $1
 `
 
 func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (AppUser, error) {
@@ -98,12 +100,13 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (AppUser, error
 		&i.EmailVerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaintenanceEmailsEnabled,
 	)
 	return i, err
 }
 
 const lockAccount = `-- name: LockAccount :one
-SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at FROM app_user WHERE id = $1 FOR UPDATE
+SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at, maintenance_emails_enabled FROM app_user WHERE id = $1 FOR UPDATE
 `
 
 func (q *Queries) LockAccount(ctx context.Context, id uuid.UUID) (AppUser, error) {
@@ -118,6 +121,7 @@ func (q *Queries) LockAccount(ctx context.Context, id uuid.UUID) (AppUser, error
 		&i.EmailVerifiedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.MaintenanceEmailsEnabled,
 	)
 	return i, err
 }
@@ -132,6 +136,20 @@ func (q *Queries) MarkUserEmailVerified(ctx context.Context, id uuid.UUID) (int6
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const setMaintenanceEmailPreference = `-- name: SetMaintenanceEmailPreference :exec
+UPDATE app_user SET maintenance_emails_enabled = $2 WHERE id = $1
+`
+
+type SetMaintenanceEmailPreferenceParams struct {
+	ID                       uuid.UUID `json:"id"`
+	MaintenanceEmailsEnabled bool      `json:"maintenance_emails_enabled"`
+}
+
+func (q *Queries) SetMaintenanceEmailPreference(ctx context.Context, arg SetMaintenanceEmailPreferenceParams) error {
+	_, err := q.db.Exec(ctx, setMaintenanceEmailPreference, arg.ID, arg.MaintenanceEmailsEnabled)
+	return err
 }
 
 const unlinkOwnerVehicles = `-- name: UnlinkOwnerVehicles :exec

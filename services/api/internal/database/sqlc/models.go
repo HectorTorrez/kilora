@@ -624,14 +624,15 @@ func (e WorkOrderStatus) Valid() bool {
 }
 
 type AppUser struct {
-	ID              uuid.UUID          `json:"id"`
-	Email           string             `json:"email"`
-	PasswordHash    string             `json:"password_hash"`
-	FullName        string             `json:"full_name"`
-	Phone           *string            `json:"phone"`
-	EmailVerifiedAt pgtype.Timestamptz `json:"email_verified_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                       uuid.UUID          `json:"id"`
+	Email                    string             `json:"email"`
+	PasswordHash             string             `json:"password_hash"`
+	FullName                 string             `json:"full_name"`
+	Phone                    *string            `json:"phone"`
+	EmailVerifiedAt          pgtype.Timestamptz `json:"email_verified_at"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+	MaintenanceEmailsEnabled bool               `json:"maintenance_emails_enabled"`
 }
 
 type AssistantKnowledgeChunk struct {
@@ -767,6 +768,13 @@ type OdometerReading struct {
 	WorkOrderID *uuid.UUID         `json:"work_order_id"`
 	RecordedBy  *uuid.UUID         `json:"recorded_by"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type OwnerVehicleMaintenance struct {
+	VehicleID      uuid.UUID          `json:"vehicle_id"`
+	EmailReminders bool               `json:"email_reminders"`
+	Intervals      []byte             `json:"intervals"`
+	LastSentAt     pgtype.Timestamptz `json:"last_sent_at"`
 }
 
 type Part struct {

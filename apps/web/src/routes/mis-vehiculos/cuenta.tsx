@@ -25,7 +25,14 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { Form } from "@/components/ui/form";
-import { meQuery, useAccountCredentials, useUpdateProfile } from "@/lib/auth";
+import { errorMessage } from "@/lib/api";
+import {
+	meQuery,
+	useAccountCredentials,
+	useUpdateEmailPreferences,
+	useUpdateProfile,
+} from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/mis-vehiculos/cuenta")({
 	component: AccountPage,
@@ -55,7 +62,8 @@ function AccountPage() {
 			<div>
 				<h1 className="font-display text-3xl font-semibold">Mi cuenta</h1>
 				<p className="mt-2 text-sm text-ink-3">
-					Administrá tus datos personales y la seguridad de tu cuenta.
+					Administrá tus datos personales, tus correos y la seguridad de tu
+					cuenta.
 				</p>
 			</div>
 			{demo && (
@@ -76,6 +84,11 @@ function AccountPage() {
 					<ProfileForm key={me.user.id} user={me.user} disabled={demo} />
 				</CardContent>
 			</Card>
+			<EmailPreferences
+				enabled={me.user.maintenance_emails_enabled}
+				disabled={demo}
+				email={me.user.email}
+			/>
 			<Card>
 				<CardHeader>
 					<CardTitle>Cambiar contraseña</CardTitle>
@@ -292,5 +305,95 @@ function CredentialsForm({
 				</fieldset>
 			</form>
 		</Form>
+	);
+}
+
+function EmailPreferences({
+	enabled,
+	disabled,
+	email,
+}: {
+	enabled: boolean;
+	disabled: boolean;
+	email: string;
+}) {
+	const update = useUpdateEmailPreferences();
+	const router = useRouter();
+	return (
+		<Card>
+			<CardHeader>
+				<CardTitle>Correos y notificaciones</CardTitle>
+				<CardDescription>
+					Elegí si Kilora puede enviarte los recordatorios que activés para tus
+					vehículos.
+				</CardDescription>
+			</CardHeader>
+			<CardContent>
+				<div className="flex items-start justify-between gap-4">
+					<div className="min-w-0 space-y-2">
+						<label
+							htmlFor="maintenance-emails"
+							className="cursor-pointer text-sm font-medium"
+						>
+							Permitir correos de mantenimiento
+						</label>
+						<p
+							id="maintenance-emails-description"
+							className="text-sm text-ink-3"
+						>
+							Al desactivarlo, se detienen los correos de mantenimiento de todos
+							tus vehículos. Tus selecciones por vehículo se conservan.
+						</p>
+						<p className="break-words text-xs text-ink-3">
+							{enabled
+								? `Se envían a ${email} cuando activás los avisos en la ficha de un vehículo.`
+								: "No recibirás correos de mantenimiento mientras esta opción esté desactivada."}
+						</p>
+						<p className="text-xs text-ink-3">
+							Los correos para verificar tu cuenta o recuperar tu contraseña
+							seguirán disponibles.
+						</p>
+					</div>
+					<button
+						id="maintenance-emails"
+						type="button"
+						role="switch"
+						aria-checked={enabled}
+						aria-describedby="maintenance-emails-description"
+						disabled={disabled || update.isPending}
+						className={cn(
+							"inline-flex h-8 w-14 shrink-0 items-center rounded-full border p-1 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+							enabled ? "border-seal bg-seal" : "border-input bg-muted",
+						)}
+						onClick={() =>
+							update.mutate(!enabled, {
+								onSuccess: async () => {
+									await router.invalidate();
+									toast.success(
+										enabled
+											? "Correos de mantenimiento desactivados"
+											: "Correos de mantenimiento permitidos",
+									);
+								},
+								onError: (error) => toast.error(errorMessage(error)),
+							})
+						}
+					>
+						<span
+							aria-hidden
+							className={cn(
+								"size-6 rounded-full bg-background shadow-sm",
+								enabled && "translate-x-5",
+							)}
+						/>
+					</button>
+				</div>
+				<output className="mt-3 block text-xs text-ink-3">
+					{update.isPending
+						? "Guardando preferencia…"
+						: "Los cambios se guardan automáticamente."}
+				</output>
+			</CardContent>
+		</Card>
 	);
 }

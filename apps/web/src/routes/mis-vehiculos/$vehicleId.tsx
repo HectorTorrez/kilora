@@ -32,6 +32,7 @@ import {
 } from "@/components/kilora/history-parts";
 import { HistoryItems } from "@/components/kilora/history-record";
 import { ListPagination } from "@/components/kilora/list-pagination";
+import { OwnerMaintenanceCard } from "@/components/kilora/owner-maintenance";
 import { OwnerReceiptDownload } from "@/components/kilora/owner-receipt-download";
 import { OwnerServiceDialog } from "@/components/kilora/owner-service-dialog";
 import { ResaleReport } from "@/components/kilora/resale-report";
@@ -225,6 +226,13 @@ function Page() {
 					<AlertDescription>{warning}</AlertDescription>
 				</Alert>
 			)}
+			<OwnerMaintenanceCard
+				vehicleID={id}
+				email={me.user.email}
+				emailsAllowed={me.user.maintenance_emails_enabled}
+				onUpdateKm={() => setKmOpen(true)}
+				onAddService={() => setManualOpen(true)}
+			/>
 			{SHOW_3D_MAP &&
 				(partsMap.data ? (
 					<CarPartsMap

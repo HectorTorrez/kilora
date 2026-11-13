@@ -36,7 +36,7 @@ const (
 )
 
 func IsDemoEmail(email string) bool {
-	return strings.HasSuffix(strings.ToLower(email), "@"+DemoEmailDomain)
+	return strings.HasSuffix(strings.ToLower(strings.TrimSpace(email)), "@"+DemoEmailDomain)
 }
 
 func HashPassword(password string) (string, error) {

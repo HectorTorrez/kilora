@@ -48,6 +48,12 @@ func main() {
 }
 func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 	exec := func(q string, args ...any) error { _, err := tx.Exec(ctx, q, args...); return err }
+	if err := exec("UPDATE app_user SET maintenance_emails_enabled=false WHERE lower(btrim(email::text)) LIKE '%@demo.kilora.app'"); err != nil {
+		return err
+	}
+	if err := exec("UPDATE owner_vehicle_maintenance SET email_reminders=false WHERE vehicle_id IN (SELECT v.id FROM vehicle v JOIN app_user u ON u.id=v.owner_user_id WHERE lower(btrim(u.email::text)) LIKE '%@demo.kilora.app')"); err != nil {
+		return err
+	}
 	var exists bool
 	if err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM app_user WHERE email='taller@demo.kilora.app')").Scan(&exists); err != nil {
 		return err
@@ -81,7 +87,7 @@ func seed(ctx context.Context, tx pgx.Tx, reset bool) error {
 	users := make([]uuid.UUID, 4)
 	for i, u := range [][3]string{{"taller@demo.kilora.app", "Administrador Volcanes", ""}, {"recepcion@demo.kilora.app", "Recepción Santa Tecla", ""}, {"propietario@demo.kilora.app", "María Hernández", "+50370001234"}, {"ceiba@demo.kilora.app", "Administrador La Ceiba", ""}} {
 		users[i] = uuid.New()
-		if err = exec("INSERT INTO app_user(id,email,password_hash,full_name,phone,email_verified_at) VALUES($1,$2,$3,$4,NULLIF($5,''),now())", users[i], u[0], hash, u[1], u[2]); err != nil {
+		if err = exec("INSERT INTO app_user(id,email,password_hash,full_name,phone,email_verified_at,maintenance_emails_enabled) VALUES($1,$2,$3,$4,NULLIF($5,''),now(),false)", users[i], u[0], hash, u[1], u[2]); err != nil {
 			return err
 		}
 	}

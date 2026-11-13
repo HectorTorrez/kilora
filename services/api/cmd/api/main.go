@@ -51,6 +51,13 @@ func run(logger *slog.Logger) error {
 	} else {
 		logger.Info("asistente de IA desactivado: falta OPENAI_API_KEY")
 	}
+	reminderCtx, cancelReminders := context.WithCancel(ctx)
+	remindersDone := make(chan struct{})
+	go func() {
+		defer close(remindersDone)
+		httpserver.RunMaintenanceReminders(reminderCtx, httpserver.Deps{Logger: logger, DB: pool, WebOrigin: cfg.WebOrigin, Mailer: mailer})
+	}()
+	defer func() { cancelReminders(); <-remindersDone }()
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: httpserver.NewRouter(httpserver.Deps{

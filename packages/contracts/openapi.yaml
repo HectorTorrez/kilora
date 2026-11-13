@@ -6224,6 +6224,158 @@
           }
         }
       }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/maintenance": {
+      "parameters": [
+        {
+          "name": "vehicleID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "summary": "Plan de mantenimiento del propietario",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerMaintenancePlan"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "summary": "Activar o desactivar recordatorios por email",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Respuesta exitosa"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email_reminders": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "email_reminders"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/maintenance/intervals/{category}": {
+      "parameters": [
+        {
+          "name": "vehicleID",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "category",
+          "in": "path",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "put": {
+        "summary": "Personalizar un intervalo de mantenimiento",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Respuesta exitosa"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceIntervalInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Restaurar el intervalo de referencia",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Respuesta exitosa"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/me/email-preferences": {
+      "patch": {
+        "summary": "Permitir o bloquear correos de mantenimiento para toda la cuenta",
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "maintenance_emails_enabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "maintenance_emails_enabled"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Preferencia guardada"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6271,13 +6423,18 @@
               "string",
               "null"
             ]
+          },
+          "maintenance_emails_enabled": {
+            "type": "boolean",
+            "description": "Permiso global para los recordatorios activados por vehículo. Desactivarlo bloquea todos los correos de mantenimiento."
           }
         },
         "required": [
           "id",
           "email",
           "full_name",
-          "email_verified_at"
+          "email_verified_at",
+          "maintenance_emails_enabled"
         ]
       },
       "Membership": {
@@ -10011,6 +10168,125 @@
           "content_type",
           "size_bytes"
         ]
+      },
+      "OwnerMaintenanceItem": {
+        "type": "object",
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "interval_km": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "interval_months": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 120
+          },
+          "custom_interval": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "sin_historial",
+              "programado",
+              "proximo",
+              "vencido",
+              "sin_kilometraje"
+            ]
+          },
+          "last_performed_on": {
+            "type": "string",
+            "nullable": true
+          },
+          "last_summary": {
+            "type": "string",
+            "nullable": true
+          },
+          "last_odometer_km": {
+            "type": "integer",
+            "nullable": true
+          },
+          "due_date": {
+            "type": "string",
+            "nullable": true
+          },
+          "due_km": {
+            "type": "integer",
+            "nullable": true
+          }
+        },
+        "required": [
+          "category",
+          "label",
+          "interval_km",
+          "interval_months",
+          "custom_interval",
+          "status",
+          "last_performed_on",
+          "last_summary",
+          "last_odometer_km",
+          "due_date",
+          "due_km"
+        ]
+      },
+      "OwnerMaintenancePlan": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OwnerMaintenanceItem"
+            }
+          },
+          "email_reminders": {
+            "type": "boolean"
+          },
+          "current_odometer_km": {
+            "type": "integer",
+            "nullable": true
+          },
+          "last_odometer_at": {
+            "type": "string",
+            "nullable": true
+          },
+          "odometer_stale": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "email_reminders",
+          "current_odometer_km",
+          "last_odometer_at",
+          "odometer_stale"
+        ]
+      },
+      "MaintenanceIntervalInput": {
+        "type": "object",
+        "properties": {
+          "km": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000000
+          },
+          "months": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 120
+          }
+        },
+        "required": [
+          "km",
+          "months"
+        ],
+        "description": "Al menos un intervalo debe ser mayor que cero. Cero desactiva ese límite."
       }
     }
   }

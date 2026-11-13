@@ -107,6 +107,7 @@ func security(origin string) func(http.Handler) http.Handler {
 }
 
 type sessionUser struct {
+	MaintenanceEmailsEnabled     bool
 	ID                           uuid.UUID
 	Email, FullName, SessionHash string
 	Phone                        *string
@@ -149,7 +150,7 @@ func (s *server) sessionUser(w http.ResponseWriter, r *http.Request, token strin
 			s.setCookie(w, token)
 		}
 	}
-	return &sessionUser{ID: user.ID, Email: user.Email, FullName: user.FullName, SessionHash: hash, VerifiedAt: nullableTime(user.EmailVerifiedAt), Phone: user.Phone}
+	return &sessionUser{ID: user.ID, Email: user.Email, FullName: user.FullName, SessionHash: hash, VerifiedAt: nullableTime(user.EmailVerifiedAt), Phone: user.Phone, MaintenanceEmailsEnabled: user.MaintenanceEmailsEnabled && !auth.IsDemoEmail(user.Email)}
 }
 
 func requireUser(next http.Handler) http.Handler {

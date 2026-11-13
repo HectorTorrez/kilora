@@ -35,3 +35,15 @@ Puedes agregar tu propio vehículo desde "Mis vehículos" sin una invitación. S
 ## Cambiar de taller
 
 Tu historial es tuyo y sigue contigo. Si visitas otro taller que use Kilora y se vincula a tu vehículo, ese taller verá el contexto de mantenimiento (qué, cuándo, kilometraje) pero no los precios ni el nombre del taller anterior.
+
+## Próximo mantenimiento
+
+La ficha de tu vehículo muestra "Próximo mantenimiento": fechas y kilometrajes estimados a partir del último servicio registrado de cada categoría, incluidas sus correcciones. No inventa fechas para categorías sin historial. "Próximo" indica que se consumió al menos el 80% del intervalo; "Revisión pendiente" indica que ya se alcanzó el límite por tiempo o kilometraje. Estas estimaciones no son un diagnóstico. Seguí el manual del fabricante y la indicación de tu taller.
+
+Con "Ajustar" podés indicar cada cuántos kilómetros o meses se revisa una categoría para ese vehículo. Si indicás ambos, se usa lo que ocurra primero. Un campo vacío o en cero desactiva ese límite, pero debe quedar al menos uno mayor que cero. "Restaurar referencia general" elimina tu intervalo personalizado. "Ver el resto del plan y ajustar intervalos" muestra también las categorías sin registros. Si falta el kilometraje del último servicio y tu intervalo solo usa kilómetros, necesitás completar o corregir ese registro para estimar la próxima revisión.
+
+## Recordatorios por correo
+
+Los correos están desactivados por defecto. En "Próximo mantenimiento", "Activar correos" habilita recordatorios solo para ese vehículo; "Desactivar correos" los detiene. Se envían a tu correo verificado, con un enlace a la ficha para actualizar datos o desactivarlos. El sistema revisa cada hora mientras el API está funcionando: envía como máximo un resumen de revisiones próximas o pendientes cada siete días por vehículo. Si solo falta actualizar el kilometraje (no hay lectura o tiene al menos 30 días), envía como máximo un aviso cada 30 días. No envía correos a cuentas demo ni a vehículos archivados o sin propietario. Al registrar un nuevo servicio o cambiar un intervalo, el siguiente aviso usa los datos actualizados.
+
+En "Mi cuenta → Correos y notificaciones", el switch "Permitir correos de mantenimiento" controla los recordatorios de todos tus vehículos. Los cambios se guardan automáticamente. Apagarlo pausa todos los correos de mantenimiento y conserva tus selecciones por vehículo; al encenderlo, se permiten de nuevo los avisos que habías activado. No activa por sí solo los avisos de vehículos nuevos. Los correos de verificación y recuperación de contraseña siguen disponibles. En las cuentas demo el switch siempre está apagado y no se puede activar. Las cuentas demo no reciben ningún correo, incluidas invitaciones, verificación y recuperación de contraseña.

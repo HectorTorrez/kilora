@@ -116,3 +116,36 @@ func (s *server) accountCredentialChange(w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(http.StatusNoContent)
 	return nil
 }
+
+func (s *server) updateEmailPreferences(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		Enabled *bool `json:"maintenance_emails_enabled"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	if in.Enabled == nil {
+		return badRequest("Indicá si querés permitir correos de mantenimiento")
+	}
+	u := currentUser(r.Context())
+	if auth.IsDemoEmail(u.Email) {
+		return forbidden("Las cuentas demo no pueden modificar sus preferencias")
+	}
+	ctx := r.Context()
+	err := s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
+		user, err := q.LockAccount(ctx, u.ID)
+		if err != nil {
+			return auditEvent{}, err
+		}
+		if !user.EmailVerifiedAt.Valid {
+			return auditEvent{}, errAccessDenied
+		}
+		err = q.SetMaintenanceEmailPreference(ctx, sqlc.SetMaintenanceEmailPreferenceParams{ID: u.ID, MaintenanceEmailsEnabled: *in.Enabled})
+		return auditEvent{actor: u.ID, entity: "user", id: u.ID, action: "user.email_preferences_updated"}, err
+	})
+	if err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}

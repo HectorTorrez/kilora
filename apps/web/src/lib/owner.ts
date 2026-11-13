@@ -74,7 +74,48 @@ export const ownerReportQuery = (vehicleID: string) =>
 				}),
 			),
 	});
+export const ownerMaintenanceQuery = (vehicleID: string) =>
+	queryOptions({
+		queryKey: ["owner", "maintenance", vehicleID],
+		queryFn: async () =>
+			unwrap(
+				await api.GET("/api/v1/me/vehicles/{vehicleID}/maintenance", {
+					params: { path: { vehicleID } },
+				}),
+			),
+	});
+
 export const ownerActions = {
+	maintenanceEmail: async (vehicleID: string, enabled: boolean) =>
+		unwrap(
+			await api.PATCH("/api/v1/me/vehicles/{vehicleID}/maintenance", {
+				params: { path: { vehicleID } },
+				body: { email_reminders: enabled },
+			}),
+		),
+	maintenanceInterval: async (
+		vehicleID: string,
+		category: string,
+		body: S["MaintenanceIntervalInput"],
+	) =>
+		unwrap(
+			await api.PUT(
+				"/api/v1/me/vehicles/{vehicleID}/maintenance/intervals/{category}",
+				{
+					params: { path: { vehicleID, category } },
+					body,
+				},
+			),
+		),
+	resetMaintenanceInterval: async (vehicleID: string, category: string) =>
+		unwrap(
+			await api.DELETE(
+				"/api/v1/me/vehicles/{vehicleID}/maintenance/intervals/{category}",
+				{
+					params: { path: { vehicleID, category } },
+				},
+			),
+		),
 	createReport: async (vehicleID: string) =>
 		unwrap(
 			await api.POST("/api/v1/me/vehicles/{vehicleID}/report", {
