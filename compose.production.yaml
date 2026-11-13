@@ -41,7 +41,8 @@ services:
     restart: unless-stopped
     environment:
       APP_ENV: production
-      DEMO_MODE: 'false'
+      DEMO_MODE: ${DEMO_MODE:-false}
+      RUN_MIGRATIONS: 'false'
       API_ADDR: ':8080'
       WEB_ORIGIN: https://${DOMAIN:?Set DOMAIN}
       DATABASE_URL: postgres://kilora:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/kilora?sslmode=disable

@@ -41,8 +41,7 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
       OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
       OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT:-low}
-      # El API rechaza DEMO_MODE=true en producción.
-      DEMO_MODE: "false"
+      DEMO_MODE: ${DEMO_MODE:-false}
       # Red de Traefik (dokploy-network): solo se confía en su X-Forwarded-For.
       TRUSTED_PROXY_CIDRS: ${TRUSTED_PROXY_CIDRS:-10.0.1.0/24}
     expose:

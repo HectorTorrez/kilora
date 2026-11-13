@@ -8,6 +8,15 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      demo_mode:
+        description: Public demo access in Dokploy
+        type: choice
+        default: unchanged
+        options:
+          - unchanged
+          - 'true'
+          - 'false'
 
 concurrency:
   group: deploy-production
@@ -75,7 +84,42 @@ jobs:
           DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
           DOKPLOY_API_KEY: ${{ secrets.DOKPLOY_API_KEY }}
           DOKPLOY_COMPOSE_ID: ${{ secrets.DOKPLOY_COMPOSE_ID }}
+          DEMO_MODE_OVERRIDE: ${{ inputs.demo_mode || 'unchanged' }}
         run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          import urllib.error
+          import urllib.parse
+          import urllib.request
+
+          mode = os.environ['DEMO_MODE_OVERRIDE']
+          if mode == 'unchanged':
+              raise SystemExit(0)
+          if mode not in ('true', 'false'):
+              raise SystemExit('Invalid demo mode')
+          base = os.environ['DOKPLOY_URL'].rstrip('/')
+          compose_id = os.environ['DOKPLOY_COMPOSE_ID']
+          headers = {'x-api-key': os.environ['DOKPLOY_API_KEY'], 'Content-Type': 'application/json'}
+
+          def call(path, body=None):
+              data = None if body is None else json.dumps(body).encode()
+              req = urllib.request.Request(base + '/api/' + path, data=data, headers=headers)
+              try:
+                  with urllib.request.urlopen(req, timeout=30) as response:
+                      return json.load(response)
+              except urllib.error.HTTPError as error:
+                  raise SystemExit(f'Dokploy request failed: HTTP {error.code}') from None
+
+          compose = call('compose.one?' + urllib.parse.urlencode({'composeId': compose_id}))
+          env = compose.get('env') or ''
+          pattern = r'(?m)^(?:export[ \t]+)?DEMO_MODE[ \t]*=.*$'
+          setting = 'DEMO_MODE=' + mode
+          env = re.sub(pattern, setting, env) if re.search(pattern, env) else env.rstrip('\n') + '\n' + setting + '\n'
+          call('compose.saveEnvironment', {'composeId': compose_id, 'env': env, 'createEnvFile': compose.get('createEnvFile', False)})
+          print('Updated DEMO_MODE=' + mode + ' in Dokploy')
+          PY
           curl -fsS -X POST "${DOKPLOY_URL%/}/api/compose.deploy" \
             -H "x-api-key: ${DOKPLOY_API_KEY}" \
             -H "Content-Type: application/json" \

@@ -133,6 +133,18 @@ slash), and `RESEND_API_KEY` with a valid `EMAIL_FROM` on a verified sending dom
 The API refuses to start with missing mail credentials or unsafe production settings.
 Development can still use the log mailer without credentials.
 
+For a public demo with fictional data, set `DEMO_MODE=true` in the deployment
+environment (Dokploy's Environment tab for `deploy/compose.prod.yaml`). Production
+demo mode keeps HTTPS cookies and the other production checks. On API startup,
+the container runs the existing seed before serving requests, creating the four
+accounts listed above and their sample data. Repeated starts preserve existing
+demo data; they do not reset it. The login displays three demo shortcuts; reception
+can sign in using its email and password. Keep demo deployments separate from real
+customer data. To restore the fictional dataset manually in Dokploy, run `seed --reset`
+inside the API container; this deletes and recreates demo data. Automatic resets
+and disabling external services are not configured by demo mode. Validate a public
+demo with `SMOKE_DEMO=true ./scripts/production/smoke.py https://kilora.dev`.
+
 Set `TRUSTED_PROXY_CIDRS` to the comma-separated networks of the reverse proxies
 that connect directly to the API. Keep the API private behind those proxies and
 ensure the ingress appends or overwrites `X-Forwarded-For`. With no trusted proxies,

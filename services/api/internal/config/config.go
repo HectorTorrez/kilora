@@ -91,9 +91,6 @@ func Load() (Config, error) {
 		if err != nil || origin.Scheme != "https" || origin.Hostname() == "" || origin.User != nil || origin.RawQuery != "" || origin.Fragment != "" || origin.Path != "" {
 			return Config{}, fmt.Errorf("WEB_ORIGIN debe ser un origen HTTPS sin ruta en producción")
 		}
-		if cfg.DemoMode {
-			return Config{}, fmt.Errorf("DEMO_MODE debe estar desactivado en producción")
-		}
 	}
 
 	return cfg, nil

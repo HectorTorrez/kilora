@@ -41,8 +41,15 @@ with client.open(origin + '/', timeout=30) as homepage:
         sys.exit('Homepage did not return HTML')
 if request('/healthz') != {'status': 'ok', 'db': 'up'}:
     sys.exit('API/database is not healthy')
-if request('/api/v1/public/demo') != {'enabled': False, 'accounts': []}:
-    sys.exit('Demo access is enabled')
+expect_demo = os.getenv('SMOKE_DEMO', 'false') == 'true'
+demo = request('/api/v1/public/demo')
+if expect_demo:
+    if demo.get('enabled') is not True or {account['role'] for account in demo.get('accounts', [])} != {'taller', 'propietario', 'taller_competencia'}:
+        sys.exit('Expected the three public demo accounts')
+else:
+    if demo != {'enabled': False, 'accounts': []}:
+        sys.exit('Demo access is enabled')
+demo_status = 'demo enabled' if expect_demo else 'demo disabled'
 request('/api/v1/auth/me', expected=401)
 email, password = os.getenv('SMOKE_EMAIL'), os.getenv('SMOKE_PASSWORD')
 if bool(email) != bool(password):
@@ -55,7 +62,7 @@ if email:
     request('/api/v1/auth/me')
     request('/api/v1/auth/logout', {}, 204)
     request('/api/v1/auth/me', expected=401)
-    print('PASS: HTTPS, homepage, API routing, database, demo disabled and session lifecycle')
+    print(f'PASS: HTTPS, homepage, API routing, database, {demo_status} and session lifecycle')
 else:
-    print('PASS: HTTPS, homepage, API routing, database and demo disabled')
+    print(f'PASS: HTTPS, homepage, API routing, database and {demo_status}')
     print('PENDING: session checks (set SMOKE_EMAIL and SMOKE_PASSWORD for a dedicated account)')

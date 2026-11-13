@@ -31,7 +31,7 @@ func TestRejectUnsafeProductionConfig(t *testing.T) {
 		{"RESEND_API_KEY", ""}, {"EMAIL_FROM", "invalid"}, {"WEB_ORIGIN", "http://kilora.app"},
 		{"WEB_ORIGIN", "https://kilora.app/path"}, {"WEB_ORIGIN", "https://user@kilora.app"},
 		{"WEB_ORIGIN", "https://kilora.app?query=1"}, {"WEB_ORIGIN", "https://kilora.app#fragment"},
-		{"DEMO_MODE", "true"}, {"APP_ENV", "prod"}, {"TRUSTED_PROXY_CIDRS", "anywhere"},
+		{"APP_ENV", "prod"}, {"TRUSTED_PROXY_CIDRS", "anywhere"},
 	} {
 		t.Run(tc.key+"="+tc.value, func(t *testing.T) {
 			productionEnv(t)
@@ -40,6 +40,18 @@ func TestRejectUnsafeProductionConfig(t *testing.T) {
 				t.Fatal("unsafe configuration accepted")
 			}
 		})
+	}
+}
+
+func TestProductionDemoConfig(t *testing.T) {
+	productionEnv(t)
+	t.Setenv("DEMO_MODE", "true")
+	cfg, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.IsProduction() || !cfg.DemoMode {
+		t.Fatal("production demo configuration was not preserved")
 	}
 }
 
