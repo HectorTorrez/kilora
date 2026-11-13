@@ -267,7 +267,7 @@ function VehicleCard({ vehicle }: { vehicle: OwnerVehicle }) {
 		<Link
 			to="/mis-vehiculos/$vehicleId"
 			params={{ vehicleId: vehicle.id || "" }}
-			className="group block h-full rounded-xl transition-transform duration-200 ease-out motion-reduce:transition-none motion-safe:hover:-translate-y-0.5 motion-safe:focus-visible:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+			className="group block h-full rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
 		>
 			<Card className="h-full gap-0 p-5 shadow-none transition-[border-color,box-shadow] duration-200 ease-out motion-reduce:transition-none group-hover:border-seal group-hover:shadow-sm group-focus-visible:border-seal group-focus-visible:shadow-sm dark:group-hover:border-primary dark:group-focus-visible:border-primary">
 				<div className="flex items-center justify-between gap-3">
@@ -281,10 +281,7 @@ function VehicleCard({ vehicle }: { vehicle: OwnerVehicle }) {
 					>
 						{vehicle.plate || "Sin placa"}
 					</span>
-					<ChevronRight
-						aria-hidden
-						className="size-4 shrink-0 text-ink-3 transition-transform duration-200 motion-reduce:transition-none motion-safe:group-hover:translate-x-0.5 motion-safe:group-focus-visible:translate-x-0.5"
-					/>
+					<ChevronRight aria-hidden className="size-4 shrink-0 text-ink-3" />
 				</div>
 				<h2 className="mt-4 font-display text-xl leading-tight font-bold">
 					{vehicle.make} {vehicle.model}

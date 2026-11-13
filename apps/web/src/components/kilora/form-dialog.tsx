@@ -30,7 +30,10 @@ export function FormDialog({
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent
-				className={cn("max-h-[90dvh] overflow-y-auto", className)}
+				className={cn(
+					"max-h-[90dvh] overflow-y-auto overscroll-contain",
+					className,
+				)}
 				onInteractOutside={(event) => {
 					// Permite usar popovers (calendario, selects) dentro del modal.
 					const target = event.target;

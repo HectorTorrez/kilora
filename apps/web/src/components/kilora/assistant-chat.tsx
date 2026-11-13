@@ -523,7 +523,7 @@ export function AssistantChat({
 				<Button
 					type="button"
 					onClick={() => setOpen(true)}
-					className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 h-12 touch-manipulation select-none gap-2 rounded-full bg-seal px-4 text-white shadow-lg shadow-seal/25 transition-transform hover:scale-[1.03] hover:bg-seal/90 print:hidden sm:right-6 sm:bottom-6 sm:px-5"
+					className="fixed right-4 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-40 h-12 touch-manipulation select-none gap-2 rounded-full bg-seal px-4 text-white shadow-lg shadow-seal/25 transition-colors hover:bg-seal/90 print:hidden sm:right-6 sm:bottom-6 sm:px-5"
 					aria-label="Abrir asistente"
 				>
 					<Sparkles className="size-4" aria-hidden />

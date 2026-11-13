@@ -23,7 +23,7 @@ export function BackLink({
 		<Link
 			{...props}
 			className={cn(
-				"inline-flex items-center gap-1 text-[13px] font-medium text-ink-3 hover:text-foreground print:hidden",
+				"inline-flex items-center gap-1 text-[13px] font-medium rounded-sm text-ink-3 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ring print:hidden",
 				className as string,
 			)}
 		>
@@ -53,7 +53,7 @@ export function PageHeader({
 	return (
 		<header className={cn("space-y-3", className)}>
 			{back}
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 				<div className="min-w-0 flex-1">
 					{eyebrow && (
 						<p className="mb-1 font-mono text-[11px] tracking-widest text-ink-3 uppercase">
@@ -61,13 +61,13 @@ export function PageHeader({
 						</p>
 					)}
 					<div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-						<h1 className="flex min-w-0 flex-wrap items-center gap-3 font-display text-[28px] leading-tight font-bold tracking-[-0.01em] text-balance">
+						<h1 className="flex min-w-0 flex-wrap items-center gap-3 font-display text-2xl leading-tight font-bold tracking-tight text-balance wrap-anywhere sm:text-[28px]">
 							{title}
 						</h1>
 						{badges}
 					</div>
 					{description && (
-						<div className="mt-1.5 max-w-2xl text-sm text-pretty text-ink-3">
+						<div className="mt-2 max-w-2xl text-sm leading-relaxed text-pretty text-ink-3">
 							{description}
 						</div>
 					)}
@@ -94,7 +94,7 @@ export function PageBody({
 	return (
 		<main
 			className={cn(
-				"mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:py-8",
+				"mx-auto w-full max-w-7xl min-w-0 space-y-6 px-4 py-6 sm:px-6 lg:space-y-8 lg:px-8 lg:py-8",
 				className,
 			)}
 		>
@@ -106,7 +106,7 @@ export function PageBody({
 /** Barra de una lista: búsqueda y filtros por columna. */
 export function ListToolbar({ children }: { children: ReactNode }) {
 	return (
-		<div className="flex flex-wrap items-center gap-2 border-b px-3 py-3 sm:px-4">
+		<div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-4 py-3 [&>*]:max-w-full">
 			{children}
 		</div>
 	);
@@ -139,7 +139,7 @@ export function DetailList({
 	return (
 		<dl
 			className={cn(
-				"grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2.5 text-[13px]",
+				"grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-x-4 gap-y-2.5 text-[13px]",
 				className,
 			)}
 		>
@@ -151,7 +151,7 @@ export function DetailList({
 					<dt className="text-ink-3">{item.label}</dt>
 					<dd
 						className={cn(
-							"min-w-0 truncate text-right font-medium",
+							"min-w-0 text-right font-medium wrap-anywhere",
 							item.mono && "font-mono font-normal tabular-nums",
 						)}
 					>
@@ -277,13 +277,13 @@ export function EmptyState({
 	action?: ReactNode;
 }) {
 	return (
-		<div className="flex flex-col items-center px-6 py-14 text-center">
+		<div className="flex flex-col items-center px-6 py-14 text-center sm:py-16">
 			<div className="grid size-11 place-items-center rounded-full bg-secondary text-ink-3">
 				<Icon className="size-5" aria-hidden="true" />
 			</div>
 			<p className="mt-4 font-semibold">{title}</p>
 			{description && (
-				<p className="mt-1 max-w-sm text-sm text-pretty text-ink-3">
+				<p className="mt-2 max-w-sm text-sm leading-relaxed text-pretty text-ink-3">
 					{description}
 				</p>
 			)}
@@ -360,16 +360,20 @@ export function SectionCard({
 			id={id}
 			className={cn("gap-0 overflow-hidden py-0 shadow-none", className)}
 		>
-			<div className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-5">
+			<div className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-4 sm:px-5">
 				<div className="min-w-0 flex-1">
-					<h2 className="text-[14px] font-semibold">{title}</h2>
+					<h2 className="text-sm leading-snug font-semibold">{title}</h2>
 					{description && (
-						<p className="mt-0.5 text-xs text-pretty text-ink-3">
+						<p className="mt-1 text-xs leading-relaxed text-pretty text-ink-3">
 							{description}
 						</p>
 					)}
 				</div>
-				{actions && <div className="flex shrink-0 gap-2">{actions}</div>}
+				{actions && (
+					<div className="flex max-w-full flex-wrap items-center gap-2">
+						{actions}
+					</div>
+				)}
 			</div>
 			<div className={cn("p-4 sm:p-5", bodyClassName)}>{children}</div>
 		</Card>

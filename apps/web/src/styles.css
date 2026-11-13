@@ -5,6 +5,9 @@
 
 :root {
   --radius: 0.5rem;
+  --surface: #e9edf2;
+  --ink-2: #3f4a58;
+  --ink-3: #667180;
 
   --background: #eef1f4;
   --foreground: #111827;
@@ -47,6 +50,9 @@
 }
 
 .dark {
+  --surface: #222a33;
+  --ink-2: #c2cbd6;
+  --ink-3: #a4afbd;
   --background: #0f141a;
   --foreground: #eef1f4;
   --card: #161c23;
@@ -91,9 +97,9 @@
   --color-warn: #9a5a0b;
   --color-warn-soft: #fbefdc;
   --color-paper: #eef1f4;
-  --color-surface: #e9edf2;
-  --color-ink-2: #3f4a58;
-  --color-ink-3: #667180;
+  --color-surface: var(--surface);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
   --color-line: #dce2e8;
 
   --radius-sm: calc(var(--radius) - 2px);
@@ -212,15 +218,9 @@
 
 @layer utilities {
   .pressable {
-    transition-property: color, background-color, border-color, box-shadow, transform;
+    transition-property: color, background-color, border-color, box-shadow;
     transition-duration: 150ms;
     transition-timing-function: var(--ease-out);
-  }
-  .pressable:active {
-    transform: scale(0.98);
-  }
-  .pressable:disabled {
-    transform: none;
   }
 }
 
@@ -355,9 +355,6 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
-  }
-  .pressable:active {
-    transform: none;
   }
 }
 

@@ -261,7 +261,10 @@ export function AppShell({ children }: { children: ReactNode }) {
 			</aside>
 
 			<Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-				<SheetContent side="left" className="w-[272px] gap-0 p-0">
+				<SheetContent
+					side="left"
+					className="w-[272px] max-w-[calc(100vw-2rem)] gap-0 p-0"
+				>
 					<SheetTitle className="sr-only">Navegación</SheetTitle>
 					<SheetDescription className="sr-only">
 						Secciones del panel del taller
@@ -383,7 +386,10 @@ function SidebarContent({
 				</Link>
 			</Button>
 
-			<nav className="flex flex-col gap-5" aria-label="Panel del taller">
+			<nav
+				className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain"
+				aria-label="Panel del taller"
+			>
 				{sections.map((section) => (
 					<div key={section.label}>
 						<p className="px-2.5 pb-1.5 font-mono text-[10.5px] tracking-widest text-ink-3 uppercase">
@@ -402,7 +408,7 @@ function SidebarContent({
 												aria-current={on ? "page" : undefined}
 												className={cn(
 													"pressable relative flex h-9 items-center gap-2.5 rounded-md px-2.5 text-[13.5px] font-medium text-ink-2",
-													"hover:bg-secondary hover:text-foreground",
+													"hover:bg-secondary hover:text-foreground focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
 													on &&
 														"bg-seal-soft font-semibold text-seal hover:bg-seal-soft hover:text-seal",
 												)}
@@ -421,13 +427,11 @@ function SidebarContent({
 				))}
 			</nav>
 
-			<div className="flex-1" />
-
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<button
 						type="button"
-						className="pressable flex w-full items-center gap-2.5 rounded-md p-2 text-left hover:bg-secondary"
+						className="pressable flex w-full items-center gap-2.5 shrink-0 rounded-md border-t border-border p-2 text-left outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:bg-secondary"
 					>
 						<span className="grid size-8 shrink-0 place-items-center rounded-full bg-foreground text-[11px] font-semibold text-background">
 							{initials(userName)}
@@ -511,7 +515,7 @@ function WorkshopSwitcher({
 					<button
 						type="button"
 						aria-label={`Taller actual: ${name}, ${branch}. Cambiar de taller o sucursal`}
-						className="pressable flex w-full items-center gap-2.5 rounded-lg border bg-background/60 p-2 text-left hover:bg-secondary"
+						className="pressable flex w-full items-center gap-2.5 rounded-lg border bg-background/60 p-2 text-left outline-none hover:bg-secondary focus-visible:ring-2 focus-visible:ring-ring data-[state=open]:border-ring data-[state=open]:bg-secondary"
 					>
 						<span className="grid size-8 shrink-0 place-items-center rounded-md bg-seal text-[11px] font-bold text-white">
 							{initials(name)}

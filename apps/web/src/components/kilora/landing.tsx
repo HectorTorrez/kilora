@@ -916,8 +916,11 @@ export function Features({ audience = "owner" }: AudienceProps) {
 						</li>
 					))}
 				</ul>
-				<div className="mt-6 flex flex-col gap-4 rounded-lg border bg-seal-soft p-6 sm:flex-row sm:items-start md:p-8">
-					<Sparkles className="size-5 shrink-0 text-seal" aria-hidden="true" />
+				<div className="mt-6 flex flex-col gap-4 rounded-lg border bg-seal-soft p-6 dark:bg-accent sm:flex-row sm:items-start md:p-8">
+					<Sparkles
+						className="size-5 shrink-0 text-seal dark:text-primary"
+						aria-hidden="true"
+					/>
 					<div>
 						<h3 className="font-display text-xl font-bold">
 							{workshop
