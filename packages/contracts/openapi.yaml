@@ -1508,6 +1508,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Posibles duplicados; no se guardó el servicio ni el comprobante. Volver a enviar con allow_duplicate=true confirma un nuevo registro.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DuplicateServiceError"
+                }
+              }
+            }
           }
         },
         "requestBody": {
@@ -8800,6 +8810,10 @@
           },
           "receipt": {
             "$ref": "#/components/schemas/ReceiptFileInput"
+          },
+          "allow_duplicate": {
+            "type": "boolean",
+            "description": "Confirmación explícita para guardar después de revisar posibles duplicados."
           }
         },
         "required": [
@@ -10362,6 +10376,62 @@
               "unfiltered_total"
             ]
           }
+        ]
+      },
+      "DuplicateService": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "performed_on": {
+            "type": "string",
+            "format": "date"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "workshop_name": {
+            "type": "string"
+          },
+          "total": {
+            "type": "string",
+            "nullable": true
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "receipt",
+              "details"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "performed_on",
+          "summary",
+          "workshop_name",
+          "total",
+          "reason"
+        ]
+      },
+      "DuplicateServiceError": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "duplicates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DuplicateService"
+            }
+          }
+        },
+        "required": [
+          "error",
+          "duplicates"
         ]
       }
     }

@@ -700,6 +700,7 @@ type HistoryReceipt struct {
 	ContentType     string             `json:"content_type"`
 	Data            []byte             `json:"data"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	ContentHash     []byte             `json:"content_hash"`
 }
 
 type HistoryRecord struct {

@@ -30,3 +30,15 @@ SELECT * FROM correction WHERE history_record_id = ANY(sqlc.arg(record_ids)::uui
 
 -- name: GetHistoryRecordForOwner :one
 SELECT h.* FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.id = sqlc.arg(id) AND h.vehicle_id = sqlc.arg(vehicle_id) AND v.owner_user_id = sqlc.arg(owner_user_id);
+
+-- name: LockOwnerVehicleForService :one
+SELECT * FROM vehicle WHERE id = sqlc.arg(vehicle_id) AND owner_user_id = sqlc.arg(owner_user_id) FOR UPDATE;
+
+-- name: FindDuplicateOwnerServices :many
+SELECT sqlc.embed(h), coalesce(r.content_hash = sqlc.arg(receipt_hash)::bytea, false)::boolean AS same_receipt
+FROM history_record h
+JOIN vehicle v ON v.id = h.vehicle_id
+LEFT JOIN history_receipt r ON r.history_record_id = h.id
+WHERE h.vehicle_id = sqlc.arg(vehicle_id) AND v.owner_user_id = sqlc.arg(owner_user_id)
+AND (r.content_hash = sqlc.arg(receipt_hash)::bytea OR (h.performed_on = sqlc.arg(performed_on) AND h.total = sqlc.arg(total)::numeric))
+ORDER BY h.performed_on DESC, h.created_at DESC, h.id DESC;

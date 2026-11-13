@@ -118,6 +118,73 @@ func (q *Queries) CreateHistoryRecord(ctx context.Context, arg CreateHistoryReco
 	return i, err
 }
 
+const findDuplicateOwnerServices = `-- name: FindDuplicateOwnerServices :many
+SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at, coalesce(r.content_hash = $1::bytea, false)::boolean AS same_receipt
+FROM history_record h
+JOIN vehicle v ON v.id = h.vehicle_id
+LEFT JOIN history_receipt r ON r.history_record_id = h.id
+WHERE h.vehicle_id = $2 AND v.owner_user_id = $3
+AND (r.content_hash = $1::bytea OR (h.performed_on = $4 AND h.total = $5::numeric))
+ORDER BY h.performed_on DESC, h.created_at DESC, h.id DESC
+`
+
+type FindDuplicateOwnerServicesParams struct {
+	ReceiptHash []byte         `json:"receipt_hash"`
+	VehicleID   uuid.UUID      `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID     `json:"owner_user_id"`
+	PerformedOn pgtype.Date    `json:"performed_on"`
+	Total       pgtype.Numeric `json:"total"`
+}
+
+type FindDuplicateOwnerServicesRow struct {
+	HistoryRecord HistoryRecord `json:"history_record"`
+	SameReceipt   bool          `json:"same_receipt"`
+}
+
+func (q *Queries) FindDuplicateOwnerServices(ctx context.Context, arg FindDuplicateOwnerServicesParams) ([]FindDuplicateOwnerServicesRow, error) {
+	rows, err := q.db.Query(ctx, findDuplicateOwnerServices,
+		arg.ReceiptHash,
+		arg.VehicleID,
+		arg.OwnerUserID,
+		arg.PerformedOn,
+		arg.Total,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []FindDuplicateOwnerServicesRow{}
+	for rows.Next() {
+		var i FindDuplicateOwnerServicesRow
+		if err := rows.Scan(
+			&i.HistoryRecord.ID,
+			&i.HistoryRecord.VehicleID,
+			&i.HistoryRecord.WorkshopID,
+			&i.HistoryRecord.WorkOrderID,
+			&i.HistoryRecord.Source,
+			&i.HistoryRecord.PerformedOn,
+			&i.HistoryRecord.OdometerKm,
+			&i.HistoryRecord.Summary,
+			&i.HistoryRecord.Items,
+			&i.HistoryRecord.Total,
+			&i.HistoryRecord.Currency,
+			&i.HistoryRecord.WorkshopNotes,
+			&i.HistoryRecord.InternalCost,
+			&i.HistoryRecord.InternalNotes,
+			&i.HistoryRecord.CreatedBy,
+			&i.HistoryRecord.CreatedAt,
+			&i.SameReceipt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getHistoryRecordForOwner = `-- name: GetHistoryRecordForOwner :one
 SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.id = $1 AND h.vehicle_id = $2 AND v.owner_user_id = $3
 `
@@ -409,4 +476,35 @@ func (q *Queries) ListHistoryPageForOwner(ctx context.Context, arg ListHistoryPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockOwnerVehicleForService = `-- name: LockOwnerVehicleForService :one
+SELECT id, owner_user_id, created_by_workshop_id, status, plate, make, model, year, vin, last_activity_at, archived_at, created_at, updated_at, body_type FROM vehicle WHERE id = $1 AND owner_user_id = $2 FOR UPDATE
+`
+
+type LockOwnerVehicleForServiceParams struct {
+	VehicleID   uuid.UUID  `json:"vehicle_id"`
+	OwnerUserID *uuid.UUID `json:"owner_user_id"`
+}
+
+func (q *Queries) LockOwnerVehicleForService(ctx context.Context, arg LockOwnerVehicleForServiceParams) (Vehicle, error) {
+	row := q.db.QueryRow(ctx, lockOwnerVehicleForService, arg.VehicleID, arg.OwnerUserID)
+	var i Vehicle
+	err := row.Scan(
+		&i.ID,
+		&i.OwnerUserID,
+		&i.CreatedByWorkshopID,
+		&i.Status,
+		&i.Plate,
+		&i.Make,
+		&i.Model,
+		&i.Year,
+		&i.Vin,
+		&i.LastActivityAt,
+		&i.ArchivedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.BodyType,
+	)
+	return i, err
 }

@@ -5,6 +5,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { api, apiError } from "./api";
+import { clearServiceDrafts } from "./service-drafts";
 
 async function getMe() {
 	const { data, error, response } = await api.GET("/api/v1/auth/me");
@@ -42,7 +43,8 @@ export function useLogout() {
 			const { error } = await api.POST("/api/v1/auth/logout");
 			if (error) throw apiError(error);
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
+			await clearServiceDrafts().catch(() => undefined);
 			qc.setQueryData(["me"], null);
 			qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "me" });
 		},
@@ -132,7 +134,8 @@ export function useAccountCredentials() {
 			if (!result.response.ok)
 				throw apiError(result.error, result.response.status);
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
+			await clearServiceDrafts().catch(() => undefined);
 			qc.setQueryData(["me"], null);
 			qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "me" });
 		},

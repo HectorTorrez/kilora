@@ -186,6 +186,8 @@ function Page() {
 			</div>
 			{manualOpen && (
 				<OwnerServiceDialog
+					key={`${me.user.id}:${id}`}
+					ownerID={me.user.id}
 					vehicleID={id}
 					open={manualOpen}
 					pending={manual.isPending}

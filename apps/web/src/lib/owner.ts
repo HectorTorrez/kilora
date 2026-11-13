@@ -98,6 +98,14 @@ export const ownerMaintenanceQuery = (vehicleID: string) =>
 			),
 	});
 
+export class DuplicateServiceError extends Error {
+	duplicates: S["DuplicateService"][];
+	constructor(message: string, duplicates: S["DuplicateService"][]) {
+		super(message);
+		this.duplicates = duplicates;
+	}
+}
+
 export const ownerActions = {
 	maintenanceEmail: async (vehicleID: string, enabled: boolean) =>
 		unwrap(
@@ -143,13 +151,23 @@ export const ownerActions = {
 		),
 	create: async (body: S["OwnerVehicleInput"]) =>
 		unwrap(await api.POST("/api/v1/me/vehicles", { body })),
-	manual: async (vehicleID: string, body: S["ManualHistoryInput"]) =>
-		unwrap(
-			await api.POST("/api/v1/me/vehicles/{vehicleID}/history", {
-				params: { path: { vehicleID } },
-				body,
-			}),
-		),
+	manual: async (vehicleID: string, body: S["ManualHistoryInput"]) => {
+		const result = await api.POST("/api/v1/me/vehicles/{vehicleID}/history", {
+			params: { path: { vehicleID } },
+			body,
+		});
+		if (
+			result.response.status === 409 &&
+			result.error &&
+			"duplicates" in result.error
+		) {
+			throw new DuplicateServiceError(
+				result.error.error,
+				result.error.duplicates,
+			);
+		}
+		return unwrap(result);
+	},
 	correction: async (vehicleID: string, body: S["CorrectionInput"]) =>
 		unwrap(
 			await api.POST("/api/v1/me/vehicles/{vehicleID}/corrections", {

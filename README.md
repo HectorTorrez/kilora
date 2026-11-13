@@ -30,6 +30,8 @@ Kilora turns completed services into a lasting vehicle history. Owners can under
 - **Understand your maintenance.** Review service dates, mileage, work performed, parts, and charges.
 - **Plan the next service.** See upcoming maintenance dates and mileage based on recorded services, with adjustable intervals for each vehicle.
 - **Choose email reminders.** Opt in per vehicle for maintenance digests and prompts to refresh an old mileage reading.
+- **Resume unfinished entries.** Keep an unfinished service and its receipt as a draft in the same browser, with resume and discard controls.
+- **Review possible duplicates.** Get a warning for an identical receipt or matching service date, workshop, and total before saving another entry.
 - **Fill in the gaps.** Add services manually and record new odometer readings.
 - **Keep a traceable record.** Corrections are added as dated entries, preserving the original history.
 - **Share a resale report.** Create a read-only link valid for 30 days, with service dates, workshops, and mileage, and print it to PDF. Amounts and notes stay out of the report.
@@ -125,10 +127,43 @@ Set `OPENAI_API_KEY` in `.env` to turn it on. Without it, the assistant replies 
 Besides the chat, the same key enables AI helpers inside the forms. They follow one rule: **the AI drafts, a person confirms.** No AI endpoint writes data, and the model only sees what the user could already see.
 
 - **Quote from a note.** In any quote editor, *Describir con IA* turns a typed or dictated note ("cambio de aceite 5W-30 con filtro, pastillas delanteras…") into quote items matched to the part catalog. Prices are filled only when the note states them.
-- **Receipt to history.** Owners saving a service can take a photo or upload a JPG, PNG, WebP, or PDF (up to 4 MB). The model drafts the date, mileage, workshop, items, and total. The selected original stays attached even if AI reading fails, so owners can enter the details manually. The original is saved in PostgreSQL in the same transaction as the service, and can only be downloaded by its owner. Reading alone never persists it. For image extraction, the browser sends a smaller re-encoded copy without EXIF metadata to the model; PDFs are sent as files. Receipts are excluded from workshop views and public resale reports.
+- **Receipt to history.** Owners saving a service can take a photo or upload a JPG, PNG, WebP, or PDF (up to 4 MB). The model drafts the date, mileage, workshop, items, and total. The selected original stays attached even if AI reading fails, so owners can enter the details manually. The original is saved in PostgreSQL in the same transaction as the service, and can only be downloaded by its owner. Reading alone never creates a service or stores a permanent receipt on the server. The unfinished form and selected original can be kept in a local browser draft. For image extraction, the browser sends a smaller re-encoded copy without EXIF metadata to the model; PDFs are sent as files. Receipts are excluded from workshop views and public resale reports.
 - **Plain-language explanations.** Owners can tap *¿Qué me hicieron?* on any service to get a short, jargon-free explanation. Workshops get *Mensaje con IA*, an editable WhatsApp message that explains each quote line before sharing the link. The model only receives the projection the viewer already sees (`history.Project` for owners, without internal IDs), so internal costs and private notes never reach a prompt.
 - **Suggested recommendations.** *Sugerir* on a vehicle's recommendations card proposes due maintenance. Deterministic rules in [`services/api/internal/maintenance`](services/api/internal/maintenance) decide what is due using reference intervals, the history the workshop can see, and the latest odometer reading. The model only writes the wording. Without a key, the suggestions still work with template text.
 - **Resale report.** Owners can share *Reporte para venta*: a 30-day, read-only link (`/r/<token>`, printable to PDF) with the full history under a dedicated `history.ViewerReport` projection, which shows work, dates, mileage and workshops but no amounts or notes. When the link is created, the model writes a short summary of how complete and regular the history is. Creating a new link revokes the previous one, and only the token's hash is stored.
+
+## Service drafts and duplicate warnings
+
+Owners entering a service get an automatic browser draft after a short pause,
+including the selected original receipt. **Cerrar y conservar** flushes the latest
+changes before closing. Reopening the form offers **Retomar borrador** and
+**Descartar borrador**. Each draft belongs to one account and vehicle, and stays
+in that browser; drafts do not sync between devices or appear in workshop or
+public report views. They are removed after a successful save, explicit discard,
+sign-out, password change through account settings, or account deletion. If browser
+storage is unavailable or full, the form explains that a draft cannot be retained;
+normal service saving remains available. Browser storage can also be cleared by
+the user or browser. The draft does not become a service history record until the
+owner chooses **Guardar servicio**.
+
+The manual-service API checks for duplicates before writing: either the exact
+receipt bytes already belong to a service for this vehicle, or its original date,
+normalized workshop name, and total all match an existing owner-visible service.
+Missing workshop or amount does not produce a details-only warning. Re-scanning
+a paper receipt into different bytes can still match by its entered details, but
+file recognition is not an image-similarity check. A warning returns up to five
+matches and creates no service, odometer reading, receipt, or audit event.
+**Volver y revisar** preserves the form; **Guardar de todos modos** explicitly
+confirms the submitted entry. Concurrent normal saves are serialized by a vehicle
+lock so they cannot silently bypass this check.
+
+Apply migration `00018_receipt_content_hash.sql` using `pnpm db:migrate` before
+running the updated API. It indexes a stored receipt fingerprint using
+[PostgreSQL's built-in SHA-256 function](https://www.postgresql.org/docs/17/functions-binarystring.html).
+The browser draft implementation waits for [IndexedDB transaction completion](https://developer.mozilla.org/en-US/docs/Web/API/IDBTransaction/complete_event)
+before reporting a draft as saved. Run `pnpm --filter web test:drafts` for storage,
+restore, discard, account isolation, and queued-write regression checks; these
+also run in CI.
 
 ## Owner history search
 
@@ -183,7 +218,7 @@ which the provider retains for 24 hours; this does not promise exactly-once
 email delivery across an arbitrarily long outage after a successful send but
 before its database commit.
 
-Apply migrations through `00017_disable_demo_email.sql` with `pnpm db:migrate` before starting
+Apply migrations through `00018_receipt_content_hash.sql` with `pnpm db:migrate` before starting
 the updated API. No additional cron service or AI API key is required.
 
 ## Development reference
@@ -203,6 +238,7 @@ Kilora uses React and TanStack Start for the web app, Go for the API, and Postgr
 | `pnpm start` | Start the database, API, and web app. |
 | `pnpm build` | Build the web app. |
 | `pnpm check` | Check frontend lint, formatting, and TypeScript types. |
+| `pnpm --filter web test:drafts` | Test browser service draft storage and lifecycle. |
 | `pnpm api:vet` | Run Go static analysis. |
 | `pnpm api:test` | Run API tests. |
 | `pnpm api:test:db` | Run API tests with the local database, including integration tests. |

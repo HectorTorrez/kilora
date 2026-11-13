@@ -20,6 +20,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm --filter web test:drafts
       - run: pnpm contracts:check
       - run: pnpm build
 

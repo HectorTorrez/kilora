@@ -1487,6 +1487,15 @@ export interface paths {
                         };
                     };
                 };
+                /** @description Posibles duplicados; no se guardó el servicio ni el comprobante. Volver a enviar con allow_duplicate=true confirma un nuevo registro. */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DuplicateServiceError"];
+                    };
+                };
             };
         };
         delete?: never;
@@ -6566,6 +6575,8 @@ export interface components {
             total?: string;
             workshop_name_text?: string;
             receipt?: components["schemas"]["ReceiptFileInput"];
+            /** @description Confirmación explícita para guardar después de revisar posibles duplicados. */
+            allow_duplicate?: boolean;
         };
         CorrectionInput: {
             history_record_id: string;
@@ -6947,6 +6958,21 @@ export interface components {
             unfiltered_total: number;
             /** @description Cantidad total de coincidencias después de aplicar filtros y antes de paginar. */
             total?: number;
+        };
+        DuplicateService: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            performed_on: string;
+            summary: string;
+            workshop_name: string;
+            total: string | null;
+            /** @enum {string} */
+            reason: "receipt" | "details";
+        };
+        DuplicateServiceError: {
+            error: string;
+            duplicates: components["schemas"]["DuplicateService"][];
         };
     };
     responses: never;

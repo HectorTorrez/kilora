@@ -2,7 +2,9 @@ package httpserver
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -252,13 +254,14 @@ func validManualItems(items []history.Item, itemErr, priceErr error) error {
 
 func (s *server) manualHistory(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
-		PerformedOn  string         `json:"performed_on"`
-		OdometerKm   *int32         `json:"odometer_km"`
-		Summary      string         `json:"summary"`
-		Items        []history.Item `json:"items"`
-		Total        *string        `json:"total"`
-		WorkshopName *string        `json:"workshop_name_text"`
-		Receipt      *receiptInput  `json:"receipt"`
+		PerformedOn    string         `json:"performed_on"`
+		OdometerKm     *int32         `json:"odometer_km"`
+		Summary        string         `json:"summary"`
+		Items          []history.Item `json:"items"`
+		Total          *string        `json:"total"`
+		WorkshopName   *string        `json:"workshop_name_text"`
+		Receipt        *receiptInput  `json:"receipt"`
+		AllowDuplicate bool           `json:"allow_duplicate"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err
@@ -301,11 +304,33 @@ func (s *server) manualHistory(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	user := currentUser(ctx).ID
+	vehicleID, err := pathID(r, "vehicleID", vehicleNotFound)
+	if err != nil {
+		return err
+	}
+	var receiptHash []byte
+	if receipt != nil {
+		hash := sha256.Sum256(receipt.data)
+		receiptHash = hash[:]
+	}
 	var rec sqlc.HistoryRecord
 	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
-		v, err := ownedVehicle(ctx, q, r, user)
+		v, err := q.LockOwnerVehicleForService(ctx, sqlc.LockOwnerVehicleForServiceParams{VehicleID: vehicleID, OwnerUserID: &user})
 		if err != nil {
-			return auditEvent{}, err
+			return auditEvent{}, notFoundIfMissing(err, vehicleNotFound)
+		}
+		if !in.AllowDuplicate {
+			workshop := ""
+			if in.WorkshopName != nil {
+				workshop = *in.WorkshopName
+			}
+			matches, err := findDuplicateServices(ctx, q, sqlc.FindDuplicateOwnerServicesParams{VehicleID: v.ID, OwnerUserID: &user, PerformedOn: date(performed), Total: total, ReceiptHash: receiptHash}, workshop)
+			if err != nil {
+				return auditEvent{}, err
+			}
+			if len(matches) > 0 {
+				return auditEvent{}, &duplicateServiceError{Matches: matches}
+			}
 		}
 		rec, err = q.CreateHistoryRecord(ctx, sqlc.CreateHistoryRecordParams{VehicleID: v.ID, Source: sqlc.HistorySourcePropietario, PerformedOn: date(performed), OdometerKm: in.OdometerKm, Summary: in.Summary, Items: items, Total: total, Currency: values.Currency, WorkshopNotes: notes, CreatedBy: &user})
 		if err != nil {
@@ -324,6 +349,11 @@ func (s *server) manualHistory(w http.ResponseWriter, r *http.Request) error {
 		return ownerEvent(user, "history_record", rec.ID, "history.manual"), nil
 	})
 	if err != nil {
+		var duplicate *duplicateServiceError
+		if errors.As(err, &duplicate) {
+			writeJSON(w, http.StatusConflict, map[string]any{"error": duplicate.Error(), "duplicates": duplicate.Matches})
+			return nil
+		}
 		return err
 	}
 	writeJSON(w, http.StatusCreated, map[string]any{"id": rec.ID})
