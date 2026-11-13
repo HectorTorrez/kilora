@@ -43,7 +43,7 @@ export function ListPagination({
 					? pending
 						? "Cargando resultados…"
 						: null
-					:`${first <= last ? `${first}–${last}` : "0"} de ${total} resultados`}
+					: `${first <= last ? `${first}–${last}` : "0"} de ${total} resultados`}
 			</p>
 			<div className="flex flex-wrap items-center gap-2">
 				<Button
