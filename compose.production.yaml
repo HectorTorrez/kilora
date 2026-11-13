@@ -1,0 +1,117 @@
+name: kilora-production
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kilora
+      POSTGRES_DB: kilora
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U kilora -d kilora']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    logging: *logging
+
+  migrate:
+    image: kilora-api:${RELEASE_TAG:-local}
+    build:
+      context: .
+      dockerfile: deploy/api.Dockerfile
+    environment:
+      DATABASE_URL: postgres://kilora:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/kilora?sslmode=disable
+    command: [sh, -c, 'exec goose -dir /migrations postgres "$$DATABASE_URL" up']
+    depends_on:
+      db:
+        condition: service_healthy
+    logging: *logging
+
+  api:
+    image: kilora-api:${RELEASE_TAG:-local}
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DEMO_MODE: 'false'
+      API_ADDR: ':8080'
+      WEB_ORIGIN: https://${DOMAIN:?Set DOMAIN}
+      DATABASE_URL: postgres://kilora:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@db:5432/kilora?sslmode=disable
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET}
+      RESEND_API_KEY: ${RESEND_API_KEY:?Set RESEND_API_KEY}
+      EMAIL_FROM: ${EMAIL_FROM:?Set EMAIL_FROM}
+      TRUSTED_PROXY_CIDRS: 172.29.77.2/32
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-mini}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_REASONING_EFFORT: ${OPENAI_REASONING_EFFORT-low}
+    healthcheck:
+      test: [CMD, wget, -q, -O, /dev/null, 'http://127.0.0.1:8080/healthz']
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    logging: *logging
+
+  web:
+    environment:
+      API_INTERNAL_URL: http://api:8080
+    image: kilora-web:${RELEASE_TAG:-local}
+    build:
+      context: .
+      dockerfile: deploy/web.Dockerfile
+      args:
+        VITE_SITE_URL: https://${DOMAIN:?Set DOMAIN}
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    depends_on:
+      api:
+        condition: service_healthy
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      default:
+        ipv4_address: 172.29.77.2
+    depends_on:
+      web:
+        condition: service_healthy
+    logging: *logging
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.29.77.0/24
+          ip_range: 172.29.77.128/25
+
+volumes:
+  postgres:
+  caddy_data:
+  caddy_config:

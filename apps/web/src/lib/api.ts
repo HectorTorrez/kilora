@@ -13,7 +13,12 @@ const serverGet = createServerFn({ method: "GET" })
 		const { getRequest } = await import("@tanstack/react-start/server");
 		const request = getRequest();
 		const response = await fetch(
-			new URL(path, import.meta.env.VITE_API_URL || request.url),
+			new URL(
+				path,
+				process.env.API_INTERNAL_URL ||
+					import.meta.env.VITE_API_URL ||
+					request.url,
+			),
 			{ headers: { cookie: request.headers.get("cookie") || "" } },
 		);
 		return { status: response.status, body: await response.text() };
