@@ -3,13 +3,12 @@ import type { components } from "@kilora/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CircleCheck, type LucideIcon, Mail } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
 	meQuery,
 	useCreateWorkshop,
@@ -171,10 +170,8 @@ export function AuthPage({
 	demo?: components["schemas"]["DemoInfo"];
 }) {
 	const accounts = mode === "login" && demo?.enabled ? demo.accounts : [];
-	const initialAccount = accounts.find((account) => account.role === "taller");
-	const [selectedRole, setSelectedRole] = useState<string | null>(
-		initialAccount?.role ?? null,
-	);
+	const [demoOpen, setDemoOpen] = useState(false);
+	const demoAccountsId = useId();
 	const navigate = useNavigate();
 	const qc = useQueryClient();
 	const login = useLogin();
@@ -243,8 +240,8 @@ export function AuthPage({
 		),
 		defaultValues: {
 			full_name: "",
-			email: initialAccount?.email ?? "",
-			password: initialAccount?.password ?? "",
+			email: "",
+			password: "",
 			name: "",
 			nit: "",
 			branch_name: "",
@@ -373,44 +370,6 @@ export function AuthPage({
 								{(mode === "registro" || mode === "onboarding") && (
 									<RequiredLegend />
 								)}
-								{accounts.length > 0 && (
-									<div className="space-y-2">
-										<ToggleGroup
-											type="single"
-											value={selectedRole ?? ""}
-											onValueChange={(value) => {
-												const account = accounts.find((a) => a.role === value);
-												if (!account) return;
-												setSelectedRole(account.role);
-												form.setValue("email", account.email, {
-													shouldValidate: true,
-												});
-												form.setValue("password", account.password, {
-													shouldValidate: true,
-												});
-											}}
-											className="grid grid-cols-3 rounded-lg border p-1"
-											aria-label="Perfil demo"
-										>
-											{accounts.map((account) => (
-												<ToggleGroupItem
-													key={account.role}
-													value={account.role}
-													className="px-2 py-2 text-center text-sm font-semibold data-[state=on]:bg-foreground data-[state=on]:text-background"
-												>
-													{account.role === "taller"
-														? "Taller"
-														: account.role === "propietario"
-															? "Propietario"
-															: "Otro taller"}
-												</ToggleGroupItem>
-											))}
-										</ToggleGroup>
-										<p className="text-sm text-ink-3">
-											Cuenta demo lista. Pulsa Entrar o cambia el perfil.
-										</p>
-									</div>
-								)}
 								{mode === "registro" && (
 									<TextField
 										name="full_name"
@@ -429,7 +388,6 @@ export function AuthPage({
 										type="email"
 										autoComplete="email"
 										autoFocus={mode !== "registro"}
-										onValueChange={() => setSelectedRole(null)}
 										required
 									/>
 								)}
@@ -493,6 +451,74 @@ export function AuthPage({
 									{submitLabel[mode]}
 								</SubmitButton>
 							</form>
+							{accounts.length > 0 && (
+								<div className="mt-5">
+									<Button
+										type="button"
+										variant="ghost"
+										className="w-full"
+										aria-expanded={demoOpen}
+										aria-controls={demoAccountsId}
+										onClick={() => setDemoOpen(!demoOpen)}
+									>
+										{demoOpen ? "Ocultar cuentas demo" : "Ver cuentas demo"}
+									</Button>
+									<div id={demoAccountsId} hidden={!demoOpen}>
+										<p className="mt-3 text-sm text-ink-3">
+											Elegí una cuenta para probar Kilora. Sus credenciales se
+											completarán al pulsar “Usar esta cuenta”.
+										</p>
+										<ul className="mt-3 grid gap-3">
+											{accounts.map((account) => (
+												<li
+													key={account.role}
+													className="rounded-lg border p-4"
+												>
+													<p className="text-sm font-semibold">
+														{account.role === "taller"
+															? "Taller"
+															: account.role === "propietario"
+																? "Propietario"
+																: "Otro taller"}
+													</p>
+													<dl className="mt-3 space-y-2 text-sm">
+														<div>
+															<dt className="text-ink-3">Correo electrónico</dt>
+															<dd className="break-all font-mono">
+																{account.email}
+															</dd>
+														</div>
+														<div>
+															<dt className="text-ink-3">Contraseña</dt>
+															<dd className="break-all font-mono">
+																{account.password}
+															</dd>
+														</div>
+													</dl>
+													<Button
+														type="button"
+														variant="outline"
+														className="mt-4 w-full"
+														onClick={() => {
+															form.clearErrors("root");
+															form.setValue("email", account.email, {
+																shouldValidate: true,
+															});
+															form.setValue("password", account.password, {
+																shouldValidate: true,
+															});
+															setDemoOpen(false);
+															form.setFocus("email");
+														}}
+													>
+														Usar esta cuenta
+													</Button>
+												</li>
+											))}
+										</ul>
+									</div>
+								</div>
+							)}
 						</Form>
 					)}
 					{!done && ["login", "registro", "verificar"].includes(mode) && (
