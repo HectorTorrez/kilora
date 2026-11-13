@@ -60,6 +60,15 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      # El panel de Dokploy solo es accesible por Tailscale: el runner se une
+      # a la tailnet (nodo efímero con tag:ci) solo durante este job.
+      - name: Connect to Tailscale
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
       - name: Trigger Dokploy compose deploy
         env:
           DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
