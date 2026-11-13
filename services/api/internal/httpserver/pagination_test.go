@@ -38,10 +38,10 @@ func TestPaginatedLists(t *testing.T) {
 		}
 	}
 	a.req(c, "PATCH", path+"/work-orders/"+firstOrder+"/status", `{"status":"diagnostico"}`, 200)
-	if _, err := a.db.Exec(context.Background(), "UPDATE work_order SET received_at = '2026-01-01' WHERE workshop_id = $1", workshop); err != nil {
+	if _, err := a.db.Exec(context.Background(), "UPDATE work_order SET received_at = '2026-01-01 00:00:00-06' WHERE workshop_id = $1", workshop); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.db.Exec(context.Background(), "UPDATE vehicle SET last_activity_at = '2026-01-01' WHERE created_by_workshop_id = $1", workshop); err != nil {
+	if _, err := a.db.Exec(context.Background(), "UPDATE vehicle SET last_activity_at = '2026-01-01 00:00:00-06' WHERE created_by_workshop_id = $1", workshop); err != nil {
 		t.Fatal(err)
 	}
 
