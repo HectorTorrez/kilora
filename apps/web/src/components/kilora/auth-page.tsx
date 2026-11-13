@@ -2,12 +2,19 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import type { components } from "@kilora/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CircleCheck, type LucideIcon, Mail } from "lucide-react";
-import { useId, useState } from "react";
+import { ChevronDown, CircleCheck, type LucideIcon, Mail } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Form } from "@/components/ui/form";
 import {
 	meQuery,
@@ -186,8 +193,6 @@ export function AuthPage({
 					]
 				: details[mode];
 	const accounts = mode === "login" && demo?.enabled ? demo.accounts : [];
-	const [demoOpen, setDemoOpen] = useState(false);
-	const demoAccountsId = useId();
 	const navigate = useNavigate();
 	const qc = useQueryClient();
 	const login = useLogin();
@@ -476,70 +481,65 @@ export function AuthPage({
 							</form>
 							{accounts.length > 0 && (
 								<div className="mt-5">
-									<Button
-										type="button"
-										variant="ghost"
-										className="w-full"
-										aria-expanded={demoOpen}
-										aria-controls={demoAccountsId}
-										onClick={() => setDemoOpen(!demoOpen)}
-									>
-										{demoOpen ? "Ocultar cuentas demo" : "Ver cuentas demo"}
-									</Button>
-									<div id={demoAccountsId} hidden={!demoOpen}>
-										<p className="mt-3 text-sm text-ink-3">
-											Elegí una cuenta para probar Kilora. Sus credenciales se
-											completarán al pulsar “Usar esta cuenta”.
-										</p>
-										<ul className="mt-3 grid gap-3">
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												type="button"
+												variant="outline"
+												className="w-full justify-between"
+												disabled={login.isPending}
+											>
+												{login.isPending
+													? "Ingresando…"
+													: "Probar con una cuenta demo"}
+												<ChevronDown
+													className="size-4 text-ink-3"
+													aria-hidden="true"
+												/>
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="start"
+											className="w-(--radix-dropdown-menu-trigger-width)"
+										>
+											<DropdownMenuLabel className="text-xs text-ink-3">
+												Elegí un perfil para entrar a la demo
+											</DropdownMenuLabel>
+											<DropdownMenuSeparator />
 											{accounts.map((account) => (
-												<li
+												<DropdownMenuItem
 													key={account.role}
-													className="rounded-lg border p-4"
+													className="items-start px-3 py-3"
+													disabled={login.isPending}
+													onSelect={async () => {
+														form.clearErrors("root");
+														try {
+															await login.mutateAsync({
+																email: account.email,
+																password: account.password,
+															});
+															await enterApp();
+														} catch (error) {
+															applyFormError(form, error);
+														}
+													}}
 												>
-													<p className="text-sm font-semibold">
-														{account.role === "taller"
-															? "Taller"
-															: account.role === "propietario"
-																? "Propietario"
-																: "Otro taller"}
-													</p>
-													<dl className="mt-3 space-y-2 text-sm">
-														<div>
-															<dt className="text-ink-3">Correo electrónico</dt>
-															<dd className="break-all font-mono">
-																{account.email}
-															</dd>
-														</div>
-														<div>
-															<dt className="text-ink-3">Contraseña</dt>
-															<dd className="break-all font-mono">
-																{account.password}
-															</dd>
-														</div>
-													</dl>
-													<Button
-														type="button"
-														variant="outline"
-														className="mt-4 w-full"
-														onClick={() => {
-															form.clearErrors("root");
-															form.setValue("email", account.email, {
-																shouldValidate: true,
-															});
-															form.setValue("password", account.password, {
-																shouldValidate: true,
-															});
-															setDemoOpen(false);
-															form.setFocus("email");
-														}}
-													>
-														Usar esta cuenta
-													</Button>
-												</li>
+													<div className="min-w-0">
+														<p className="font-semibold">
+															{account.role === "taller"
+																? "Taller"
+																: account.role === "propietario"
+																	? "Propietario"
+																	: "Otro taller"}
+														</p>
+														<p className="mt-0.5 text-xs leading-relaxed text-ink-3">
+															{account.description}
+														</p>
+													</div>
+												</DropdownMenuItem>
 											))}
-										</ul>
-									</div>
+										</DropdownMenuContent>
+									</DropdownMenu>
 								</div>
 							)}
 						</Form>
