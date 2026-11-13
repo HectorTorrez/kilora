@@ -113,6 +113,14 @@ jobs:
                   raise SystemExit(f'Dokploy request failed: HTTP {error.code}') from None
 
           compose = call('compose.one?' + urllib.parse.urlencode({'composeId': compose_id}))
+          print('Dokploy compose source: ' + str(compose.get('sourceType')))
+          if compose.get('sourceType') == 'raw':
+              compose_file = compose.get('composeFile') or ''
+              pattern = r'''(?m)^([ \t]+DEMO_MODE:[ \t]*)(?:"(?:true|false)"|'(?:true|false)'|true|false)([ \t]*(?:#.*)?)$'''
+              updated, count = re.subn(pattern, lambda match: match[1] + '${DEMO_MODE:-false}' + match[2], compose_file)
+              if count:
+                  call('compose.update', {'composeId': compose_id, 'composeFile': updated})
+                  print('Updated stored Compose to read DEMO_MODE from the environment')
           env = compose.get('env') or ''
           pattern = r'(?m)^(?:export[ \t]+)?DEMO_MODE[ \t]*=.*$'
           setting = 'DEMO_MODE=' + mode
