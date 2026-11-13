@@ -1,5 +1,5 @@
 export const SITE_URL = (
-	import.meta.env.VITE_SITE_URL || "https://kilora.app"
+	import.meta.env.VITE_SITE_URL || "https://kilora.dev"
 ).replace(/\/$/, "");
 
 export const SITE_NAME = "Kilora";

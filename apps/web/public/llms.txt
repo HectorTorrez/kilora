@@ -25,6 +25,6 @@
 
 ## Enlaces
 
-- [Inicio](https://kilora.app/): qué es Kilora, cómo funciona y preguntas frecuentes
-- [Crear cuenta](https://kilora.app/registro): registro para talleres
-- [Ingresar](https://kilora.app/login): acceso para talleres y propietarios
+- [Inicio](https://kilora.dev/): qué es Kilora, cómo funciona y preguntas frecuentes
+- [Crear cuenta](https://kilora.dev/registro): registro para talleres
+- [Ingresar](https://kilora.dev/login): acceso para talleres y propietarios

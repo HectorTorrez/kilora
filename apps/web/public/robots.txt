@@ -24,4 +24,4 @@ Disallow: /c/
 Disallow: /invitacion/
 Disallow: /api/
 
-Sitemap: https://kilora.app/sitemap.xml
+Sitemap: https://kilora.dev/sitemap.xml
