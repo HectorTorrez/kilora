@@ -51,20 +51,12 @@
       "post": {
         "responses": {
           "201": {
-            "description": "Respuesta exitosa",
+            "description": "Cuenta creada. Se requiere verificar el correo antes de iniciar sesión.",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/UserResult"
                 }
-              }
-            },
-            "headers": {
-              "Set-Cookie": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "Emite o elimina la cookie de sesión."
               }
             }
           },
@@ -110,6 +102,26 @@
           },
           "415": {
             "description": "Origen o contenido inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Cuenta creada, pero el envío falló. Solicitá un nuevo enlace de verificación.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -186,7 +198,7 @@
             }
           },
           "403": {
-            "description": "Origen o contenido inválido",
+            "description": "Correo sin verificar u origen inválido",
             "content": {
               "application/json": {
                 "schema": {
@@ -303,6 +315,16 @@
           },
           "415": {
             "description": "Origen o contenido inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
             "content": {
               "application/json": {
                 "schema": {
@@ -5824,6 +5846,64 @@
             }
           }
         ]
+      }
+    },
+    "/api/v1/auth/resend-verification": {
+      "post": {
+        "responses": {
+          "429": {
+            "description": "Demasiadas solicitudes desde esta dirección IP",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Error" }
+              }
+            }
+          },
+          "204": {
+            "description": "Respuesta exitosa"
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Origen o contenido inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Origen o contenido inválido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Email"
+              }
+            }
+          }
+        },
+        "description": "Envía un enlace a cuentas sin verificar. La respuesta no revela si existe la cuenta; máximo tres envíos por correo cada 15 minutos."
       }
     }
   },

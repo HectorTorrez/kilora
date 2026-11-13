@@ -17,6 +17,8 @@ func TestAuthRateLimitsBeforeDatabaseOrPasswordHashing(t *testing.T) {
 		{"register", `{}`, 20},
 		{"reset-password", `{}`, 10},
 		{"forgot-password", `{`, 10},
+		{"resend-verification", `{`, 10},
+		{"verify-email", `{`, 20},
 	} {
 		t.Run(tc.path, func(t *testing.T) {
 			h := NewRouter(Deps{})
@@ -76,7 +78,7 @@ func TestLoginBudgetsAcrossAddressesAndAccounts(t *testing.T) {
 	api := newTestAPI(t)
 	client := api.client()
 	_, email := api.register(client)
-	for i := 0; i < loginAttemptLimit; i++ {
+	for i := 1; i < loginAttemptLimit; i++ {
 		api.req(client, "POST", "/api/v1/auth/login", `{"email":"`+email+`","password":"wrong"}`, 401)
 	}
 	api.req(client, "POST", "/api/v1/auth/login", `{"email":"`+email+`","password":"wrong"}`, 429)

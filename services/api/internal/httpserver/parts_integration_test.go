@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/google/uuid"
 )
 
 // La pieza elegida viaja del trabajo y de la cotización hasta lo que ve el
@@ -15,7 +13,7 @@ func TestPartKeysFlow(t *testing.T) {
 	api := newTestAPI(t)
 	req := api.req
 	a := api.client()
-	req(a, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, uuid.NewString()+"@example.com"), 201)
+	api.register(a)
 	work := req(a, "POST", "/api/v1/workshops", `{"name":"Taller","branch_name":"Principal"}`, 201).(map[string]any)
 	pa, branch := "/api/v1/workshops/"+work["id"].(string), work["branch_id"].(string)
 	vid := req(a, "POST", pa+"/vehicles", `{"make":"Toyota","model":"Hilux","customer":{"full_name":"Ana López","phone":"7777-8888"}}`, 201).(map[string]any)["id"].(string)

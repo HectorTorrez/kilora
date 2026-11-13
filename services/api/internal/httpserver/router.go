@@ -78,6 +78,7 @@ func NewRouter(d Deps) http.Handler {
 		r.Post("/auth/login", s.handle(s.login))
 		r.Post("/auth/logout", s.handle(s.logout))
 		r.Post("/auth/verify-email", s.handle(s.verify))
+		r.Post("/auth/resend-verification", s.handle(s.resendVerification))
 		r.Post("/auth/forgot-password", s.handle(s.forgot))
 		r.Post("/auth/reset-password", s.handle(s.reset))
 		r.Group(func(r chi.Router) {

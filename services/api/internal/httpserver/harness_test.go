@@ -92,6 +92,7 @@ func (a *testAPI) register(c *http.Client) (uuid.UUID, string) {
 	a.t.Helper()
 	email := uuid.NewString() + "@example.com"
 	reg := a.obj(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, email), 201)
+	a.confirmAndLogin(c, email)
 	return uuid.MustParse(reg["user"].(map[string]any)["id"].(string)), email
 }
 
@@ -125,4 +126,22 @@ func mustUser(t *testing.T, a *testAPI, c *http.Client) uuid.UUID {
 	t.Helper()
 	me := a.obj(c, "GET", "/api/v1/auth/me", "", 200)
 	return uuid.MustParse(me["user"].(map[string]any)["id"].(string))
+}
+
+func (a *testAPI) verificationToken() string {
+	a.t.Helper()
+	a.mail.mu.Lock()
+	defer a.mail.mu.Unlock()
+	body := a.mail.bodies[len(a.mail.bodies)-1]
+	_, token, ok := strings.Cut(body, "token=")
+	if !ok {
+		a.t.Fatal("verification email has no token")
+	}
+	return token
+}
+
+func (a *testAPI) confirmAndLogin(c *http.Client, email string) {
+	a.t.Helper()
+	a.req(c, "POST", "/api/v1/auth/verify-email", fmt.Sprintf(`{"token":%q}`, a.verificationToken()), 204)
+	a.req(c, "POST", "/api/v1/auth/login", fmt.Sprintf(`{"email":%q,"password":"password123"}`, email), 204)
 }

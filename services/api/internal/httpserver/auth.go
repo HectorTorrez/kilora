@@ -45,11 +45,17 @@ func createSession(ctx context.Context, q *sqlc.Queries, user uuid.UUID, r *http
 	return token, err
 }
 
-func (s *server) startSession(w http.ResponseWriter, r *http.Request, user uuid.UUID) error {
+func (s *server) startSession(w http.ResponseWriter, r *http.Request, userID uuid.UUID) error {
 	var token string
 	err := s.tx(r.Context(), func(q *sqlc.Queries) error {
-		var err error
-		token, err = createSession(r.Context(), q, user, r)
+		user, err := q.GetUserByID(r.Context(), userID)
+		if err != nil {
+			return err
+		}
+		if !user.EmailVerifiedAt.Valid {
+			return forbidden("Verificá tu correo antes de iniciar sesión. Si no recibiste el enlace, solicitá uno nuevo")
+		}
+		token, err = createSession(r.Context(), q, user.ID, r)
 		return err
 	})
 	if err != nil {
@@ -92,7 +98,7 @@ func (s *server) register(w http.ResponseWriter, r *http.Request) error {
 	}
 	ctx := r.Context()
 	var u userResponse
-	var verify, token string
+	var verify string
 	err = s.mutate(ctx, func(q *sqlc.Queries) (auditEvent, error) {
 		created, err := q.CreateUser(ctx, sqlc.CreateUserParams{Email: email, PasswordHash: hash, FullName: in.FullName})
 		if err != nil {
@@ -100,9 +106,6 @@ func (s *server) register(w http.ResponseWriter, r *http.Request) error {
 		}
 		u = userResponse{ID: created.ID, Email: created.Email, FullName: created.FullName}
 		if verify, err = createToken(ctx, q, u.ID, sqlc.AuthTokenPurposeVerifyEmail, verifyEmailTTL); err != nil {
-			return auditEvent{}, err
-		}
-		if token, err = createSession(ctx, q, u.ID, r); err != nil {
 			return auditEvent{}, err
 		}
 		return auditEvent{actor: u.ID, entity: "user", id: u.ID, action: "user.register"}, nil
@@ -113,10 +116,10 @@ func (s *server) register(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err = s.mailer.Send(ctx, u.Email, "Verifica tu correo", s.webURL("/verificar?token="+verify)); err != nil {
+	if err = s.sendVerification(ctx, u.Email, verify); err != nil {
 		s.logger.Error("error enviando correo", "error", err)
+		return httpError{http.StatusServiceUnavailable, "Tu cuenta fue creada, pero no pudimos enviar el correo. Solicitá un nuevo enlace de verificación"}
 	}
-	s.setCookie(w, token)
 	writeJSON(w, http.StatusCreated, map[string]any{"user": u})
 	return nil
 }
@@ -172,7 +175,51 @@ func (s *server) me(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
+func (s *server) sendVerification(ctx context.Context, email, token string) error {
+	body := "Bienvenido a Kilora. Confirmá tu correo para poder iniciar sesión. El enlace vence en 24 horas y solo puede usarse una vez. Si no creaste esta cuenta, ignorá este mensaje.\n\n" + s.webURL("/verificar?token="+token)
+	return s.mailer.Send(ctx, email, "Confirmá tu correo de Kilora", body)
+}
+
+func (s *server) resendVerification(w http.ResponseWriter, r *http.Request) error {
+	if !s.limiter.allow("verify-resend-ip:"+clientIP(r), 10) {
+		return errTooManyRequests
+	}
+	var in struct {
+		Email string `json:"email"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	email, valid := values.Email(in.Email)
+	if !valid {
+		return badRequest("Correo inválido")
+	}
+	ctx := r.Context()
+	if s.limiter.allow("verify-resend-email:"+email, 3) {
+		user, err := sqlc.New(s.db).GetUserByEmail(ctx, email)
+		if err == nil && !user.EmailVerifiedAt.Valid {
+			var token string
+			err = s.tx(ctx, func(q *sqlc.Queries) error {
+				var err error
+				token, err = createToken(ctx, q, user.ID, sqlc.AuthTokenPurposeVerifyEmail, verifyEmailTTL)
+				return err
+			})
+			if err == nil {
+				err = s.sendVerification(ctx, email, token)
+			}
+		}
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			s.logger.Error("error reenviando verificación", "error", err)
+		}
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
+
 func (s *server) verify(w http.ResponseWriter, r *http.Request) error {
+	if !s.limiter.allow("verify:"+clientIP(r), 20) {
+		return errTooManyRequests
+	}
 	var in struct {
 		Token string `json:"token"`
 	}

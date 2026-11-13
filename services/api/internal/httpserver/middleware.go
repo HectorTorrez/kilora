@@ -139,6 +139,10 @@ func (s *server) sessionUser(w http.ResponseWriter, r *http.Request, token strin
 	if err != nil {
 		return nil
 	}
+	if !user.EmailVerifiedAt.Valid {
+		s.clearCookie(w)
+		return nil
+	}
 	if time.Since(session.LastSeenAt.Time) >= auth.SessionTouchInterval {
 		if n, err := q.TouchSession(r.Context(), hash); err == nil && n > 0 {
 			s.setCookie(w, token)

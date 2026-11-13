@@ -24,23 +24,7 @@ func TestHistoryHTTP(t *testing.T) {
 		t.Helper()
 		jar, _ := cookiejar.New(nil)
 		c := &http.Client{Jar: jar}
-		b := request(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, uuid.NewString()+"@example.com"), 201)
-		var data struct {
-			User struct {
-				ID uuid.UUID `json:"id"`
-			} `json:"user"`
-			ID uuid.UUID `json:"id"`
-		}
-		if err := json.Unmarshal(b, &data); err != nil {
-			t.Fatal(err)
-		}
-		id := data.User.ID
-		if id == uuid.Nil {
-			id = data.ID
-		}
-		if id == uuid.Nil {
-			t.Fatalf("id ausente: %s", b)
-		}
+		id, _ := api.register(c)
 		return c, id
 	}
 	a, aid := register()

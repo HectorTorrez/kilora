@@ -15,6 +15,7 @@ func TestRecommendationsMembersAndAudit(t *testing.T) {
 	register := func(c *http.Client) string {
 		email := uuid.NewString() + "@example.com"
 		req(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, email), 201)
+		api.confirmAndLogin(c, email)
 		return email
 	}
 	setup := func(c *http.Client) (string, string) {

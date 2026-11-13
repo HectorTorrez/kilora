@@ -32,6 +32,7 @@ func TestInvitationOwnerFlow(t *testing.T) {
 		email string
 	}{{a, uuid.NewString() + "@example.com"}, {b, uuid.NewString() + "@example.com"}, {owner, email}, {other, uuid.NewString() + "@example.com"}} {
 		req(pair.c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, pair.email), 201)
+		api.confirmAndLogin(pair.c, pair.email)
 	}
 	workshop := func(c *http.Client) (string, string) {
 		m := decodeMap(req(c, "POST", "/api/v1/workshops", `{"name":"Taller","branch_name":"Principal"}`, 201))

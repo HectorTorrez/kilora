@@ -2,9 +2,11 @@
 
 **A vehicle’s service history should stay with its owner.**
 
-Kilora connects automotive workshops and vehicle owners through a shared service history. Workshops manage their day-to-day work, and owners keep a record of their vehicle’s maintenance—even when they change workshops.
+Kilora is a vehicle service history and workshop management app for independent automotive workshops and vehicle owners in El Salvador. Workshops manage customers, service orders, and quotes; owners keep their maintenance records—even when they change workshops.
 
-Built for independent workshops and drivers in El Salvador, Kilora brings service orders, quotes, and maintenance records into one place.
+AI tools help turn notes into quotes, receipts into service records, and technical work into clear explanations. Parts diagrams help users understand the work, and shareable resale reports make the history useful when selling a vehicle.
+
+The app is in Spanish, with prices in USD. This repository is a portfolio project and working demo built with React, TanStack Start, Go, and PostgreSQL.
 
 ## Why Kilora
 
@@ -15,7 +17,8 @@ Kilora turns completed services into a lasting vehicle history. Owners can under
 ## For workshops
 
 - **Manage service orders.** Register vehicles, track work from intake to completion, and record jobs, parts, and mileage.
-- **Keep quotes connected to the work.** Prepare itemized estimates, share a read-only link through WhatsApp, record the customer’s verbal decision, and compare the quote with the final charge.
+- **Prepare quotes before or during a service.** Create a counter quote without registering a vehicle, convert an accepted quote into an order, or prepare an estimate within an existing order. Share a read-only link through WhatsApp, record the customer’s verbal decision, and compare the quote with the final charge.
+- **Track the parts installed.** Record part brands alongside quote items and service work, preserving those details in the owner’s history.
 - **Start before the owner signs up.** Create a provisional vehicle record, then invite its owner to connect it to their account.
 - **Coordinate your team.** Give administrators, reception staff, and mechanics access according to their roles and assigned branches.
 - **Publish a useful service record.** Marking an order ready adds a permanent snapshot to the vehicle’s history.
@@ -26,6 +29,7 @@ Kilora turns completed services into a lasting vehicle history. Owners can under
 - **Understand your maintenance.** Review service dates, mileage, work performed, parts, and charges.
 - **Fill in the gaps.** Add services manually and record new odometer readings.
 - **Keep a traceable record.** Corrections are added as dated entries, preserving the original history.
+- **Share a resale report.** Create a read-only link valid for 30 days, with service dates, workshops, and mileage, and print it to PDF. Amounts and notes stay out of the report.
 
 ## Shared history, with clear boundaries
 
@@ -35,9 +39,10 @@ Kilora gives each person the information relevant to them:
 | --- | --- |
 | Vehicle owner | Their vehicle’s service history, including workshop names, charges, and public service notes. |
 | Workshop that performed the service | Its own service records, including internal costs and private notes. |
-| Another linked workshop | Maintenance context: work, parts, dates, and mileage. Other workshops’ identities, prices, and notes stay hidden. |
+| Another linked workshop | Maintenance context: work, parts, dates, and mileage. Other workshops’ identities, part brands and models, quantities, prices, and notes stay hidden. |
+| Anyone with an owner-shared resale link | Service history with workshop names, work, dates, and mileage, without amounts or notes. Access expires after 30 days or when the owner replaces the link. |
 
-Workshop internal costs and private notes remain private to that workshop, including when the owner views the service.
+Workshop internal costs and private notes remain private to that workshop, including when the owner views the service. These boundaries are enforced by the API through [`history.Project`](services/api/internal/history/history.go), before data reaches the browser or an AI prompt.
 
 ## How it works
 
@@ -84,6 +89,18 @@ pnpm start
 
 The web app runs at [localhost:3300](http://localhost:3300), and the API at [localhost:8080](http://localhost:8080). During development, the frontend proxies `/api` requests to the API; leave `VITE_API_URL` empty to use this setup.
 
+### Optional configuration
+
+The core workflows and seeded demo run without external API keys. See [`.env.example`](.env.example) for the available settings.
+
+| Setting | Purpose |
+| --- | --- |
+| `OPENAI_API_KEY` | Enable the assistant and AI drafting tools described below. |
+| `OPENAI_MODEL`, `OPENAI_EMBEDDING_MODEL`, `OPENAI_REASONING_EFFORT` | Configure generation, knowledge embeddings, and reasoning effort. |
+| `RESEND_API_KEY`, `EMAIL_FROM` | Send verification, password reset, and invitation emails. Without a Resend key, emails are written to the API logs for local development. |
+| `DEMO_MODE` | Show public demo account access. The example environment enables it; disable it for a non-demo deployment. |
+| `VITE_SITE_URL` | Set the public canonical URL used by search and social metadata. |
+
 ## AI assistant
 
 Signed-in workshop staff and owners get an **Asistente** button. It answers two kinds of questions:
@@ -100,7 +117,7 @@ Besides the chat, the same key enables AI helpers inside the forms. They follow 
 - **Quote from a note.** In any quote editor, *Describir con IA* turns a typed or dictated note ("cambio de aceite 5W-30 con filtro, pastillas delanteras…") into quote items matched to the part catalog. Prices are filled only when the note states them.
 - **Receipt to history.** Owners adding a manual service can tap *Escanear recibo* and photograph an old receipt or invoice. A vision model reads the date, mileage, workshop, line items and total into the form. The browser downsizes the photo, which also strips EXIF metadata, and the API never stores it.
 - **Plain-language explanations.** Owners can tap *¿Qué me hicieron?* on any service to get a short, jargon-free explanation. Workshops get *Mensaje con IA*, an editable WhatsApp message that explains each quote line before sharing the link. The model only receives the projection the viewer already sees (`history.Project` for owners, without internal IDs), so internal costs and private notes never reach a prompt.
-- **Suggested recommendations.** *Sugerir* on a vehicle's recommendations card proposes due maintenance. Deterministic rules in [`services/api/internal/maintenance`](services/api/internal/maintenance) decide what is due: the same reference intervals as the 3D parts map, applied to the history the workshop can see and the latest odometer reading. The model only writes the wording. Without a key, the suggestions still work with template text.
+- **Suggested recommendations.** *Sugerir* on a vehicle's recommendations card proposes due maintenance. Deterministic rules in [`services/api/internal/maintenance`](services/api/internal/maintenance) decide what is due using reference intervals, the history the workshop can see, and the latest odometer reading. The model only writes the wording. Without a key, the suggestions still work with template text.
 - **Resale report.** Owners can share *Reporte para venta*: a 30-day, read-only link (`/r/<token>`, printable to PDF) with the full history under a dedicated `history.ViewerReport` projection, which shows work, dates, mileage and workshops but no amounts or notes. When the link is created, the model writes a short summary of how complete and regular the history is. Creating a new link revokes the previous one, and only the token's hash is stored.
 
 ## Development reference
@@ -119,8 +136,11 @@ Kilora uses React and TanStack Start for the web app, Go for the API, and Postgr
 | --- | --- |
 | `pnpm start` | Start the database, API, and web app. |
 | `pnpm build` | Build the web app. |
-| `pnpm check` | Check frontend lint and formatting. |
+| `pnpm check` | Check frontend lint, formatting, and TypeScript types. |
+| `pnpm api:vet` | Run Go static analysis. |
 | `pnpm api:test` | Run API tests. |
+| `pnpm api:test:db` | Run API tests with the local database, including integration tests. |
+| `pnpm contracts:check` | Regenerate API types and check that the committed contract types are current. |
 | `pnpm db:migrate` | Apply pending database migrations. |
 | `pnpm db:seed` | Populate demo data. |
 | `pnpm sqlc` | Regenerate database query code; requires sqlc. |

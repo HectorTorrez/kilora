@@ -13,11 +13,15 @@ import (
 type fakeMailer struct {
 	mu     sync.Mutex
 	bodies []string
+	err    error
 }
 
 func (m *fakeMailer) Send(_ context.Context, _, _, body string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.err != nil {
+		return m.err
+	}
 	m.bodies = append(m.bodies, body)
 	return nil
 }
@@ -29,6 +33,7 @@ func TestAuthAndWorkshops(t *testing.T) {
 	email := uuid.NewString() + "@example.com"
 	register := func(c *http.Client, email string) {
 		request(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, email), 201)
+		api.confirmAndLogin(c, email)
 	}
 	register(a, email)
 	request(a, "GET", "/api/v1/auth/me", "", 200)

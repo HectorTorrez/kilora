@@ -17,8 +17,7 @@ func TestWorkshopIsolation(t *testing.T) {
 	db := api.db
 	client, req := api.client, api.req
 	setup := func(c *http.Client) (string, string, uuid.UUID) {
-		reg := req(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Prueba"}`, uuid.NewString()+"@example.com"), 201).(map[string]any)
-		uid := uuid.MustParse(reg["user"].(map[string]any)["id"].(string))
+		uid, _ := api.register(c)
 		work := req(c, "POST", "/api/v1/workshops", `{"name":"Taller","branch_name":"Principal"}`, 201).(map[string]any)
 		return "/api/v1/workshops/" + work["id"].(string), work["branch_id"].(string), uid
 	}

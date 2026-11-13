@@ -105,11 +105,9 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Respuesta exitosa */
+                /** @description Cuenta creada. Se requiere verificar el correo antes de iniciar sesión. */
                 201: {
                     headers: {
-                        /** @description Emite o elimina la cookie de sesión. */
-                        "Set-Cookie"?: string;
                         [name: string]: unknown;
                     };
                     content: {
@@ -153,7 +151,25 @@ export interface paths {
                     };
                 };
                 /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
                 500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Cuenta creada, pero el envío falló. Solicitá un nuevo enlace de verificación. */
+                503: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -218,7 +234,7 @@ export interface paths {
                         "application/json": components["schemas"]["Error"];
                     };
                 };
-                /** @description Origen o contenido inválido */
+                /** @description Correo sin verificar u origen inválido */
                 403: {
                     headers: {
                         [name: string]: unknown;
@@ -373,6 +389,15 @@ export interface paths {
                 };
                 /** @description Origen o contenido inválido */
                 415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -5406,6 +5431,80 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/resend-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description Envía un enlace a cuentas sin verificar. La respuesta no revela si existe la cuenta; máximo tres envíos por correo cada 15 minutos. */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["Email"];
+                };
+            };
+            responses: {
+                /** @description Respuesta exitosa */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Origen o contenido inválido */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Origen o contenido inválido */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Demasiadas solicitudes desde esta dirección IP */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;

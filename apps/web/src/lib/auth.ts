@@ -58,6 +58,16 @@ export function useForgotPassword() {
 		},
 	});
 }
+export function useResendVerification() {
+	return useMutation({
+		mutationFn: async (body: Schemas["Email"]) => {
+			const { error } = await api.POST("/api/v1/auth/resend-verification", {
+				body,
+			});
+			if (error) throw apiError(error);
+		},
+	});
+}
 export function useResetPassword() {
 	const qc = useQueryClient();
 	return useMutation({

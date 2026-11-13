@@ -16,6 +16,7 @@ import {
 	useForgotPassword,
 	useLogin,
 	useRegister,
+	useResendVerification,
 	useResetPassword,
 	useVerifyEmail,
 } from "@/lib/auth";
@@ -52,8 +53,14 @@ type Mode =
 	| "onboarding"
 	| "olvide"
 	| "restablecer"
-	| "verificar";
+	| "verificar"
+	| "reenviar";
 const details: Record<Mode, [string, string, string]> = {
+	reenviar: [
+		"Verificación de correo",
+		"Solicitá un nuevo enlace",
+		"Ingresá tu correo y te enviaremos un enlace para activar tu cuenta.",
+	],
 	login: [
 		"Acceso a Kilora",
 		"Ingresá a Kilora",
@@ -86,6 +93,7 @@ const details: Record<Mode, [string, string, string]> = {
 	],
 };
 const pendingLabel: Record<Mode, string> = {
+	reenviar: "Enviando…",
 	login: "Ingresando…",
 	registro: "Creando cuenta…",
 	onboarding: "Creando taller…",
@@ -94,6 +102,7 @@ const pendingLabel: Record<Mode, string> = {
 	verificar: "Verificando…",
 };
 const submitLabel: Record<Mode, string> = {
+	reenviar: "Reenviar verificación",
 	login: "Entrar",
 	registro: "Crear cuenta",
 	onboarding: "Crear taller",
@@ -117,6 +126,18 @@ function successContent(mode: Mode): {
 	body: string;
 	icon: LucideIcon;
 } | null {
+	if (mode === "registro")
+		return {
+			title: "Revisá tu correo",
+			body: "Te enviamos un enlace para confirmar tu correo. Vence en 24 horas. Verificá tu dirección antes de iniciar sesión y revisá también la carpeta de spam.",
+			icon: Mail,
+		};
+	if (mode === "reenviar")
+		return {
+			title: "Revisá tu correo",
+			body: "Si la cuenta está pendiente de verificación, recibirás un enlace. Revisá también la carpeta de spam. Si no llega, podés intentarlo de nuevo en 15 minutos.",
+			icon: Mail,
+		};
 	if (mode === "olvide")
 		return {
 			title: "Revisá tu correo",
@@ -132,7 +153,7 @@ function successContent(mode: Mode): {
 	if (mode === "verificar")
 		return {
 			title: "Correo verificado",
-			body: "Tu correo fue verificado.",
+			body: "Tu correo fue verificado. Ya podés iniciar sesión en Kilora.",
 			icon: CircleCheck,
 		};
 	return null;
@@ -162,6 +183,7 @@ export function AuthPage({
 	const forgot = useForgotPassword();
 	const reset = useResetPassword();
 	const verify = useVerifyEmail();
+	const resend = useResendVerification();
 	const mutation = {
 		login,
 		registro: register,
@@ -169,6 +191,7 @@ export function AuthPage({
 		olvide: forgot,
 		restablecer: reset,
 		verificar: verify,
+		reenviar: resend,
 	}[mode];
 	const form = useForm<Values>({
 		mode: "onChange",
@@ -190,7 +213,7 @@ export function AuthPage({
 				};
 				if (mode === "registro") check("full_name", personName);
 				if (
-					["login", "registro", "olvide"].includes(mode) &&
+					["login", "registro", "olvide", "reenviar"].includes(mode) &&
 					!emailField.safeParse(v.email).success
 				)
 					ctx.addIssue({
@@ -248,7 +271,7 @@ export function AuthPage({
 					email: v.email,
 					password: v.password,
 				});
-				await enterApp();
+				form.resetField("password");
 			}
 			if (mode === "onboarding") {
 				await workshop.mutateAsync({
@@ -262,12 +285,16 @@ export function AuthPage({
 			if (mode === "restablecer")
 				await reset.mutateAsync({ token, password: v.password });
 			if (mode === "verificar") await verify.mutateAsync({ token });
+			if (mode === "reenviar") await resend.mutateAsync({ email: v.email });
 		} catch (error) {
 			applyFormError(form, error);
 		}
 	});
 	const done =
-		mutation.isSuccess && ["olvide", "restablecer", "verificar"].includes(mode);
+		mutation.isSuccess &&
+		["registro", "olvide", "restablecer", "verificar", "reenviar"].includes(
+			mode,
+		);
 	const success = successContent(mode);
 	const SuccessIcon = success?.icon;
 	return (
@@ -324,10 +351,21 @@ export function AuthPage({
 								{success.body}
 							</p>
 							<Button asChild className="mt-6 w-full">
-								<Link to="/login" search={{ redirect: undefined }}>
+								<Link to="/login" search={{ redirect: redirectTo }}>
 									Ir a iniciar sesión
 								</Link>
 							</Button>
+							{mode === "registro" && (
+								<p className="mt-4 text-sm">
+									<Link
+										to="/verificar"
+										search={{ token: "" }}
+										className="font-semibold text-seal"
+									>
+										¿No recibiste el correo? Reenviar enlace
+									</Link>
+								</p>
+							)}
 						</output>
 					) : (
 						<Form {...form}>
@@ -384,7 +422,7 @@ export function AuthPage({
 										required
 									/>
 								)}
-								{["login", "registro", "olvide"].includes(mode) && (
+								{["login", "registro", "olvide", "reenviar"].includes(mode) && (
 									<TextField
 										name="email"
 										label="Correo electrónico"
@@ -456,6 +494,17 @@ export function AuthPage({
 								</SubmitButton>
 							</form>
 						</Form>
+					)}
+					{!done && ["login", "registro", "verificar"].includes(mode) && (
+						<p className="mt-5 text-center text-sm">
+							<Link
+								to="/verificar"
+								search={{ token: "" }}
+								className="font-semibold text-seal"
+							>
+								Solicitar un nuevo correo de verificación
+							</Link>
+						</p>
 					)}
 					{!done && (
 						<p className="mt-7 text-center text-sm text-ink-3">

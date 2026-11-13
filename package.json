@@ -1,5 +1,6 @@
 {
   "name": "kilora",
+  "description": "Vehicle service history and workshop management for El Salvador, with AI-assisted quotes, receipt scanning, and shareable resale reports.",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.23.0",

@@ -8,5 +8,5 @@ export const Route = createFileRoute("/verificar")({
 });
 function Page() {
 	const { token } = Route.useSearch();
-	return <AuthPage mode="verificar" token={token} />;
+	return <AuthPage mode={token ? "verificar" : "reenviar"} token={token} />;
 }

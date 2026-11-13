@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/google/uuid"
 )
 
 func TestCounterQuotes(t *testing.T) {
@@ -16,7 +14,7 @@ func TestCounterQuotes(t *testing.T) {
 	client, req := api.client, api.req
 	setup := func(c *http.Client) (string, string) {
 		t.Helper()
-		req(c, "POST", "/api/v1/auth/register", fmt.Sprintf(`{"email":%q,"password":"password123","full_name":"Recepción"}`, uuid.NewString()+"@example.com"), 201)
+		api.register(c)
 		work := req(c, "POST", "/api/v1/workshops", `{"name":"Taller","branch_name":"Principal"}`, 201).(map[string]any)
 		return "/api/v1/workshops/" + work["id"].(string), work["branch_id"].(string)
 	}
