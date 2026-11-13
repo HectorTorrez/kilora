@@ -14,7 +14,8 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}
+  # Docker exige minúsculas; debe coincidir con GHCR_OWNER en deploy/compose.prod.yaml.
+  IMAGE_PREFIX: ghcr.io/hectortorrez
 
 jobs:
   images:
