@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+**/node_modules
+**/.output
+**/dist
+**/.tanstack
+bin
+design
+assets
+.postman
+postman
+backups
+*.log

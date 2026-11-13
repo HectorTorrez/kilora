@@ -55,3 +55,23 @@ jobs:
       - name: Vet API
         working-directory: services/api
         run: go vet ./...
+
+  deployment:
+    runs-on: ubuntu-latest
+    env:
+      DOMAIN: release-test.example
+      POSTGRES_PASSWORD: testonly0123456789abcdef
+      SESSION_SECRET: test-only-session-secret-at-least-32-characters
+      RESEND_API_KEY: test-only-not-a-real-key
+      EMAIL_FROM: no-reply@release-test.example
+      RELEASE_TAG: ci
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate production configuration
+        run: docker compose -f compose.production.yaml config --quiet
+      - name: Build production images
+        run: docker compose -f compose.production.yaml build
+      - name: Check production scripts
+        run: |
+          bash -n scripts/production/*.sh
+          python3 -c "from pathlib import Path; compile(Path('scripts/production/smoke.py').read_text(), 'smoke.py', 'exec')"

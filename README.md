@@ -138,3 +138,6 @@ that connect directly to the API. Keep the API private behind those proxies and
 ensure the ingress appends or overwrites `X-Forwarded-For`. With no trusted proxies,
 forwarded headers are ignored. Authentication rate limits are per API process;
 use shared edge limits when running multiple replicas.
+
+For single-VPS Docker deployment, HTTPS routing, backup/restore and release checks,
+see [the production runbook](docs/production.md).
