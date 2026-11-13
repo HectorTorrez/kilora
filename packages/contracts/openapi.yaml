@@ -5341,7 +5341,7 @@
     "/api/v1/me/vehicles/{vehicleID}/ai/receipt": {
       "post": {
         "summary": "Leer un recibo con IA",
-        "description": "Lee la foto de un recibo o factura de taller y devuelve los datos para prellenar un servicio manual. La imagen no se guarda y no se escribe nada. Solo el propietario del vehículo.",
+        "description": "Lee una imagen o PDF para prellenar un servicio manual. No guarda datos: el propietario revisa y guarda el servicio con su comprobante.",
         "requestBody": {
           "required": true,
           "content": {
@@ -6156,6 +6156,73 @@
           }
         ],
         "description": "Requires the current password. Revokes all sessions and outstanding auth tokens."
+      }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/history/{recordID}/receipt": {
+      "get": {
+        "summary": "Descargar el comprobante privado de un servicio",
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "recordID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Archivo del comprobante",
+            "content": {
+              "application/pdf": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Comprobante no encontrado"
+          },
+          "401": {
+            "description": "Autenticación requerida"
+          }
+        }
       }
     }
   },
@@ -7430,6 +7497,10 @@
           "workshop_verified_at": {
             "type": "string",
             "format": "date-time"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/ReceiptMetadata",
+            "description": "Comprobante privado, visible solo para el propietario."
           }
         },
         "required": [
@@ -8524,6 +8595,9 @@
           },
           "workshop_name_text": {
             "type": "string"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/ReceiptFileInput"
           }
         },
         "required": [
@@ -9447,10 +9521,22 @@
           "image": {
             "type": "string",
             "description": "Data URL (image/jpeg, image/png o image/webp) de hasta 4 MB."
+          },
+          "file": {
+            "$ref": "#/components/schemas/ReceiptFileInput"
           }
         },
-        "required": [
-          "image"
+        "oneOf": [
+          {
+            "required": [
+              "image"
+            ]
+          },
+          {
+            "required": [
+              "file"
+            ]
+          }
         ]
       },
       "ReceiptItem": {
@@ -9888,6 +9974,43 @@
           }
         },
         "additionalProperties": false
+      },
+      "ReceiptFileInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "data": {
+            "type": "string",
+            "description": "Data URL base64 de un JPG, PNG, WebP o PDF de hasta 4 MB."
+          }
+        },
+        "required": [
+          "filename",
+          "data"
+        ]
+      },
+      "ReceiptMetadata": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "content_type": {
+            "type": "string"
+          },
+          "size_bytes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "filename",
+          "content_type",
+          "size_bytes"
+        ]
       }
     }
   }

@@ -53,6 +53,20 @@ func projectHistory(ctx context.Context, q *sqlc.Queries, viewer history.Viewer,
 	for _, c := range corrections {
 		grouped[c.HistoryRecordID] = append(grouped[c.HistoryRecordID], c)
 	}
+	receipts := make(map[uuid.UUID]*history.Receipt)
+	if viewer.IsOwner {
+		ids := make([]uuid.UUID, 0, len(rows))
+		for _, row := range rows {
+			ids = append(ids, row.ID)
+		}
+		metadata, err := q.ListHistoryReceiptMetadata(ctx, ids)
+		if err != nil {
+			return nil, err
+		}
+		for _, receipt := range metadata {
+			receipts[receipt.HistoryRecordID] = &history.Receipt{Filename: receipt.Filename, ContentType: receipt.ContentType, SizeBytes: receipt.SizeBytes}
+		}
+	}
 	workshops := make(map[uuid.UUID]*sqlc.Workshop)
 	records := make([]history.Projected, 0, len(rows))
 	for _, row := range rows {
@@ -71,6 +85,7 @@ func projectHistory(ctx context.Context, q *sqlc.Queries, viewer history.Viewer,
 		if err != nil {
 			return nil, err
 		}
+		rec.Receipt = receipts[row.ID]
 		if p, ok := history.Project(history.ResolveViewer(rec, viewer), rec); ok {
 			records = append(records, p)
 		}

@@ -6,15 +6,15 @@ En "Mis vehículos" aparecen los vehículos vinculados a tu cuenta. En cada uno 
 
 ## Agregar un servicio manual
 
-Si te hicieron un servicio fuera de Kilora, puedes agregarlo a mano en el historial de tu vehículo con fecha, kilometraje y lo que se hizo. Queda marcado como registrado por el propietario.
+Desde tu vehículo, elige "Guardar servicio" para agregar lo que le hicieron en cualquier taller, aunque no use Kilora. Solo necesitas fecha y descripción. Kilometraje, total y dónde se hizo son opcionales. En "Trabajos y repuestos (opcional)" puedes agregar el detalle. Queda marcado como agregado por el propietario; escribir el nombre de un taller no lo convierte en un registro emitido por ese taller.
 
 ## ¿Qué me hicieron?
 
 En cada servicio del historial, el botón "¿Qué me hicieron?" muestra un resumen en palabras simples de lo que se hizo y para qué sirve. Lo escribe la IA solo con los datos que ya ves en ese servicio; no diagnostica ni opina sobre los precios.
 
-## Escanear un recibo
+## Escanear y conservar un comprobante
 
-Al agregar un servicio manual, el botón "Escanear recibo" permite tomar o subir una foto del recibo o factura del taller. La IA lee la fecha, el kilometraje, el taller, los trabajos con sus precios y el total, y llena el formulario. Solo usa lo que se lee con claridad; lo demás queda vacío. La foto no se guarda en Kilora, y nada se registra hasta que revisas los datos y presionas "Guardar servicio".
+En "Guardar servicio", elige "Tomar foto" o "Subir imagen o PDF". Se acepta un comprobante JPG, PNG, WebP o PDF de hasta 4 MB. La IA lee la fecha, el kilometraje, el taller, los trabajos y el total para llenar el formulario. Revisa los datos antes de guardar. El archivo original se conserva junto al servicio al presionar "Guardar servicio" y puedes descargarlo desde el historial. Si falla la lectura, puedes completar los datos manualmente y conservar igualmente el archivo. "Quitar comprobante" permite guardar sin adjuntarlo. Cancelar no guarda el servicio ni el archivo. Solo el propietario puede descargar el comprobante: no aparece en las vistas de talleres ni en el reporte para venta.
 
 ## Reporte para venta
 
@@ -22,7 +22,7 @@ Desde la ficha de tu vehículo, "Reporte para venta" crea un enlace de solo lect
 
 ## Corregir un registro
 
-Los registros no se editan ni se borran. Si algo está mal, agrega una corrección con el motivo; queda fechada y el registro original se conserva.
+Los registros no se editan ni se borran. Puedes agregar una corrección con el motivo a los servicios que registraste tú; queda fechada y el registro original se conserva. Si lo registró el taller, pídele que agregue la corrección.
 
 ## Kilometraje
 
@@ -30,7 +30,7 @@ Puedes registrar nuevas lecturas del odómetro. Si registras un kilometraje meno
 
 ## Agregar un vehículo
 
-Puedes agregar tu propio vehículo desde "Mis vehículos". Si un taller ya tenía tu vehículo como provisional, te enviará una invitación para vincularlo.
+Puedes agregar tu propio vehículo desde "Mis vehículos" sin una invitación. Solo necesitas marca y modelo; año y placa son opcionales. Si un taller ya tenía tu vehículo como provisional, te enviará una invitación para vincularlo.
 
 ## Cambiar de taller
 

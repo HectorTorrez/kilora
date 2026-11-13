@@ -2,7 +2,9 @@
 # Las páginas de la aplicación también declaran noindex en su HTML.
 User-agent: *
 Allow: /
-Disallow: /taller
+Disallow: /taller$
+Disallow: /taller?
+Disallow: /taller/
 Disallow: /mis-vehiculos
 Disallow: /onboarding
 Disallow: /c/

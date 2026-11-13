@@ -219,11 +219,11 @@ func (c *OpenAI) Embed(ctx context.Context, inputs []string) ([][]float32, error
 	return vectors, nil
 }
 
-// Part es un fragmento de contenido de un mensaje: texto o una imagen
-// (data URL o https).
+// Part es un fragmento de contenido: texto, imagen o PDF codificado en base64.
 type Part struct {
 	Text     string
 	ImageURL string
+	PDFData  string
 }
 
 // Structured pide una respuesta que cumple schema (JSON Schema estricto) y la
@@ -232,7 +232,9 @@ type Part struct {
 func (c *OpenAI) Structured(ctx context.Context, system string, user []Part, name string, schema map[string]any, out any) error {
 	content := make([]map[string]any, 0, len(user))
 	for _, p := range user {
-		if p.ImageURL != "" {
+		if p.PDFData != "" {
+			content = append(content, map[string]any{"type": "file", "file": map[string]any{"filename": "comprobante.pdf", "file_data": p.PDFData}})
+		} else if p.ImageURL != "" {
 			content = append(content, map[string]any{"type": "image_url", "image_url": map[string]any{"url": p.ImageURL}})
 		} else {
 			content = append(content, map[string]any{"type": "text", "text": p.Text})

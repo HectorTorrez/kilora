@@ -4950,7 +4950,7 @@ export interface paths {
         put?: never;
         /**
          * Leer un recibo con IA
-         * @description Lee la foto de un recibo o factura de taller y devuelve los datos para prellenar un servicio manual. La imagen no se guarda y no se escribe nada. Solo el propietario del vehículo.
+         * @description Lee una imagen o PDF para prellenar un servicio manual. No guarda datos: el propietario revisa y guarda el servicio con su comprobante.
          */
         post: {
             parameters: {
@@ -5754,6 +5754,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/vehicles/{vehicleID}/history/{recordID}/receipt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Descargar el comprobante privado de un servicio */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    vehicleID: string;
+                    recordID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Archivo del comprobante */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/pdf": string;
+                        "image/jpeg": string;
+                        "image/png": string;
+                        "image/webp": string;
+                    };
+                };
+                /** @description Autenticación requerida */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Comprobante no encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6072,6 +6128,8 @@ export interface components {
             corrections?: components["schemas"]["Correction"][];
             /** Format: date-time */
             workshop_verified_at?: string;
+            /** @description Comprobante privado, visible solo para el propietario. */
+            receipt?: components["schemas"]["ReceiptMetadata"];
         };
         HistoryVehicle: {
             /** Format: uuid */
@@ -6323,6 +6381,7 @@ export interface components {
             items?: components["schemas"]["ManualItem"][];
             total?: string;
             workshop_name_text?: string;
+            receipt?: components["schemas"]["ReceiptFileInput"];
         };
         CorrectionInput: {
             history_record_id: string;
@@ -6557,8 +6616,9 @@ export interface components {
         };
         ReceiptScanInput: {
             /** @description Data URL (image/jpeg, image/png o image/webp) de hasta 4 MB. */
-            image: string;
-        };
+            image?: string;
+            file?: components["schemas"]["ReceiptFileInput"];
+        } & (unknown | unknown);
         ReceiptItem: {
             description: string;
             price: string | null;
@@ -6659,6 +6719,16 @@ export interface components {
         };
         DeleteAccount: {
             current_password: string;
+        };
+        ReceiptFileInput: {
+            filename: string;
+            /** @description Data URL base64 de un JPG, PNG, WebP o PDF de hasta 4 MB. */
+            data: string;
+        };
+        ReceiptMetadata: {
+            filename: string;
+            content_type: string;
+            size_bytes: number;
         };
     };
     responses: never;

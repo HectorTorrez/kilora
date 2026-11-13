@@ -98,6 +98,7 @@ func NewRouter(d Deps) http.Handler {
 			r.Post("/me/vehicles/{vehicleID}/odometer", s.handle(s.addOdometer))
 			r.Put("/me/vehicles/{vehicleID}/body-type", s.handle(s.setOwnerBodyType))
 			r.Get("/me/vehicles/{vehicleID}/history", s.handle(s.ownerHistory))
+			r.Get("/me/vehicles/{vehicleID}/history/{recordID}/receipt", s.handle(s.downloadOwnerReceipt))
 			r.Post("/me/vehicles/{vehicleID}/ai/receipt", s.handle(s.readReceipt))
 			r.Post("/me/vehicles/{vehicleID}/history/{recordID}/ai/explain", s.handle(s.explainRecord))
 			r.Get("/me/vehicles/{vehicleID}/report", s.handle(s.getReportStatus))

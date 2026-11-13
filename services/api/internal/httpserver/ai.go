@@ -26,15 +26,14 @@ var aiPaths = []string{"/ai/quote-draft", receiptPath, "/ai/explain", "/ai/messa
 
 const (
 	receiptPath = "/ai/receipt"
-	// maxReceiptBody admite la foto en base64; la web la reduce antes de enviarla.
+	// maxReceiptBody admite un comprobante de hasta 4 MB codificado en base64.
 	maxReceiptBody  = 6 << 20
 	maxReceiptImage = 4 << 20
 )
 
-// bodyLimit es el tamaño máximo del cuerpo de una petición: 1 MB, salvo la
-// foto de un recibo.
+// bodyLimit admite comprobantes en lectura y guardado del historial personal.
 func bodyLimit(r *http.Request) int64 {
-	if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, receiptPath) {
+	if r.Method == http.MethodPost && (strings.HasSuffix(r.URL.Path, receiptPath) || (strings.HasPrefix(r.URL.Path, "/api/v1/me/vehicles/") && strings.HasSuffix(r.URL.Path, "/history"))) {
 		return maxReceiptBody
 	}
 	return 1 << 20
@@ -108,12 +107,11 @@ func receiptImageURL(image string) (string, bool) {
 	return "", false
 }
 
-// readReceipt lee la foto de un recibo para prellenar un servicio manual del
-// propietario. La imagen no se guarda y nada se escribe: el propietario
-// revisa los datos y guarda el servicio él mismo.
+// readReceipt genera un borrador sin persistir el comprobante ni el servicio.
 func (s *server) readReceipt(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
-		Image string `json:"image"`
+		Image string        `json:"image"`
+		File  *receiptInput `json:"file"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err
@@ -122,14 +120,26 @@ func (s *server) readReceipt(w http.ResponseWriter, r *http.Request) error {
 	if _, err := ownedVehicle(ctx, sqlc.New(s.db), r, currentUser(ctx).ID); err != nil {
 		return err
 	}
-	image, ok := receiptImageURL(in.Image)
-	if !ok {
-		return badRequest("La foto no es válida. Usá una imagen JPG, PNG o WebP de hasta 4 MB.")
+	var document string
+	if in.File != nil {
+		if in.Image != "" {
+			return badRequest("Enviá un solo comprobante")
+		}
+		if _, err := decodeReceiptFile(*in.File); err != nil {
+			return err
+		}
+		document = in.File.Data
+	} else {
+		var ok bool
+		document, ok = receiptImageURL(in.Image)
+		if !ok {
+			return badRequest("La foto no es válida. Usá una imagen JPG, PNG o WebP de hasta 4 MB.")
+		}
 	}
 	if err := s.aiAllowed(r); err != nil {
 		return err
 	}
-	draft, err := s.ai.ReadReceipt(ctx, image, values.Today())
+	draft, err := s.ai.ReadReceipt(ctx, document, values.Today())
 	if err != nil {
 		s.logger.Error("lectura de recibo", "error", err)
 		return httpError{http.StatusBadGateway, "La IA no pudo leer el recibo. Intenta de nuevo."}

@@ -215,8 +215,8 @@ function Page() {
 							Todavía no tenés vehículos
 						</h2>
 						<p className="text-sm leading-relaxed text-ink-3">
-							Los servicios, el kilometraje y el historial se quedan con vos
-							aunque cambies de taller.
+							Agregá tu carro y guardá su primer servicio con una foto del
+							recibo o con tus palabras. Tu taller no necesita usar Kilora.
 						</p>
 					</div>
 					<Button type="button" onClick={() => onDialogChange(true)}>

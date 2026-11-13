@@ -2,9 +2,19 @@
 
 ## Para qué sirve
 
-Kilora conecta talleres automotrices independientes con los propietarios de vehículos mediante un historial de servicio compartido. El taller administra su trabajo diario (órdenes, cotizaciones, vehículos y clientes) y el propietario conserva el registro del mantenimiento de su vehículo aunque cambie de taller. Está pensado para El Salvador: todos los montos son en dólares (USD) y la aplicación está en español.
+Kilora permite al propietario conservar el historial de mantenimiento de su carro aunque su taller no use Kilora. Puede registrar su vehículo y guardar servicios de cualquier taller sin una invitación, con una foto del recibo o ingresando los datos. Los talleres que participen también pueden administrar órdenes, cotizaciones, vehículos y clientes y compartir servicios con sus propietarios. Está pensado para El Salvador: todos los montos son en dólares (USD) y la aplicación está en español.
 
-## Cómo funciona en cinco pasos
+## Empezar como propietario
+
+1. Crea tu cuenta y registra tu carro desde "Mis vehículos".
+2. Abre el carro y elige "Guardar servicio".
+3. Escanea un recibo o ingresa la fecha y lo que le hicieron. Kilometraje, monto, taller y detalle de trabajos o repuestos son opcionales.
+4. Revisa y guarda los datos. Si tomaste una foto o subiste una imagen o PDF (hasta 4 MB), el comprobante se guarda con el servicio y solo tú puedes descargarlo.
+5. Consulta el historial o comparte un reporte para venta cuando lo necesites.
+
+No necesitas que el taller tenga una cuenta ni que te invite.
+
+## Cuando el taller también usa Kilora
 
 1. El taller registra el vehículo y abre una orden de trabajo con el motivo de la visita y el kilometraje.
 2. El equipo prepara una cotización y registra los trabajos y piezas.

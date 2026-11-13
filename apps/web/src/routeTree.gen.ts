@@ -17,6 +17,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as RestablecerRouteImport } from './routes/restablecer'
 import { Route as TallerRouteImport } from './routes/taller'
+import { Route as TalleresRouteImport } from './routes/talleres'
 import { Route as VerificarRouteImport } from './routes/verificar'
 import { Route as CTokenRouteImport } from './routes/c/$token'
 import { Route as InvitacionTokenRouteImport } from './routes/invitacion/$token'
@@ -78,6 +79,11 @@ const RestablecerRoute = RestablecerRouteImport.update({
 const TallerRoute = TallerRouteImport.update({
   id: '/taller',
   path: '/taller',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TalleresRoute = TalleresRouteImport.update({
+  id: '/talleres',
+  path: '/talleres',
   getParentRoute: () => rootRouteImport,
 } as any)
 const VerificarRoute = VerificarRouteImport.update({
@@ -205,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
   '/taller': typeof TallerRouteWithChildren
+  '/talleres': typeof TalleresRoute
   '/verificar': typeof VerificarRoute
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
+  '/talleres': typeof TalleresRoute
   '/verificar': typeof VerificarRoute
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
@@ -268,6 +276,7 @@ export interface FileRoutesById {
   '/registro': typeof RegistroRoute
   '/restablecer': typeof RestablecerRoute
   '/taller': typeof TallerRouteWithChildren
+  '/talleres': typeof TalleresRoute
   '/verificar': typeof VerificarRoute
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
@@ -302,6 +311,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/restablecer'
     | '/taller'
+    | '/talleres'
     | '/verificar'
     | '/c/$token'
     | '/invitacion/$token'
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/registro'
     | '/restablecer'
+    | '/talleres'
     | '/verificar'
     | '/c/$token'
     | '/invitacion/$token'
@@ -364,6 +375,7 @@ export interface FileRouteTypes {
     | '/registro'
     | '/restablecer'
     | '/taller'
+    | '/talleres'
     | '/verificar'
     | '/c/$token'
     | '/invitacion/$token'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   RegistroRoute: typeof RegistroRoute
   RestablecerRoute: typeof RestablecerRoute
   TallerRoute: typeof TallerRouteWithChildren
+  TalleresRoute: typeof TalleresRoute
   VerificarRoute: typeof VerificarRoute
   CTokenRoute: typeof CTokenRoute
   InvitacionTokenRoute: typeof InvitacionTokenRoute
@@ -459,6 +472,13 @@ declare module '@tanstack/react-router' {
       path: '/taller'
       fullPath: '/taller'
       preLoaderRoute: typeof TallerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/talleres': {
+      id: '/talleres'
+      path: '/talleres'
+      fullPath: '/talleres'
+      preLoaderRoute: typeof TalleresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/verificar': {
@@ -683,6 +703,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegistroRoute: RegistroRoute,
   RestablecerRoute: RestablecerRoute,
   TallerRoute: TallerRouteWithChildren,
+  TalleresRoute: TalleresRoute,
   VerificarRoute: VerificarRoute,
   CTokenRoute: CTokenRoute,
   InvitacionTokenRoute: InvitacionTokenRoute,

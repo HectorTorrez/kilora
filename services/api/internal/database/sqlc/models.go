@@ -693,6 +693,14 @@ type Customer struct {
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
+type HistoryReceipt struct {
+	HistoryRecordID uuid.UUID          `json:"history_record_id"`
+	Filename        string             `json:"filename"`
+	ContentType     string             `json:"content_type"`
+	Data            []byte             `json:"data"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+}
+
 type HistoryRecord struct {
 	ID            uuid.UUID          `json:"id"`
 	VehicleID     uuid.UUID          `json:"vehicle_id"`

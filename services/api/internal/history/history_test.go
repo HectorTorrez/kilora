@@ -96,3 +96,14 @@ func TestOwnerManualAndOrder(t *testing.T) {
 		t.Fatal("registro manual incompleto")
 	}
 }
+
+func TestReceiptIsOnlyProjectedToOwner(t *testing.T) {
+	r := fixture()
+	r.Receipt = &Receipt{Filename: "privado.pdf", ContentType: "application/pdf", SizeBytes: 100}
+	for _, kind := range []ViewerKind{ViewerOwner, ViewerAuthorWorkshop, ViewerLinkedWorkshop, ViewerReport} {
+		p, _ := Project(kind, r)
+		if (p.Receipt != nil) != (kind == ViewerOwner) {
+			t.Fatalf("comprobante con visibilidad incorrecta: %v", kind)
+		}
+	}
+}

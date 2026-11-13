@@ -258,9 +258,18 @@ func (s *server) manualHistory(w http.ResponseWriter, r *http.Request) error {
 		Items        []history.Item `json:"items"`
 		Total        *string        `json:"total"`
 		WorkshopName *string        `json:"workshop_name_text"`
+		Receipt      *receiptInput  `json:"receipt"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err
+	}
+	var receipt *receiptFile
+	if in.Receipt != nil {
+		file, err := decodeReceiptFile(*in.Receipt)
+		if err != nil {
+			return err
+		}
+		receipt = &file
 	}
 	performed, ok := values.PastDate(in.PerformedOn)
 	in.Summary = strings.TrimSpace(in.Summary)
@@ -301,6 +310,11 @@ func (s *server) manualHistory(w http.ResponseWriter, r *http.Request) error {
 		rec, err = q.CreateHistoryRecord(ctx, sqlc.CreateHistoryRecordParams{VehicleID: v.ID, Source: sqlc.HistorySourcePropietario, PerformedOn: date(performed), OdometerKm: in.OdometerKm, Summary: in.Summary, Items: items, Total: total, Currency: values.Currency, WorkshopNotes: notes, CreatedBy: &user})
 		if err != nil {
 			return auditEvent{}, err
+		}
+		if receipt != nil {
+			if err = q.CreateHistoryReceipt(ctx, sqlc.CreateHistoryReceiptParams{HistoryRecordID: rec.ID, Filename: receipt.filename, ContentType: receipt.contentType, Data: receipt.data}); err != nil {
+				return auditEvent{}, err
+			}
 		}
 		if in.OdometerKm != nil {
 			if _, err = q.CreateOdometerReading(ctx, sqlc.CreateOdometerReadingParams{VehicleID: v.ID, Km: *in.OdometerKm, ReadAt: timestamptz(time.Now()), Source: sqlc.OdometerSourcePropietario, RecordedBy: &user}); err != nil {

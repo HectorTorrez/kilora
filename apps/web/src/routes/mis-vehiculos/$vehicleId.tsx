@@ -24,7 +24,6 @@ import {
 	moneyField,
 	optionalDateField,
 	optionalText,
-	pastDateField,
 	requiredText,
 } from "@/components/kilora/form-schemas";
 import {
@@ -33,7 +32,8 @@ import {
 } from "@/components/kilora/history-parts";
 import { HistoryItems } from "@/components/kilora/history-record";
 import { ListPagination } from "@/components/kilora/list-pagination";
-import { ReceiptScan } from "@/components/kilora/receipt-scan";
+import { OwnerReceiptDownload } from "@/components/kilora/owner-receipt-download";
+import { OwnerServiceDialog } from "@/components/kilora/owner-service-dialog";
 import { ResaleReport } from "@/components/kilora/resale-report";
 import { ServiceExplanation } from "@/components/kilora/service-explanation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -76,7 +76,6 @@ import { Route as OwnerLayout } from "../mis-vehiculos";
 const SHOW_3D_MAP = false;
 
 type HistoryRecord = components["schemas"]["HistoryRecord"];
-type ManualBody = Parameters<typeof ownerActions.manual>[1];
 type CorrectionBody = Parameters<typeof ownerActions.correction>[1];
 const READINGS_PAGE_SIZE = 8;
 export const Route = createFileRoute("/mis-vehiculos/$vehicleId")({
@@ -189,7 +188,7 @@ function Page() {
 			<div className="grid gap-2 sm:flex sm:flex-wrap">
 				<Button type="button" onClick={() => setManualOpen(true)}>
 					<Plus />
-					Agregar servicio
+					Guardar servicio
 				</Button>
 				<Button type="button" variant="outline" onClick={() => setKmOpen(true)}>
 					<Gauge />
@@ -197,16 +196,18 @@ function Page() {
 				</Button>
 				<ResaleReport vehicleID={id} />
 			</div>
-			<ManualDialog
-				vehicleID={id}
-				open={manualOpen}
-				pending={manual.isPending}
-				onOpenChange={setManualOpen}
-				onSave={async (body) => {
-					await manual.mutateAsync(body);
-					setHistoryPage(1);
-				}}
-			/>
+			{manualOpen && (
+				<OwnerServiceDialog
+					vehicleID={id}
+					open={manualOpen}
+					pending={manual.isPending}
+					onOpenChange={setManualOpen}
+					onSave={async (body) => {
+						await manual.mutateAsync(body);
+						setHistoryPage(1);
+					}}
+				/>
+			)}
 			<KmDialog
 				open={kmOpen}
 				warning={warning}
@@ -251,7 +252,7 @@ function Page() {
 						aria-busy={history.isPlaceholderData}
 					>
 						{h.total === 0 && (
-							<p className="text-ink-3">Aún no hay servicios registrados.</p>
+							<OwnerHistoryEmpty onAddService={() => setManualOpen(true)} />
 						)}
 						{h.records.map((r) => (
 							<Card key={r.id} className="gap-0 p-5 shadow-none">
@@ -261,15 +262,7 @@ function Page() {
 								<h3 className="mt-2 font-display text-lg font-bold">
 									{r.summary}
 								</h3>
-								<p className="text-sm text-seal">
-									{r.workshop_name ||
-										(r.source === "propietario"
-											? "Registro personal"
-											: "Taller")}
-									{r.workshop_verified_at && (
-										<span className="ml-2 text-sm text-seal">✓ Verificado</span>
-									)}
-								</p>
+								<OwnerHistorySource record={r} />
 								<HistoryPartsStrip
 									record={r}
 									bodyType={v.body_type}
@@ -283,6 +276,13 @@ function Page() {
 									<p className="mt-3 text-sm">
 										Notas del taller: {r.workshop_notes}
 									</p>
+								)}
+								{r.receipt && (
+									<OwnerReceiptDownload
+										vehicleID={id}
+										recordID={r.id}
+										receipt={r.receipt}
+									/>
 								)}
 								<ServiceExplanation
 									vehicleID={id}
@@ -407,20 +407,39 @@ function Page() {
 	);
 }
 
-const manualSchema = z.object({
-	date: pastDateField(),
-	km: kmField(false),
-	summary: requiredText("Contá qué servicio se hizo"),
-	items: z.array(
-		z.object({
-			description: z.string(),
-			brand: optionalText.max(100, "Usá como máximo 100 caracteres"),
-			price: moneyField(false),
-		}),
-	),
-	total: moneyField(false),
-	where: optionalText,
-});
+function OwnerHistorySource({ record }: { record: HistoryRecord }) {
+	return (
+		<>
+			<p className="text-sm text-seal">
+				{record.workshop_name ||
+					(record.source === "propietario" ? "Registro personal" : "Taller")}
+				{record.workshop_verified_at && (
+					<span className="ml-2 text-sm text-seal">✓ Taller verificado</span>
+				)}
+			</p>
+			<p className="mt-1 text-xs text-ink-3">
+				{record.source === "propietario"
+					? "Agregado por el propietario"
+					: "Registrado por el taller"}
+			</p>
+		</>
+	);
+}
+
+function OwnerHistoryEmpty({ onAddService }: { onAddService: () => void }) {
+	return (
+		<div className="space-y-2 rounded-xl border border-dashed p-6">
+			<p className="font-medium">Empezá con el último servicio de tu carro</p>
+			<p className="text-sm text-ink-3">
+				Usá una foto del recibo o anotá lo que le hicieron. No necesitás que el
+				taller use Kilora ni completar todo el historial de una vez.
+			</p>
+			<Button type="button" variant="outline" onClick={onAddService}>
+				Guardar mi primer servicio
+			</Button>
+		</div>
+	);
+}
 
 function allowDatePopover(event: {
 	preventDefault: () => void;
@@ -433,211 +452,6 @@ function allowDatePopover(event: {
 	) {
 		event.preventDefault();
 	}
-}
-
-function ManualDialog({
-	vehicleID,
-	open,
-	pending,
-	onOpenChange,
-	onSave,
-}: {
-	vehicleID: string;
-	open: boolean;
-	pending: boolean;
-	onOpenChange: (open: boolean) => void;
-	onSave: (body: ManualBody) => Promise<unknown>;
-}) {
-	const form = useForm({
-		mode: "onChange",
-		resolver: zodResolver(manualSchema),
-		defaultValues: {
-			date: "",
-			km: "",
-			summary: "",
-			items: [{ description: "", brand: "", price: "" }],
-			total: "",
-			where: "",
-		},
-	});
-	const rows = useFieldArray({ control: form.control, name: "items" });
-	const close = () => {
-		form.reset();
-		form.clearErrors();
-		onOpenChange(false);
-	};
-	const submit = form.handleSubmit(async (values) => {
-		form.clearErrors("root");
-		try {
-			await onSave({
-				performed_on: values.date,
-				summary: values.summary,
-				...(values.km ? { odometer_km: Number(values.km) } : {}),
-				...(values.total ? { total: values.total } : {}),
-				workshop_name_text: values.where || "",
-				items: values.items.flatMap((item) => {
-					const description = item.description.trim();
-					if (!description) return [];
-					return [
-						{
-							kind: "trabajo" as const,
-							description,
-							...(item.brand ? { brand: item.brand } : {}),
-							...(item.price ? { price: item.price } : {}),
-						},
-					];
-				}),
-			});
-			toast.success("Servicio guardado");
-			close();
-		} catch (error) {
-			applyFormError(form, error, { toast: true });
-		}
-	});
-	return (
-		<Dialog
-			open={open}
-			onOpenChange={(next) => {
-				if (!next) close();
-				else onOpenChange(true);
-			}}
-		>
-			<DialogContent
-				className="max-h-[90dvh] overflow-y-auto sm:max-w-lg"
-				onInteractOutside={allowDatePopover}
-			>
-				<DialogHeader className="pr-8">
-					<DialogTitle>Agregar servicio</DialogTitle>
-					<DialogDescription>
-						Registrá un servicio que hiciste vos. Queda en el historial del
-						vehículo.
-					</DialogDescription>
-				</DialogHeader>
-				<Form {...form}>
-					<form onSubmit={submit} className="grid gap-5" noValidate>
-						<ReceiptScan
-							vehicleID={vehicleID}
-							onDraft={(draft) => {
-								const items = draft.items.map((item) => ({
-									description: item.description,
-									brand: "",
-									price: item.price ?? "",
-								}));
-								form.reset(
-									{
-										date: draft.performed_on ?? "",
-										km:
-											draft.odometer_km == null
-												? ""
-												: String(draft.odometer_km),
-										summary: draft.summary,
-										items: items.length
-											? items
-											: [{ description: "", brand: "", price: "" }],
-										total: draft.total ?? "",
-										where: draft.workshop_name ?? "",
-									},
-									{ keepDefaultValues: true },
-								);
-								void form.trigger();
-							}}
-						/>
-						<RequiredLegend />
-						<DateField name="date" label="Fecha" autoFocus required />
-						<NumberField
-							name="km"
-							label="Kilometraje"
-							optional
-							suffix="km"
-							min={0}
-							step={1}
-							className="sm:max-w-xs"
-						/>
-						<TextField
-							name="summary"
-							label="¿Qué se hizo?"
-							placeholder="Ej. Cambio de aceite y filtro"
-							description="Es el título con el que aparece en el historial."
-							maxLength={200}
-							required
-						/>
-						<div className="grid gap-4">
-							{rows.fields.map((row, index) => (
-								<div
-									key={row.id}
-									className="grid gap-5 sm:grid-cols-2 sm:items-end"
-								>
-									<TextField
-										name={`items.${index}.description`}
-										label="Trabajo o pieza"
-										placeholder="Ej. Filtro de aceite"
-										optional
-									/>
-									<TextField
-										name={`items.${index}.brand`}
-										label="Marca del repuesto"
-										placeholder="Sin registrar"
-										maxLength={100}
-										optional
-									/>
-									<NumberField
-										name={`items.${index}.price`}
-										label="Precio"
-										optional
-										min={0}
-										step="0.01"
-									/>
-									{rows.fields.length > 1 ? (
-										<Button
-											type="button"
-											variant="outline"
-											className="w-full sm:w-auto"
-											onClick={() => rows.remove(index)}
-										>
-											Quitar
-										</Button>
-									) : null}
-								</div>
-							))}
-							<Button
-								type="button"
-								variant="outline"
-								className="w-full sm:w-auto"
-								onClick={() =>
-									rows.append({ description: "", brand: "", price: "" })
-								}
-							>
-								Agregar otro ítem
-							</Button>
-						</div>
-						<NumberField
-							name="total"
-							label="Total"
-							optional
-							min={0}
-							step="0.01"
-							className="sm:max-w-xs"
-						/>
-						<TextField name="where" label="Dónde se hizo" optional />
-						<RootError />
-						<DialogFooter>
-							<FormActions className="w-full">
-								<Button
-									type="button"
-									variant="outline"
-									className="w-full sm:w-auto"
-									onClick={close}
-								>
-									Cancelar
-								</Button>
-								<SubmitButton pending={pending}>Guardar servicio</SubmitButton>
-							</FormActions>
-						</DialogFooter>
-					</form>
-				</Form>
-			</DialogContent>
-		</Dialog>
-	);
 }
 
 function KmDialog({

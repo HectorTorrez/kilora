@@ -10,7 +10,6 @@ import {
 	MessageCircle,
 	Package,
 	Plus,
-	QrCode,
 	ScanLine,
 	ShieldCheck,
 	Sparkles,
@@ -20,16 +19,17 @@ import {
 import { type ReactNode, useState } from "react";
 import { buttonVariants } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { FAQS } from "@/lib/site";
+import { LANDING_PAGES, type LandingAudience } from "@/lib/site";
+
+type AudienceProps = { audience?: LandingAudience };
 
 const NAV = [
 	{ href: "#como-funciona", label: "Cómo funciona" },
 	{ href: "#funciones", label: "Qué podés hacer" },
-	{ href: "#talleres", label: "Talleres" },
 	{ href: "#preguntas", label: "Preguntas" },
 ];
 
-export function LandingHeader() {
+export function LandingHeader({ audience = "owner" }: AudienceProps) {
 	return (
 		<header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70">
 			<div className="frame flex h-14 items-center justify-between gap-6 px-5 md:px-8">
@@ -41,7 +41,7 @@ export function LandingHeader() {
 					<Logo />
 					KILORA
 				</a>
-				<nav aria-label="Secciones" className="hidden md:block">
+				<nav aria-label="Secciones" className="hidden lg:block">
 					<ul className="flex items-center gap-7 font-mono text-[11px] uppercase tracking-widest text-ink-3">
 						{NAV.map((item) => (
 							<li key={item.href}>
@@ -58,19 +58,44 @@ export function LandingHeader() {
 				<div className="flex items-center gap-2">
 					<Link
 						to="/login"
-						search={{ redirect: undefined }}
+						search={{
+							redirect: audience === "workshop" ? "/onboarding" : undefined,
+						}}
 						className={buttonVariants({ variant: "ghost", size: "sm" })}
 					>
 						Ingresar
 					</Link>
 					<Link
 						to="/registro"
-						search={{ redirect: undefined }}
+						search={{
+							redirect: audience === "workshop" ? "/onboarding" : undefined,
+						}}
 						className={`${buttonVariants({ size: "sm" })} hidden sm:inline-flex`}
 					>
 						Crear cuenta
 					</Link>
 				</div>
+			</div>
+			<div className="border-t">
+				<nav
+					aria-label="Elegir experiencia"
+					className="frame flex gap-1 px-5 py-2 md:px-8"
+				>
+					<Link
+						to="/"
+						aria-current={audience === "owner" ? "page" : undefined}
+						className={`rounded-md px-3 py-1.5 text-sm font-medium ${audience === "owner" ? "bg-seal-soft text-seal" : "text-ink-3 hover:text-foreground"}`}
+					>
+						Para propietarios
+					</Link>
+					<Link
+						to="/talleres"
+						aria-current={audience === "workshop" ? "page" : undefined}
+						className={`rounded-md px-3 py-1.5 text-sm font-medium ${audience === "workshop" ? "bg-seal-soft text-seal" : "text-ink-3 hover:text-foreground"}`}
+					>
+						Para talleres
+					</Link>
+				</nav>
 			</div>
 		</header>
 	);
@@ -105,7 +130,8 @@ function Logo() {
 	);
 }
 
-export function Hero() {
+export function Hero({ audience = "owner" }: AudienceProps) {
+	const workshop = audience === "workshop";
 	return (
 		<section
 			id="inicio"
@@ -117,44 +143,128 @@ export function Hero() {
 				<div className="enter">
 					<p className="eyebrow">
 						<span className="inline-block size-1.5 rounded-full bg-seal" />
-						Para tu carro y tu taller · El Salvador
+						{workshop
+							? "Software para talleres · El Salvador"
+							: "El historial de tu carro · El Salvador"}
 					</p>
 					<h1
 						id="hero-title"
 						className="mt-6 font-display text-[2.6rem] leading-[1.02] font-bold tracking-[-0.03em] text-balance sm:text-6xl lg:text-[4.4rem]"
 					>
-						Todo lo que le hiciste a tu carro,{" "}
-						<span className="text-seal">en un solo lugar.</span>
+						{workshop
+							? "Tu taller en orden."
+							: "Todo lo que le hicieron a tu carro,"}{" "}
+						<span className="text-seal">
+							{workshop ? "Tus clientes, informados." : "en un solo lugar."}
+						</span>
 					</h1>
 					<p className="mt-6 max-w-xl text-lg leading-relaxed text-pretty text-ink-2">
-						Kilora reúne el historial de mantenimiento de tu carro: qué se
-						reparó, cuándo y cuánto pagaste, aunque cambies de taller. Y si
-						tenés un taller, organizás los trabajos y las cotizaciones sin
-						perderte entre papeles y mensajes.
+						{workshop
+							? "Organizá clientes, vehículos, órdenes de trabajo y cotizaciones por sucursal. Compartí presupuestos por WhatsApp y entregá a cada cliente un historial claro de lo que le hicieron a su carro."
+							: "Guardá qué le hicieron a tu carro, cuándo y cuánto pagaste. Tomá una foto o subí una imagen o PDF del comprobante, aunque tu taller no use Kilora."}
 					</p>
 					<div className="mt-9 flex flex-wrap items-center gap-3">
-						<a href="#como-funciona" className={buttonVariants({ size: "lg" })}>
+						<Link
+							to="/registro"
+							search={{ redirect: workshop ? "/onboarding" : undefined }}
+							className={buttonVariants({ size: "lg" })}
+						>
+							{workshop
+								? "Organizar mi taller"
+								: "Guardar el historial de mi carro"}
+							<ArrowRight />
+						</Link>
+						<a
+							href="#como-funciona"
+							className={buttonVariants({ size: "lg", variant: "outline" })}
+						>
 							Ver cómo funciona
 							<ArrowDownRight />
 						</a>
-						<Link
-							to="/registro"
-							search={{ redirect: undefined }}
-							className={buttonVariants({ size: "lg", variant: "outline" })}
-						>
-							Registrar mi taller
-						</Link>
 					</div>
 					<p className="mt-5 font-mono text-xs text-ink-3">
-						Desde tu teléfono · Sin instalar una app
+						{workshop
+							? "Para talleres independientes · Sin instalar un programa"
+							: "Desde tu teléfono · Sin instalar una app"}
 					</p>
 				</div>
 				<div className="enter [animation-delay:120ms]" data-nosnippet>
-					<HistoryCard />
+					{workshop ? <WorkshopOrderPreview /> : <HistoryCard />}
 				</div>
 			</div>
-			<SpecStrip />
+			<SpecStrip audience={audience} />
 		</section>
+	);
+}
+
+function WorkshopOrderPreview() {
+	return (
+		<figure
+			className="rounded-lg border bg-card shadow-xl"
+			aria-label="Ejemplo de una orden de trabajo"
+		>
+			<div className="flex items-center justify-between gap-4 border-b p-5">
+				<div>
+					<p className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
+						Orden de trabajo · Ejemplo
+					</p>
+					<h2 className="mt-2 font-display text-xl font-bold">
+						Toyota Corolla
+					</h2>
+				</div>
+				<span className="rounded-full bg-seal-soft px-3 py-1 text-xs font-medium text-seal">
+					En reparación
+				</span>
+			</div>
+			<div className="space-y-6 p-5">
+				<ol
+					className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4"
+					aria-label="Estados de la orden"
+				>
+					{["Recibido", "Diagnóstico", "En reparación", "Listo"].map(
+						(status) => (
+							<li
+								key={status}
+								className={`rounded-md border px-2 py-3 text-center ${status === "En reparación" ? "border-seal bg-seal-soft font-medium text-seal" : "text-ink-3"}`}
+							>
+								{status}
+							</li>
+						),
+					)}
+				</ol>
+				<div>
+					<p className="text-xs text-ink-3">Motivo de la visita</p>
+					<p className="mt-1 font-medium">
+						Servicio de aceite y revisión de frenos
+					</p>
+				</div>
+				<ul className="divide-y rounded-md border px-4">
+					{[
+						"Cambio de aceite y filtro",
+						"Revisión de pastillas delanteras",
+						"Registro de repuestos y kilometraje",
+					].map((job) => (
+						<li key={job} className="flex items-start gap-3 py-4 text-sm">
+							<Check className="size-4 shrink-0 text-seal" aria-hidden />
+							{job}
+						</li>
+					))}
+				</ul>
+				<div className="rounded-md bg-muted p-4">
+					<p className="text-sm font-medium">
+						Costos internos y notas del equipo
+					</p>
+					<p className="mt-1 text-sm text-ink-3">
+						Privados para tu taller. El propietario recibe el detalle público
+						del servicio.
+					</p>
+				</div>
+			</div>
+			<figcaption className="border-t px-5 py-4 text-xs text-ink-3">
+				Al marcar la orden como lista, el servicio se publica en el historial
+				del vehículo.
+			</figcaption>
+		</figure>
 	);
 }
 
@@ -358,11 +468,20 @@ const SPECS = [
 	{ value: "Listo para vender", label: "compartí el cuidado de tu carro" },
 ];
 
-function SpecStrip() {
+function SpecStrip({ audience = "owner" }: AudienceProps) {
+	const specs =
+		audience === "workshop"
+			? [
+					{ value: "Órdenes", label: "de recepción a entrega" },
+					{ value: "Cotizaciones", label: "compartibles por WhatsApp" },
+					{ value: "Tu equipo", label: "acceso por rol y sucursal" },
+					{ value: "Privacidad", label: "costos y notas para tu taller" },
+				]
+			: SPECS;
 	return (
 		<div className="relative border-t bg-background/60">
 			<dl className="frame grid grid-cols-2 md:grid-cols-4">
-				{SPECS.map((s, i) => (
+				{specs.map((s, i) => (
 					<div
 						key={s.label}
 						className={`px-5 py-6 md:px-8 ${i % 2 === 1 ? "border-l" : ""} ${i > 1 ? "border-t md:border-t-0" : ""} ${i === 2 ? "md:border-l" : ""}`}
@@ -427,21 +546,37 @@ function SectionHead({
 	);
 }
 
-export function Problem() {
-	const items = [
-		{
-			k: "Recibos perdidos",
-			t: "El recibo quedó en la guantera y el detalle del trabajo, entre mensajes de WhatsApp.",
-		},
-		{
-			k: "Memoria",
-			t: "¿Cuándo cambiaste los frenos? ¿Qué aceite le pusieron? No tendrías que depender de tu memoria.",
-		},
-		{
-			k: "Venta",
-			t: "Cuidaste tu carro, pero al venderlo te cuesta mostrar los servicios que le hiciste.",
-		},
-	];
+export function Problem({ audience = "owner" }: AudienceProps) {
+	const workshop = audience === "workshop";
+	const items = workshop
+		? [
+				{
+					k: "Trabajo disperso",
+					t: "Los datos del cliente están en una libreta y el detalle de la reparación, en otra conversación.",
+				},
+				{
+					k: "Presupuestos sin contexto",
+					t: "Cuesta encontrar qué se cotizó, qué aceptó el cliente y cuánto se cobró al final.",
+				},
+				{
+					k: "Entregas sin historial",
+					t: "El servicio termina, pero recuperar los trabajos y repuestos para la próxima visita lleva tiempo.",
+				},
+			]
+		: [
+				{
+					k: "Recibos perdidos",
+					t: "El recibo quedó en la guantera y el detalle del trabajo, entre mensajes de WhatsApp.",
+				},
+				{
+					k: "Memoria",
+					t: "¿Cuándo cambiaste los frenos? ¿Qué aceite le pusieron? No tendrías que depender de tu memoria.",
+				},
+				{
+					k: "Venta",
+					t: "Cuidaste tu carro, pero al venderlo te cuesta mostrar los servicios que le hiciste.",
+				},
+			];
 	return (
 		<section aria-labelledby="problema-title" className="border-b">
 			<div className="frame px-5 py-20 md:px-8 md:py-28">
@@ -449,11 +584,15 @@ export function Problem() {
 					index="01"
 					label="El problema"
 					id="problema-title"
-					title="Cuando cambiás de taller, el historial se queda atrás."
+					title={
+						workshop
+							? "Cada orden debería tener su información a mano."
+							: "Cuando cambiás de taller, el historial se queda atrás."
+					}
 				>
-					Entre recibos, mensajes y lo que recordás, es difícil saber todo lo
-					que se le ha hecho a tu carro. Kilora reúne esos servicios para que
-					los tengás a mano cuando los necesités.
+					{workshop
+						? "Reuní clientes, vehículos, trabajos y cotizaciones para que recepción y tu equipo consulten el mismo registro, con los permisos que les corresponden."
+						: "Entre recibos, mensajes y lo que recordás, es difícil saber todo lo que se le ha hecho a tu carro. Kilora reúne esos servicios para que los tengás a mano cuando los necesités."}
 				</SectionHead>
 				<ul className="mt-14 grid border-t md:grid-cols-3 lg:ml-[15rem]">
 					{items.map((it, i) => (
@@ -477,39 +616,65 @@ export function Problem() {
 	);
 }
 
-export function HowItWorks() {
-	const steps = [
-		{
-			icon: ClipboardList,
-			title: "Tu taller registra el servicio",
-			body: "El taller anota el motivo de la visita, el kilometraje y el trabajo a realizar. Así queda claro qué necesita tu carro.",
-			meta: "El trabajo, en orden",
-		},
-		{
-			icon: QrCode,
-			title: "Conectás tu carro a tu cuenta",
-			body: "Recibís una invitación del taller por correo o WhatsApp. La aceptás y consultás los servicios de tu carro desde tu teléfono.",
-			meta: "Sin instalar una app",
-		},
-		{
-			icon: History,
-			title: "Guardás cada mantenimiento",
-			body: "Cuando el taller termina el trabajo, el servicio queda en tu historial. Podés agregar recibos anteriores y conservarlo aunque cambies de taller.",
-			meta: "A mano cuando lo necesités",
-		},
-	];
+export function HowItWorks({ audience = "owner" }: AudienceProps) {
+	const workshop = audience === "workshop";
+	const steps = workshop
+		? [
+				{
+					icon: ClipboardList,
+					title: "Recibí al cliente y su vehículo",
+					body: "Registrá el motivo de la visita y el kilometraje. Podés empezar aunque el propietario todavía no tenga cuenta.",
+					meta: "Una ficha para cada visita",
+				},
+				{
+					icon: MessageCircle,
+					title: "Cotizá y organizá el trabajo",
+					body: "Prepará el presupuesto, compartí su enlace por WhatsApp y registrá trabajos y repuestos mientras avanza la orden.",
+					meta: "De diagnóstico a reparación",
+				},
+				{
+					icon: History,
+					title: "Entregá con un historial claro",
+					body: "Marcá la orden como lista e invitá al propietario a consultar su historial. Tus costos internos y notas privadas quedan en el taller.",
+					meta: "El servicio queda registrado",
+				},
+			]
+		: [
+				{
+					icon: Plus,
+					title: "Registrá tu carro",
+					body: "Creá tu cuenta y agregá la marca y el modelo de tu carro. Podés empezar por tu cuenta, sin una invitación del taller.",
+					meta: "Desde tu teléfono",
+				},
+				{
+					icon: ScanLine,
+					title: "Agregá lo que le hicieron",
+					body: "Tomá una foto o subí una imagen o PDF del comprobante. Revisá los datos y guardá el servicio con su archivo. También podés ingresarlo sin recibo.",
+					meta: "De cualquier taller",
+				},
+				{
+					icon: History,
+					title: "Consultá y compartí tu historial",
+					body: "Encontrá fechas, kilometraje, repuestos y gastos. Conservá los servicios aunque cambies de taller y compartí un reporte cuando vendás el carro.",
+					meta: "Siempre con vos",
+				},
+			];
 	return (
 		<section
 			id="como-funciona"
 			aria-labelledby="como-title"
-			className="scroll-mt-14 border-b"
+			className="scroll-mt-28 border-b"
 		>
 			<div className="frame px-5 py-20 md:px-8 md:py-28">
 				<SectionHead
 					index="02"
 					label="Cómo funciona"
 					id="como-title"
-					title="Del taller a tu teléfono, en tres pasos."
+					title={
+						workshop
+							? "De la recepción al historial, en tres pasos."
+							: "El historial de tu carro empieza con vos."
+					}
 				/>
 				<ol className="mt-14 grid gap-px overflow-hidden rounded-lg border bg-line md:grid-cols-3">
 					{steps.map((s, i) => (
@@ -546,16 +711,17 @@ const LAYERS: { field: string; owner: boolean; shop: boolean }[] = [
 	{ field: "Taller que lo hizo", owner: true, shop: false },
 	{ field: "Costo y cotización", owner: true, shop: false },
 	{ field: "Fotos", owner: true, shop: false },
+	{ field: "Comprobantes del propietario", owner: true, shop: false },
 	{ field: "Notas del servicio", owner: true, shop: false },
 	{ field: "Costos internos y notas privadas", owner: false, shop: false },
 ];
 
-export function TwoLayers() {
+export function TwoLayers({ audience = "owner" }: AudienceProps) {
 	return (
 		<section
 			id="dos-capas"
 			aria-labelledby="capas-title"
-			className="dark-band scroll-mt-14 border-b bg-foreground text-background"
+			className="dark-band scroll-mt-28 border-b bg-foreground text-background"
 		>
 			<div className="frame px-5 py-20 md:px-8 md:py-28">
 				<SectionHead
@@ -565,10 +731,9 @@ export function TwoLayers() {
 					title="Compartí el mantenimiento con tranquilidad."
 					invert
 				>
-					Como propietario, podés consultar tus servicios y lo que pagaste. Si
-					vinculás tu carro a otro taller, ese taller podrá conocer los trabajos
-					anteriores sin ver tus pagos ni las notas. Si tenés un taller, tus
-					costos internos y anotaciones privadas quedan solo para tu equipo.
+					{audience === "workshop"
+						? "Compartí con el propietario los trabajos realizados y lo cobrado. Tus costos internos y notas del mecánico quedan privados. Otro taller vinculado solo recibe el contexto de mantenimiento, sin tus precios ni la identidad de tu taller."
+						: "Consultá tus servicios y lo que pagaste. Otro taller vinculado puede conocer los trabajos anteriores sin ver tus pagos ni notas. Los comprobantes que agregás vos son privados y no se incluyen en el reporte para venta."}
 				</SectionHead>
 				<div className="reveal mt-14 overflow-x-auto lg:ml-[15rem]">
 					<table className="w-full border-collapse text-left">
@@ -630,64 +795,110 @@ function Mark({ on }: { on: boolean }) {
 	);
 }
 
-const FEATURES = [
+const OWNER_FEATURES = [
 	{
-		icon: ClipboardList,
-		label: "Para talleres",
-		title: "Cotizá sin empezar de cero",
-		body: "Describí el trabajo con tus palabras y recibí una cotización para revisar. Ajustá los repuestos y precios antes de compartirla con tu cliente.",
+		icon: History,
+		label: "Tu historial",
+		title: "Servicios de cualquier taller",
+		body: "Guardá lo que le hicieron a tu carro con fechas, kilometraje, trabajos y repuestos. Conservá el registro aunque cambies de mecánico.",
 	},
 	{
 		icon: ScanLine,
-		label: "Para propietarios",
-		title: "Tus recibos también cuentan",
-		body: "¿Tenés servicios guardados en papel? Tomá una foto del recibo, revisá los datos y agregalos al historial de tu carro.",
+		label: "Comprobantes",
+		title: "Una foto o un PDF para empezar",
+		body: "Tomá una foto o subí un comprobante JPG, PNG, WebP o PDF de hasta 4 MB. Revisá los datos extraídos antes de guardar el servicio.",
+	},
+	{
+		icon: ShieldCheck,
+		label: "Documentos privados",
+		title: "El comprobante queda con el servicio",
+		body: "Conservá el archivo original y descargalo cuando lo necesités. Solo vos podés acceder; no se comparte con talleres ni en el reporte para venta.",
 	},
 	{
 		icon: MessageCircle,
-		label: "Para ambos",
-		title: "El mantenimiento, en palabras claras",
-		body: "Entendé para qué sirvió cada reparación y qué te están cotizando. El taller puede preparar una explicación y compartirla por WhatsApp.",
-	},
-	{
-		icon: Wrench,
-		label: "Para talleres",
-		title: "Orientá mejor a tu cliente",
-		body: "Consultá los servicios anteriores y el kilometraje para revisar qué mantenimiento podría necesitar el carro. Vos decidís qué recomendar.",
-	},
-	{
-		icon: FileText,
-		label: "Para propietarios",
-		title: "Un historial listo para la venta",
-		body: "Mostrale a un posible comprador cómo cuidaste tu carro. Compartí sus servicios y kilometraje con un enlace que dura 30 días, sin mostrar lo que pagaste ni tus notas.",
+		label: "Explicaciones",
+		title: "Entendé qué le hicieron",
+		body: "Consultá una explicación en palabras claras de los trabajos registrados. La IA usa los datos de tu servicio; no hace un diagnóstico del vehículo.",
 	},
 	{
 		icon: Package,
-		label: "Para ambos",
-		title: "Sabé qué repuestos lleva tu carro",
-		body: "Consultá qué piezas se cambiaron y de qué marca eran. Tené ese detalle a mano para tu próxima visita al taller.",
+		label: "Repuestos y gastos",
+		title: "Encontrá el detalle de cada visita",
+		body: "Revisá qué piezas usaron, sus marcas y cuánto pagaste cuando esos datos estén registrados. Tené ese contexto a mano antes del próximo servicio.",
+	},
+	{
+		icon: FileText,
+		label: "Al vender tu carro",
+		title: "Compartí cómo lo cuidaste",
+		body: "Creá un reporte con servicios, talleres y kilometraje. Su enlace dura 30 días y no muestra montos, notas ni tus comprobantes privados.",
 	},
 ];
 
-export function Features() {
+const WORKSHOP_FEATURES = [
+	{
+		icon: ClipboardList,
+		label: "Cotizaciones",
+		title: "Cotizá sin empezar de cero",
+		body: "Describí el trabajo y revisá el borrador con IA. Ajustá los repuestos y precios, compartí la cotización por WhatsApp y registrá el resultado.",
+	},
+	{
+		icon: Wrench,
+		label: "Órdenes de trabajo",
+		title: "Seguí cada reparación",
+		body: "Llevá las órdenes desde recibido y diagnóstico hasta reparación y entrega. Registrá trabajos, repuestos y kilometraje en el mismo lugar.",
+	},
+	{
+		icon: FileText,
+		label: "Clientes y vehículos",
+		title: "Recibí al cliente sin esperar su registro",
+		body: "Creá la ficha del cliente y del vehículo, y empezá a trabajar. El propietario puede aceptar después una invitación para consultar su historial.",
+	},
+	{
+		icon: Package,
+		label: "Tu equipo",
+		title: "Acceso por rol y sucursal",
+		body: "Organizá sucursales y asigná miembros de administración, recepción o mecánica. Cada persona consulta lo que le corresponde.",
+	},
+	{
+		icon: History,
+		label: "Historial del vehículo",
+		title: "Recuperá el contexto del mantenimiento",
+		body: "Consultá trabajos, piezas, fechas y kilometraje del historial al que tenés acceso. Revisá las sugerencias antes de recomendar un próximo servicio.",
+	},
+	{
+		icon: ShieldCheck,
+		label: "Información privada",
+		title: "Tus costos y notas quedan en tu taller",
+		body: "Compartí con el cliente los datos públicos del servicio. Los costos internos y las notas del mecánico no salen de tu equipo.",
+	},
+];
+
+export function Features({ audience = "owner" }: AudienceProps) {
+	const workshop = audience === "workshop";
+	const features = workshop ? WORKSHOP_FEATURES : OWNER_FEATURES;
 	return (
 		<section
 			id="funciones"
 			aria-labelledby="funciones-title"
-			className="scroll-mt-14 border-b bg-surface"
+			className="scroll-mt-28 border-b bg-surface"
 		>
 			<div className="frame px-5 py-20 md:px-8 md:py-28">
 				<SectionHead
 					index="04"
 					label="Más que un registro"
 					id="funciones-title"
-					title="Menos trabajo para registrar. Más claridad para decidir."
+					title={
+						workshop
+							? "Todo el trabajo del taller, con su contexto."
+							: "Guardá el servicio. Entendé el mantenimiento."
+					}
 				>
-					Encontrá lo que necesitás para cuidar tu carro o atender mejor a tus
-					clientes, desde la primera cotización hasta el próximo servicio.
+					{workshop
+						? "Herramientas para recibir vehículos, preparar presupuestos y dejar constancia de cada servicio en tu taller de El Salvador."
+						: "Tu historial de mantenimiento en El Salvador, desde el primer comprobante hasta el reporte que compartís al vender tu carro."}
 				</SectionHead>
 				<ul className="mt-14 grid gap-px overflow-hidden rounded-lg border bg-line md:grid-cols-2 lg:grid-cols-3">
-					{FEATURES.map((feature) => (
+					{features.map((feature) => (
 						<li key={feature.title} className="reveal bg-card p-6 md:p-8">
 							<div className="flex items-center justify-between gap-4">
 								<feature.icon
@@ -709,12 +920,14 @@ export function Features() {
 					<Sparkles className="size-5 shrink-0 text-seal" aria-hidden="true" />
 					<div>
 						<h3 className="font-display text-xl font-bold">
-							¿Cuánto gasté? ¿Qué le hicieron a mi carro?
+							{workshop
+								? "¿Qué órdenes tengo pendientes? ¿Dónde está la cotización?"
+								: "¿Cuánto gasté? ¿Qué le hicieron a mi carro?"}
 						</h3>
 						<p className="mt-2 max-w-3xl leading-relaxed text-ink-2">
-							Preguntale al asistente y encontrá respuestas sobre tus servicios,
-							vehículos y cotizaciones sin buscar uno por uno. También te ayuda
-							cuando tenés dudas sobre cómo usar Kilora.
+							{workshop
+								? "Consultá al asistente sobre las órdenes, clientes, vehículos y cotizaciones a los que tu cuenta tiene acceso. También puede orientarte sobre cómo usar Kilora."
+								: "Preguntale al asistente sobre los servicios y vehículos de tu cuenta. Encontrá respuestas usando los datos que ya guardaste en tu historial."}
 						</p>
 					</div>
 				</div>
@@ -723,102 +936,62 @@ export function Features() {
 	);
 }
 
-export function Audiences() {
-	const groups = [
-		{
-			id: "talleres",
-			label: "Para talleres",
-			title: "Tu taller en orden. Tus clientes, informados.",
-			points: [
-				"Encontrá los trabajos y los clientes de cada sucursal",
-				"Prepará cotizaciones y compartilas por WhatsApp",
-				"Guardá los costos y las notas privadas de tu equipo",
-				"Consultá los repuestos usados y el mantenimiento anterior",
-				"Elegí a qué sucursales puede acceder cada persona del equipo",
-			],
-			cta: { to: "/registro" as const, text: "Registrar mi taller" },
-		},
-		{
-			id: "propietarios",
-			label: "Para propietarios",
-			title: "Todo el mantenimiento de tu carro, en tu teléfono.",
-			points: [
-				"Recordá cuándo se hizo cada servicio y qué repuestos usaron",
-				"Lo conservás aunque cambies de taller",
-				"Recuperá servicios anteriores con una foto del recibo",
-				"Entendé las reparaciones con explicaciones claras",
-				"Mostrá cómo cuidaste tu carro cuando lo pongás en venta",
-			],
-			cta: { to: "/login" as const, text: "Ver mis vehículos" },
-		},
-	];
+export function OtherAudience({ audience = "owner" }: AudienceProps) {
+	const workshop = audience === "workshop";
 	return (
-		<section aria-label="Beneficios" className="border-b">
-			<div className="frame grid md:grid-cols-2">
-				{groups.map((g, i) => (
-					<article
-						key={g.id}
-						id={g.id}
-						aria-labelledby={`${g.id}-title`}
-						className={`reveal scroll-mt-14 px-5 py-20 md:px-8 md:py-24 ${i === 1 ? "border-t md:border-t-0 md:border-l" : ""}`}
+		<section
+			aria-labelledby="otra-experiencia-title"
+			className="border-b bg-surface"
+		>
+			<div className="frame flex flex-col gap-5 px-5 py-10 sm:flex-row sm:items-center sm:justify-between md:px-8">
+				<div>
+					<h2
+						id="otra-experiencia-title"
+						className="font-display text-xl font-bold"
 					>
-						<p className="font-mono text-[11px] uppercase tracking-widest text-ink-3">
-							<span className="text-seal">[0{i + 5}]</span> {g.label}
-						</p>
-						<h2
-							id={`${g.id}-title`}
-							className="mt-6 max-w-md font-display text-3xl leading-[1.1] font-bold tracking-[-0.02em] text-balance md:text-4xl"
-						>
-							{g.title}
-						</h2>
-						<ul className="mt-8 border-t">
-							{g.points.map((p) => (
-								<li
-									key={p}
-									className="flex items-start gap-3 border-b py-3.5 leading-relaxed"
-								>
-									<Plus
-										className="mt-1 size-3.5 shrink-0 text-seal"
-										aria-hidden="true"
-									/>
-									{p}
-								</li>
-							))}
-						</ul>
-						<Link
-							to={g.cta.to}
-							search={{ redirect: undefined }}
-							className="group mt-8 inline-flex items-center gap-2 font-medium text-seal"
-						>
-							{g.cta.text}
-							<ArrowRight
-								className="size-4 transition-transform group-hover:translate-x-0.5"
-								aria-hidden="true"
-							/>
-						</Link>
-					</article>
-				))}
+						{workshop
+							? "¿Buscás guardar el historial de tu propio carro?"
+							: "¿Tenés un taller automotriz?"}
+					</h2>
+					<p className="mt-2 max-w-xl text-sm text-ink-3">
+						{workshop
+							? "Podés empezar como propietario aunque tu mecánico no use Kilora."
+							: "Conocé las herramientas para organizar clientes, órdenes y cotizaciones de tu taller."}
+					</p>
+				</div>
+				<Link
+					to={workshop ? "/" : "/talleres"}
+					className={`${buttonVariants({ variant: "outline" })} shrink-0`}
+				>
+					{workshop ? "Kilora para propietarios" : "Kilora para talleres"}
+					<ArrowRight />
+				</Link>
 			</div>
 		</section>
 	);
 }
 
-export function FaqSection() {
+export function FaqSection({ audience = "owner" }: AudienceProps) {
+	const faqs = LANDING_PAGES[audience].faqs;
 	return (
 		<section
 			id="preguntas"
 			aria-labelledby="faq-title"
-			className="scroll-mt-14 border-b"
+			className="scroll-mt-28 border-b"
 		>
 			<div className="frame px-5 py-20 md:px-8 md:py-28">
 				<SectionHead
-					index="07"
+					index="05"
 					label="Preguntas frecuentes"
 					id="faq-title"
-					title="Lo que preguntan talleres y propietarios."
+					title={
+						audience === "workshop"
+							? "Preguntas sobre Kilora para talleres."
+							: "Preguntas sobre el historial de tu carro."
+					}
 				/>
 				<div className="mt-14 border-t lg:ml-[15rem]">
-					{FAQS.map((f) => (
+					{faqs.map((f) => (
 						<details key={f.q} className="faq group border-b">
 							<summary className="flex cursor-pointer list-none items-center justify-between gap-6 py-5 font-display text-lg font-semibold [&::-webkit-details-marker]:hidden">
 								<h3>{f.q}</h3>
@@ -836,7 +1009,8 @@ export function FaqSection() {
 	);
 }
 
-export function FinalCta() {
+export function FinalCta({ audience = "owner" }: AudienceProps) {
+	const workshop = audience === "workshop";
 	return (
 		<section
 			aria-labelledby="cta-title"
@@ -849,16 +1023,22 @@ export function FinalCta() {
 					id="cta-title"
 					className="mx-auto mt-6 max-w-3xl font-display text-4xl leading-[1.05] font-bold tracking-[-0.03em] text-balance md:text-6xl"
 				>
-					Cuidás tu carro.{" "}
-					<span className="text-seal">Conservá su historia.</span>
+					{workshop ? "Organizá tu taller." : "Cuidás tu carro."}{" "}
+					<span className="text-seal">
+						{workshop
+							? "Dale continuidad a cada servicio."
+							: "Conservá su historia."}
+					</span>
 				</h2>
 				<div className="mt-10 flex flex-wrap justify-center gap-3">
 					<Link
 						to="/registro"
-						search={{ redirect: undefined }}
+						search={{ redirect: workshop ? "/onboarding" : undefined }}
 						className={buttonVariants({ size: "lg" })}
 					>
-						Crear cuenta
+						{workshop
+							? "Empezar con mi taller"
+							: "Guardar el historial de mi carro"}
 						<ArrowRight />
 					</Link>
 				</div>
@@ -867,24 +1047,38 @@ export function FinalCta() {
 	);
 }
 
-export function LandingFooter() {
+export function LandingFooter({ audience = "owner" }: AudienceProps) {
 	return (
 		<footer>
-			<div className="frame flex flex-col gap-6 px-5 py-10 md:flex-row md:items-center md:justify-between md:px-8">
+			<div className="frame flex flex-col gap-6 px-5 py-10 md:flex-row md:flex-wrap md:items-center md:justify-between md:px-8">
 				<div className="flex items-center gap-2.5 font-display text-sm font-bold tracking-[0.22em]">
 					<Logo />
 					KILORA
 				</div>
 				<p className="font-mono text-xs text-ink-3">
-					El cuidado de tu carro, a mano · Hecho en El Salvador ·{" "}
-					{new Date().getFullYear()}
+					{audience === "workshop"
+						? "El trabajo de tu taller, en orden"
+						: "El cuidado de tu carro, a mano"}{" "}
+					· Hecho en El Salvador · {new Date().getFullYear()}
 				</p>
 				<nav aria-label="Pie de página">
-					<ul className="flex gap-5 text-sm text-ink-3">
+					<ul className="flex flex-wrap gap-5 text-sm text-ink-3">
+						<li>
+							<Link to="/" className="hover:text-foreground">
+								Propietarios
+							</Link>
+						</li>
+						<li>
+							<Link to="/talleres" className="hover:text-foreground">
+								Talleres
+							</Link>
+						</li>
 						<li>
 							<Link
 								to="/login"
-								search={{ redirect: undefined }}
+								search={{
+									redirect: audience === "workshop" ? "/onboarding" : undefined,
+								}}
 								className="hover:text-foreground"
 							>
 								Ingresar
@@ -893,7 +1087,9 @@ export function LandingFooter() {
 						<li>
 							<Link
 								to="/registro"
-								search={{ redirect: undefined }}
+								search={{
+									redirect: audience === "workshop" ? "/onboarding" : undefined,
+								}}
 								className="hover:text-foreground"
 							>
 								Crear cuenta

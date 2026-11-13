@@ -2,7 +2,7 @@
 
 **A vehicle’s service history should stay with its owner.**
 
-Kilora is a vehicle service history and workshop management app for independent automotive workshops and vehicle owners in El Salvador. Workshops manage customers, service orders, and quotes; owners keep their maintenance records—even when they change workshops.
+Kilora helps vehicle owners in El Salvador keep their maintenance history, even when their workshop does not use Kilora. Owners can register their own vehicles and add services from receipt photos or by hand. Independent workshops can also manage customers, service orders, and quotes, and share completed services with owners.
 
 AI tools help turn notes into quotes, receipts into service records, and technical work into clear explanations. Parts diagrams help users understand the work, and shareable resale reports make the history useful when selling a vehicle.
 
@@ -46,11 +46,18 @@ Workshop internal costs and private notes remain private to that workshop, inclu
 
 ## How it works
 
-1. **A workshop registers a vehicle** and opens a service order with the reason for the visit and its mileage.
-2. **The team prepares a quote** and records the work and parts used.
-3. **The workshop marks the order ready**, publishing a permanent service record.
-4. **The owner accepts an invitation** to connect the vehicle and access its history.
-5. **The history stays available** as the owner adds services or visits another linked workshop.
+1. **An owner creates an account and registers their vehicle**, without needing a workshop invitation.
+2. **They save a service from any workshop**, using a receipt photo or entering the date and work performed. Mileage, total, workshop name, and item details are optional.
+3. **They review the extracted data before saving.** A photo or uploaded JPG, PNG, WebP, or PDF can be attached to the service. Saving the service also saves its private receipt; owners can download it later.
+4. **The history identifies who added each service** and stays available when the owner changes workshops.
+5. **Participating workshops can contribute through their existing Kilora workflow**: complete an order, publish the service, and invite its owner to connect the vehicle. Owners can share a separate resale report when needed.
+
+## Public pages
+
+- `/` introduces the owner's maintenance history, receipt scanning and private documents, and resale report.
+- `/talleres` introduces workshop customers, work orders, quotes, branches, and roles. Registration and sign-in links preserve the workshop setup intent.
+
+Each page renders its own title, description, canonical URL, social metadata, audience-specific application data, and visible FAQs in server-rendered HTML. Both target Spanish-speaking users in El Salvador. The sitemap includes both pages, and robots rules allow `/talleres` while keeping `/taller` and its application routes excluded from crawling.
 
 ## Explore the demo locally
 
@@ -115,7 +122,7 @@ Set `OPENAI_API_KEY` in `.env` to turn it on. Without it, the assistant replies 
 Besides the chat, the same key enables AI helpers inside the forms. They follow one rule: **the AI drafts, a person confirms.** No AI endpoint writes data, and the model only sees what the user could already see.
 
 - **Quote from a note.** In any quote editor, *Describir con IA* turns a typed or dictated note ("cambio de aceite 5W-30 con filtro, pastillas delanteras…") into quote items matched to the part catalog. Prices are filled only when the note states them.
-- **Receipt to history.** Owners adding a manual service can tap *Escanear recibo* and photograph an old receipt or invoice. A vision model reads the date, mileage, workshop, line items and total into the form. The browser downsizes the photo, which also strips EXIF metadata, and the API never stores it.
+- **Receipt to history.** Owners saving a service can take a photo or upload a JPG, PNG, WebP, or PDF (up to 4 MB). The model drafts the date, mileage, workshop, items, and total. The selected original stays attached even if AI reading fails, so owners can enter the details manually. The original is saved in PostgreSQL in the same transaction as the service, and can only be downloaded by its owner. Reading alone never persists it. For image extraction, the browser sends a smaller re-encoded copy without EXIF metadata to the model; PDFs are sent as files. Receipts are excluded from workshop views and public resale reports.
 - **Plain-language explanations.** Owners can tap *¿Qué me hicieron?* on any service to get a short, jargon-free explanation. Workshops get *Mensaje con IA*, an editable WhatsApp message that explains each quote line before sharing the link. The model only receives the projection the viewer already sees (`history.Project` for owners, without internal IDs), so internal costs and private notes never reach a prompt.
 - **Suggested recommendations.** *Sugerir* on a vehicle's recommendations card proposes due maintenance. Deterministic rules in [`services/api/internal/maintenance`](services/api/internal/maintenance) decide what is due using reference intervals, the history the workshop can see, and the latest odometer reading. The model only writes the wording. Without a key, the suggestions still work with template text.
 - **Resale report.** Owners can share *Reporte para venta*: a 30-day, read-only link (`/r/<token>`, printable to PDF) with the full history under a dedicated `history.ViewerReport` projection, which shows work, dates, mileage and workshops but no amounts or notes. When the link is created, the model writes a short summary of how complete and regular the history is. Creating a new link revokes the previous one, and only the token's hash is stored.

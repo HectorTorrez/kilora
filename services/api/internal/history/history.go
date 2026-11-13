@@ -54,7 +54,14 @@ type Correction struct {
 	CreatedBy uuid.UUID
 	CreatedAt time.Time
 }
+type Receipt struct {
+	Filename    string `json:"filename"`
+	ContentType string `json:"content_type"`
+	SizeBytes   int32  `json:"size_bytes"`
+}
+
 type Record struct {
+	Receipt            *Receipt
 	ID                 uuid.UUID
 	WorkshopID         *uuid.UUID
 	WorkshopName       *string
@@ -80,6 +87,7 @@ type ProjectedCorrection struct {
 	CreatedBy *uuid.UUID                 `json:"created_by,omitempty"`
 }
 type Projected struct {
+	Receipt            *Receipt              `json:"receipt,omitempty"`
 	ID                 uuid.UUID             `json:"id"`
 	PerformedOn        string                `json:"performed_on"`
 	OdometerKm         *int32                `json:"odometer_km,omitempty"`
@@ -172,6 +180,9 @@ func Project(kind ViewerKind, rec Record) (Projected, bool) {
 		return Projected{}, false
 	}
 	p := Projected{ID: rec.ID, PerformedOn: rec.PerformedOn.Format(dateLayout), OdometerKm: rec.OdometerKm, Source: rec.Source, Summary: rec.Summary, Items: filterItems(rec.Items, kind)}
+	if kind == ViewerOwner {
+		p.Receipt = rec.Receipt
+	}
 	if kind == ViewerReport {
 		p.WorkshopName = rec.WorkshopName
 		p.WorkshopVerifiedAt = rec.WorkshopVerifiedAt

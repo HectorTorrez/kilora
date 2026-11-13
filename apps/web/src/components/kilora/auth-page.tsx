@@ -68,7 +68,7 @@ const details: Record<Mode, [string, string, string]> = {
 	registro: [
 		"Crear cuenta",
 		"Empezá con Kilora",
-		"Creá tu cuenta para conservar el historial de tus vehículos.",
+		"Guardá los servicios de tu carro, aunque tu taller no use Kilora.",
 	],
 	onboarding: [
 		"Tu espacio de trabajo",
@@ -169,6 +169,22 @@ export function AuthPage({
 	redirectTo?: string;
 	demo?: components["schemas"]["DemoInfo"];
 }) {
+	const workshopIntent =
+		mode === "onboarding" || safeRedirect(redirectTo) === "/onboarding";
+	const pageDetails =
+		workshopIntent && mode === "registro"
+			? [
+					"Crear cuenta",
+					"Empezá con tu taller",
+					"Creá tu cuenta para organizar clientes, órdenes y cotizaciones. Después configurarás tu taller.",
+				]
+			: workshopIntent && mode === "login"
+				? [
+						"Acceso a Kilora",
+						"Ingresá a tu taller",
+						"Consultá tus órdenes, clientes y cotizaciones, o configurá tu primer taller.",
+					]
+				: details[mode];
 	const accounts = mode === "login" && demo?.enabled ? demo.accounts : [];
 	const [demoOpen, setDemoOpen] = useState(false);
 	const demoAccountsId = useId();
@@ -251,7 +267,9 @@ export function AuthPage({
 		const me = await qc.fetchQuery(meQuery());
 		await navigate({
 			href:
-				safeRedirect(redirectTo) ||
+				(safeRedirect(redirectTo) === "/onboarding" && me?.memberships.length
+					? "/taller"
+					: safeRedirect(redirectTo)) ||
 				(me?.memberships.length ? "/taller" : "/mis-vehiculos"),
 		});
 	}
@@ -305,14 +323,19 @@ export function AuthPage({
 				</Link>
 				<div>
 					<p className="mb-4 font-mono text-xs uppercase tracking-widest opacity-60">
-						Historial digital del vehículo
+						{workshopIntent
+							? "Gestión de talleres automotrices"
+							: "Historial digital del vehículo"}
 					</p>
 					<h1 className="max-w-lg font-display text-4xl font-bold tracking-tight md:text-5xl">
-						El historial del vehículo, en un solo lugar.
+						{workshopIntent
+							? "El trabajo de tu taller, en un solo lugar."
+							: "El historial del vehículo, en un solo lugar."}
 					</h1>
 					<p className="mt-6 max-w-md leading-relaxed opacity-70">
-						El taller registra. El propietario conserva. Cada servicio queda a
-						mano, incluso al cambiar de taller.
+						{workshopIntent
+							? "Organizá clientes, vehículos y cotizaciones por sucursal. Compartí el servicio con tu cliente y conservá privados los costos y notas de tu equipo."
+							: "Agregá servicios con una foto del recibo o con tus palabras. Tu historial se queda con vos, aunque cambies de taller."}
 					</p>
 				</div>
 				<p className="text-sm opacity-60">Kilora · El Salvador</p>
@@ -328,13 +351,13 @@ export function AuthPage({
 				</header>
 				<div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center">
 					<p className="font-mono text-xs uppercase tracking-widest text-ink-3">
-						{details[mode][0]}
+						{pageDetails[0]}
 					</p>
 					<h2 className="mt-4 font-display text-3xl font-bold tracking-tight">
-						{details[mode][1]}
+						{pageDetails[1]}
 					</h2>
 					<p className="mt-3 text-sm leading-relaxed text-ink-3">
-						{details[mode][2]}
+						{pageDetails[2]}
 					</p>
 					{done && success && SuccessIcon ? (
 						<output className="mt-8 block rounded-lg border bg-card px-6 py-8 text-center">
