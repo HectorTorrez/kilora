@@ -1,30 +1,41 @@
 # Kilora
 
-> Kilora es el historial digital del vehículo para talleres independientes y propietarios de carros en El Salvador. El taller registra cada orden de servicio (trabajos, repuestos, kilometraje, fotos y cotización) en menos de 5 minutos, y el propietario conserva el historial completo aunque cambie de taller.
+> Kilora reúne el historial de mantenimiento del carro y ayuda a organizar talleres independientes en El Salvador. Los propietarios conservan sus servicios aunque cambien de taller; los talleres organizan clientes, trabajos y cotizaciones.
 
-## Qué resuelve
+## Para propietarios de vehículos
 
-- En El Salvador la mayoría de talleres independientes guardan el historial en papel o Excel; el propietario lo pierde al cambiar de taller.
-- Kilora liga el historial al vehículo y al propietario, no al taller.
+- Consultar qué se reparó, cuándo, con qué kilometraje y cuánto se pagó.
+- Conservar los servicios en su cuenta aunque cambien de taller.
+- Agregar servicios anteriores a mano o desde una foto del recibo, revisando los datos antes de guardar.
+- Entender las reparaciones con explicaciones en palabras claras.
+- Compartir un reporte para venta con servicios, talleres y kilometraje. El enlace dura 30 días y no muestra montos ni notas.
 
-## Historial en dos capas (diferenciador)
+## Para talleres
 
-- El propietario ve todo: trabajo, fecha, kilometraje, taller autor, costo, fotos y notas.
-- Otro taller vinculado ve una vista ciega: trabajo o pieza, fecha y kilometraje. Nunca ve el taller autor, los precios, las fotos ni las notas internas.
-- La proyección se aplica en el servidor.
+- Organizar clientes, vehículos, trabajos y cotizaciones por sucursal.
+- Preparar una cotización desde una descripción del trabajo y revisar repuestos y precios antes de compartirla.
+- Compartir cotizaciones e invitaciones por WhatsApp.
+- Consultar servicios anteriores y sugerencias de mantenimiento para decidir qué recomendar.
 
-## Datos clave
+## Acceso y privacidad
 
-- Mercado: El Salvador. Moneda USD. Teléfonos +503. Solo en español.
-- Usuarios: talleres automotrices independientes (recepción) y propietarios de vehículos.
-- Registro de una orden: menos de 5 minutos, con plantillas de trabajos frecuentes.
-- Invitación al propietario: correo, link y QR compartible por WhatsApp. Sin app que instalar.
-- Registros append-only: los errores se corrigen con una corrección fechada; nada se borra.
-- Talleres verificados con sello visible en cada registro.
-- Permisos por sucursal y auditoría de cambios.
+- Kilora se abre desde el navegador del teléfono o computadora, sin instalar una app.
+- El propietario acepta la invitación del taller para conectar el carro a su cuenta.
+- Otro taller vinculado puede consultar trabajos, piezas, fechas y kilometraje; no ve los pagos, las marcas de repuestos, las fotos, las notas ni el taller anterior.
+- Los costos internos y las notas privadas quedan solo en el taller que hizo el trabajo.
+- Si hay un error en el historial, se agrega una corrección fechada y se conserva el registro original.
+- La aplicación está en español y usa dólares estadounidenses.
 
-## Enlaces
+## Información del producto
 
-- [Inicio](https://kilora.dev/): qué es Kilora, cómo funciona y preguntas frecuentes
-- [Crear cuenta](https://kilora.dev/registro): registro para talleres
-- [Ingresar](https://kilora.dev/login): acceso para talleres y propietarios
+- [Inicio](https://kilora.dev/): descripción de Kilora y beneficios para propietarios y talleres.
+- [Cómo funciona](https://kilora.dev/#como-funciona): del servicio del taller al historial del propietario.
+- [Qué podés hacer](https://kilora.dev/#funciones): cotizaciones, recibos, explicaciones y reportes para venta.
+- [Para talleres](https://kilora.dev/#talleres): organización del trabajo y atención a clientes.
+- [Para propietarios](https://kilora.dev/#propietarios): mantenimiento del carro en un solo lugar.
+- [Preguntas frecuentes](https://kilora.dev/#preguntas): acceso, historial, privacidad y reportes.
+
+## Acceso a la aplicación
+
+- [Crear cuenta](https://kilora.dev/registro)
+- [Ingresar](https://kilora.dev/login)

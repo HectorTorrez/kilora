@@ -36,6 +36,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 				{ title: "Kilora" },
 				{ name: "description", content: "Historial digital del vehículo" },
 				{ name: "application-name", content: "Kilora" },
+				{ name: "robots", content: "noindex, follow" },
 			],
 			links: [
 				{ rel: "stylesheet", href: appCss },
