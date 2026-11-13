@@ -34,7 +34,7 @@ jobs:
           POSTGRES_DB: kilora_test
         ports: ['5432:5432']
         options: >-
-          --health-cmd 'pg_isready -U kilora -d kilora_test'
+          --health-cmd "pg_isready -U kilora -d kilora_test"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
