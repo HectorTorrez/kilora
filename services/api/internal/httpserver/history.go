@@ -133,21 +133,27 @@ func (s *server) ownerHistory(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return notFoundIfMissing(err, vehicleNotFound)
 	}
-	total, err := q.CountHistoryForOwner(ctx, sqlc.CountHistoryForOwnerParams{VehicleID: id, OwnerUserID: &user})
+
+	filters, err := parseHistorySearch(r)
 	if err != nil {
 		return err
 	}
-	rows, err := q.ListHistoryPageForOwner(ctx, sqlc.ListHistoryPageForOwnerParams{VehicleID: id, OwnerUserID: &user, RowLimit: limit, RowOffset: offset})
+	rows, err := q.ListHistoryForOwner(ctx, sqlc.ListHistoryForOwnerParams{VehicleID: id, OwnerUserID: &user})
 	if err != nil {
 		return err
 	}
-	ids := make([]uuid.UUID, 0, len(rows))
-	for _, row := range rows {
-		ids = append(ids, row.ID)
-	}
-	corrections, err := q.ListCorrectionsForRecords(ctx, ids)
+	corrections, err := q.ListCorrectionsForOwner(ctx, sqlc.ListCorrectionsForOwnerParams{VehicleID: id, OwnerUserID: &user})
 	if err != nil {
 		return err
 	}
-	return s.writeHistory(ctx, w, q, history.Viewer{IsOwner: true}, vehicle, rows, corrections, &total)
+	records, err := projectHistory(ctx, q, history.Viewer{IsOwner: true}, rows, corrections)
+	if err != nil {
+		return err
+	}
+	page, total, workshops := filterOwnerHistory(records, filters, limit, offset)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"vehicle": map[string]any{"id": vehicle.ID, "plate": vehicle.Plate, "make": vehicle.Make, "model": vehicle.Model, "year": vehicle.Year},
+		"records": page, "total": total, "unfiltered_total": len(records), "workshops": workshops,
+	})
+	return nil
 }

@@ -1344,7 +1344,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/History"
+                  "$ref": "#/components/schemas/OwnerHistory"
                 }
               }
             }
@@ -1438,13 +1438,58 @@
               "minimum": 0,
               "maximum": 2147483647
             }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Palabras del servicio, piezas, marca, taller o correcciones visibles.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Fecha inicial inclusiva del servicio.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Fecha final inclusiva del servicio.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "workshop",
+            "in": "query",
+            "description": "Nombre de taller exacto; incluye nombres de registros manuales.",
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "description": "Categoría; se infiere del texto si el registro no la indica.",
+            "schema": {
+              "$ref": "#/components/schemas/PartCategory"
+            }
           }
         ],
         "security": [
           {
             "session": []
           }
-        ]
+        ],
+        "description": "Busca y filtra el historial completo visible para su propietario antes de paginar. Fechas inclusivas del servicio original; texto sin distinción de mayúsculas o acentos, incluidas las correcciones visibles. Todos los filtros se combinan."
       },
       "post": {
         "responses": {
@@ -10287,6 +10332,37 @@
           "months"
         ],
         "description": "Al menos un intervalo debe ser mayor que cero. Cero desactiva ese límite."
+      },
+      "OwnerHistory": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/History"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "workshops": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "description": "Talleres de todo el historial visible, incluidos servicios manuales."
+              },
+              "unfiltered_total": {
+                "type": "integer",
+                "description": "Cantidad de registros antes de aplicar filtros."
+              },
+              "total": {
+                "type": "integer",
+                "description": "Cantidad total de coincidencias después de aplicar filtros y antes de paginar."
+              }
+            },
+            "required": [
+              "workshops",
+              "unfiltered_total"
+            ]
+          }
+        ]
       }
     }
   }

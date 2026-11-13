@@ -267,7 +267,7 @@ func (q *Queries) ListCorrectionsForRecords(ctx context.Context, recordIds []uui
 }
 
 const listHistoryByVehicle = `-- name: ListHistoryByVehicle :many
-SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle_link l ON l.vehicle_id = h.vehicle_id WHERE h.vehicle_id = $1 AND l.workshop_id = $2 ORDER BY h.performed_on DESC, h.created_at DESC
+SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle_link l ON l.vehicle_id = h.vehicle_id WHERE h.vehicle_id = $1 AND l.workshop_id = $2 ORDER BY h.performed_on DESC, h.created_at DESC, h.id DESC
 `
 
 type ListHistoryByVehicleParams struct {
@@ -313,7 +313,7 @@ func (q *Queries) ListHistoryByVehicle(ctx context.Context, arg ListHistoryByVeh
 }
 
 const listHistoryForOwner = `-- name: ListHistoryForOwner :many
-SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.vehicle_id = $1 AND v.owner_user_id = $2 ORDER BY h.performed_on DESC, h.created_at DESC
+SELECT h.id, h.vehicle_id, h.workshop_id, h.work_order_id, h.source, h.performed_on, h.odometer_km, h.summary, h.items, h.total, h.currency, h.workshop_notes, h.internal_cost, h.internal_notes, h.created_by, h.created_at FROM history_record h JOIN vehicle v ON v.id = h.vehicle_id WHERE h.vehicle_id = $1 AND v.owner_user_id = $2 ORDER BY h.performed_on DESC, h.created_at DESC, h.id DESC
 `
 
 type ListHistoryForOwnerParams struct {

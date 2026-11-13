@@ -25,15 +25,28 @@ export const ownerVehicleQuery = (vehicleID: string) =>
 			),
 	});
 export const OWNER_HISTORY_PAGE_SIZE = 10;
-export const ownerHistoryQuery = (vehicleID: string, page = 1) =>
+export type OwnerHistoryFilters = {
+	q?: string;
+	from?: string;
+	to?: string;
+	workshop?: string;
+	category?: S["PartCategory"];
+};
+export const ownerHistoryQuery = (
+	vehicleID: string,
+	page = 1,
+	filters: OwnerHistoryFilters = {},
+) =>
 	queryOptions({
-		queryKey: ["owner", "history", vehicleID, page],
-		queryFn: async () =>
+		queryKey: ["owner", "history", vehicleID, page, filters],
+		queryFn: async ({ signal }) =>
 			unwrap(
 				await api.GET("/api/v1/me/vehicles/{vehicleID}/history", {
+					signal,
 					params: {
 						path: { vehicleID },
 						query: {
+							...filters,
 							limit: OWNER_HISTORY_PAGE_SIZE,
 							offset: (page - 1) * OWNER_HISTORY_PAGE_SIZE,
 						},

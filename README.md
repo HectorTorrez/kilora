@@ -26,6 +26,7 @@ Kilora turns completed services into a lasting vehicle history. Owners can under
 ## For vehicle owners
 
 - **Keep your history across workshops.** Find linked workshop services in one vehicle record.
+- **Find a past service.** Search descriptions, parts, brands, workshops, and visible corrections, and combine date, workshop, and category filters across the complete vehicle history.
 - **Understand your maintenance.** Review service dates, mileage, work performed, parts, and charges.
 - **Plan the next service.** See upcoming maintenance dates and mileage based on recorded services, with adjustable intervals for each vehicle.
 - **Choose email reminders.** Opt in per vehicle for maintenance digests and prompts to refresh an old mileage reading.
@@ -128,6 +129,23 @@ Besides the chat, the same key enables AI helpers inside the forms. They follow 
 - **Plain-language explanations.** Owners can tap *¿Qué me hicieron?* on any service to get a short, jargon-free explanation. Workshops get *Mensaje con IA*, an editable WhatsApp message that explains each quote line before sharing the link. The model only receives the projection the viewer already sees (`history.Project` for owners, without internal IDs), so internal costs and private notes never reach a prompt.
 - **Suggested recommendations.** *Sugerir* on a vehicle's recommendations card proposes due maintenance. Deterministic rules in [`services/api/internal/maintenance`](services/api/internal/maintenance) decide what is due using reference intervals, the history the workshop can see, and the latest odometer reading. The model only writes the wording. Without a key, the suggestions still work with template text.
 - **Resale report.** Owners can share *Reporte para venta*: a 30-day, read-only link (`/r/<token>`, printable to PDF) with the full history under a dedicated `history.ViewerReport` projection, which shows work, dates, mileage and workshops but no amounts or notes. When the link is created, the model writes a short summary of how complete and regular the history is. Creating a new link revokes the previous one, and only the token's hash is stored.
+
+## Owner history search
+
+On each vehicle page, the service history has a **Buscar** field plus **Fecha**,
+**Taller**, and **Categoría** filters. Search ignores case and accents, matches
+all entered words across visible service details, and includes visible correction
+text. Date ranges are inclusive and use the original service date. Workshop names
+include services the owner entered manually from an external workshop. Categories
+use recorded item categories when present and text inference for uncategorized
+services. **Limpiar** resets all filters and returns to the first page.
+
+The API applies the owner history projection before matching, then filters the
+complete history before pagination. Internal workshop fields cannot influence a
+match or its count. Workshop choices come from the complete visible history and
+remain available when a filter returns no matches. The current implementation
+reads that vehicle's complete history on the server; it does not download the full
+history to the browser for filtering. No database migration is required.
 
 ## Owner maintenance plan and reminders
 

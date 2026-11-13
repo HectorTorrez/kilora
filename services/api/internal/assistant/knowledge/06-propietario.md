@@ -4,6 +4,12 @@
 
 En "Mis vehículos" aparecen los vehículos vinculados a tu cuenta. En cada uno ves los servicios con fecha, kilometraje, trabajos, piezas, taller y lo cobrado, más las notas públicas del taller. Nunca ves costos internos ni notas privadas del taller.
 
+## Buscar un servicio del historial
+
+En la ficha de tu vehículo, escribí palabras en "Buscar servicio, pieza, marca o taller" y presioná "Buscar" o Enter. No hace falta distinguir mayúsculas ni acentos. Se buscan todas las palabras en las descripciones, piezas, marcas, modelos, nombres de talleres, notas públicas y correcciones visibles del historial completo, no solo de la página actual. Nunca se buscan costos internos ni notas privadas de los talleres.
+
+Podés combinar los filtros "Fecha", "Taller" y "Categoría". Las fechas inicial y final se incluyen y corresponden a la fecha original del servicio. El filtro de taller incluye también los nombres de talleres externos que anotaste al guardar servicios manuales. Cuando un servicio no tiene una categoría registrada, se estima a partir de su descripción. Al cambiar filtros volvés a la primera página; "Limpiar" los quita todos. Si no hay coincidencias, ampliá las fechas o probá otras palabras. El número de resultados corresponde a todo el historial filtrado.
+
 ## Agregar un servicio manual
 
 Desde tu vehículo, elige "Guardar servicio" para agregar lo que le hicieron en cualquier taller, aunque no use Kilora. Solo necesitas fecha y descripción. Kilometraje, total y dónde se hizo son opcionales. En "Trabajos y repuestos (opcional)" puedes agregar el detalle. Queda marcado como agregado por el propietario; escribir el nombre de un taller no lo convierte en un registro emitido por ese taller.

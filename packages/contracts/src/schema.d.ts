@@ -1369,12 +1369,23 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** @description Busca y filtra el historial completo visible para su propietario antes de paginar. Fechas inclusivas del servicio original; texto sin distinción de mayúsculas o acentos, incluidas las correcciones visibles. Todos los filtros se combinan. */
         get: {
             parameters: {
                 query?: {
                     /** @description Registros por página (predeterminado 50). */
                     limit?: number;
                     offset?: number;
+                    /** @description Palabras del servicio, piezas, marca, taller o correcciones visibles. */
+                    q?: string;
+                    /** @description Fecha inicial inclusiva del servicio. */
+                    from?: string;
+                    /** @description Fecha final inclusiva del servicio. */
+                    to?: string;
+                    /** @description Nombre de taller exacto; incluye nombres de registros manuales. */
+                    workshop?: string;
+                    /** @description Categoría; se infiere del texto si el registro no la indica. */
+                    category?: components["schemas"]["PartCategory"];
                 };
                 header?: never;
                 path: {
@@ -1390,7 +1401,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["History"];
+                        "application/json": components["schemas"]["OwnerHistory"];
                     };
                 };
                 /** @description Error */
@@ -6928,6 +6939,14 @@ export interface components {
         MaintenanceIntervalInput: {
             km: number;
             months: number;
+        };
+        OwnerHistory: components["schemas"]["History"] & {
+            /** @description Talleres de todo el historial visible, incluidos servicios manuales. */
+            workshops: string[];
+            /** @description Cantidad de registros antes de aplicar filtros. */
+            unfiltered_total: number;
+            /** @description Cantidad total de coincidencias después de aplicar filtros y antes de paginar. */
+            total?: number;
         };
     };
     responses: never;

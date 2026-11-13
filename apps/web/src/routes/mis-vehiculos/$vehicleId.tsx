@@ -3,7 +3,7 @@ import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Gauge, Plus } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -26,17 +26,12 @@ import {
 	optionalText,
 	requiredText,
 } from "@/components/kilora/form-schemas";
-import {
-	HistoryPartsStrip,
-	PartHistory,
-} from "@/components/kilora/history-parts";
-import { HistoryItems } from "@/components/kilora/history-record";
+import { PartHistory } from "@/components/kilora/history-parts";
 import { ListPagination } from "@/components/kilora/list-pagination";
+import { OwnerHistory } from "@/components/kilora/owner-history";
 import { OwnerMaintenanceCard } from "@/components/kilora/owner-maintenance";
-import { OwnerReceiptDownload } from "@/components/kilora/owner-receipt-download";
 import { OwnerServiceDialog } from "@/components/kilora/owner-service-dialog";
 import { ResaleReport } from "@/components/kilora/resale-report";
-import { ServiceExplanation } from "@/components/kilora/service-explanation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -59,9 +54,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { isNotFound } from "@/lib/api";
-import { date, day, km as formatKm, money, plural } from "@/lib/format";
+import { date, day, km as formatKm, plural } from "@/lib/format";
 import {
-	OWNER_HISTORY_PAGE_SIZE,
 	ownerActions,
 	ownerHistoryQuery,
 	ownerPartsMapQuery,
@@ -70,7 +64,6 @@ import {
 } from "@/lib/owner";
 import { useListPage } from "@/lib/pagination";
 import type { PartKey } from "@/lib/part-catalog";
-import { cn } from "@/lib/utils";
 import { Route as OwnerLayout } from "../mis-vehiculos";
 
 // Mapa 3D oculto por ahora; poner en true para mostrarlo de nuevo.
@@ -122,12 +115,7 @@ function Page() {
 	const { vehicleId: id } = Route.useParams();
 	const { me } = OwnerLayout.useRouteContext();
 	const initial = Route.useLoaderData();
-	const { page: historyPage, setPage: setHistoryPage } = useListPage(id);
-	const history = useQuery({
-		...ownerHistoryQuery(id, historyPage),
-		initialData: historyPage === 1 ? initial.history : undefined,
-	});
-	const h = history.data;
+	const [historyVersion, setHistoryVersion] = useState(0);
 	const { data: v } = useQuery({
 		...ownerVehicleQuery(id),
 		initialData: initial.vehicle,
@@ -142,7 +130,6 @@ function Page() {
 		record: HistoryRecord;
 	} | null>(null);
 	const { page: readingsPage, setPage: setReadingsPage } = useListPage(id);
-	const historyRef = useRef<HTMLElement>(null);
 	const manual = useOwnerMutation(
 		(body: Parameters<typeof ownerActions.manual>[1]) =>
 			ownerActions.manual(id, body),
@@ -156,7 +143,7 @@ function Page() {
 		(body: Parameters<typeof ownerActions.correction>[1]) =>
 			ownerActions.correction(id, body),
 	);
-	if (!h || !v)
+	if (!v)
 		return (
 			<main className="p-8">
 				<Skeleton className="h-32" aria-label="Cargando historial…" />
@@ -167,10 +154,6 @@ function Page() {
 		(readingsPage - 1) * READINGS_PAGE_SIZE,
 		readingsPage * READINGS_PAGE_SIZE,
 	);
-	const changeHistoryPage = (page: number) => {
-		setHistoryPage(page);
-		historyRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-	};
 	return (
 		<main className="mx-auto max-w-5xl space-y-6 px-5 py-8">
 			<Link to="/mis-vehiculos" className="text-sm text-seal">
@@ -183,7 +166,11 @@ function Page() {
 				</h1>
 				<p className="mt-2 opacity-70">
 					{formatKm(v.last_odometer_km)} ·{" "}
-					{plural(h.total, "registro", "registros")}
+					{plural(
+						v.history_count ?? initial.history.unfiltered_total,
+						"registro",
+						"registros",
+					)}
 				</p>
 			</header>
 			<div className="grid gap-2 sm:flex sm:flex-wrap">
@@ -205,7 +192,7 @@ function Page() {
 					onOpenChange={setManualOpen}
 					onSave={async (body) => {
 						await manual.mutateAsync(body);
-						setHistoryPage(1);
+						setHistoryVersion((version) => version + 1);
 					}}
 				/>
 			)}
@@ -248,95 +235,16 @@ function Page() {
 					<Skeleton className="h-80 rounded-xl" aria-label="Cargando mapa…" />
 				))}
 			<div className="grid gap-6 md:grid-cols-[1fr_260px]">
-				<section ref={historyRef} className="scroll-mt-6">
-					<h2 className="mb-4 font-display text-2xl font-bold">
-						Historial de servicios
-					</h2>
-					<div
-						className={cn(
-							"space-y-4 transition-opacity",
-							history.isPlaceholderData && "opacity-60",
-						)}
-						aria-busy={history.isPlaceholderData}
-					>
-						{h.total === 0 && (
-							<OwnerHistoryEmpty onAddService={() => setManualOpen(true)} />
-						)}
-						{h.records.map((r) => (
-							<Card key={r.id} className="gap-0 p-5 shadow-none">
-								<p className="text-sm text-ink-3">
-									{day(r.performed_on)} · {formatKm(r.odometer_km)}
-								</p>
-								<h3 className="mt-2 font-display text-lg font-bold">
-									{r.summary}
-								</h3>
-								<OwnerHistorySource record={r} />
-								<HistoryPartsStrip
-									record={r}
-									bodyType={v.body_type}
-									onOpen={(part, record) => setViewing({ part, record })}
-								/>
-								<HistoryItems items={r.items} />
-								{r.total && (
-									<p className="mt-3 font-semibold">Total: {money(r.total)}</p>
-								)}
-								{r.workshop_notes && (
-									<p className="mt-3 text-sm">
-										Notas del taller: {r.workshop_notes}
-									</p>
-								)}
-								{r.receipt && (
-									<OwnerReceiptDownload
-										vehicleID={id}
-										recordID={r.id}
-										receipt={r.receipt}
-									/>
-								)}
-								<ServiceExplanation
-									vehicleID={id}
-									recordID={r.id}
-									corrections={r.corrections?.length ?? 0}
-									summary={r.summary}
-									performedOn={day(r.performed_on)}
-								/>
-								{r.corrections?.map((c) => (
-									<p
-										key={c.id}
-										className="mt-3 rounded bg-secondary p-2 text-sm"
-									>
-										Corrección del {day(c.created_at)}: {c.reason} ·{" "}
-										{Object.entries(c.changes)
-											.map(
-												([k, v]) =>
-													`${k}: ${typeof v === "object" ? JSON.stringify(v) : v}`,
-											)
-											.join(", ")}
-									</p>
-								))}
-								{r.source === "propietario" && r.created_by === me.user.id && (
-									<Button
-										type="button"
-										variant="outline"
-										size="sm"
-										className="mt-4"
-										onClick={() => setEditing(r)}
-									>
-										Corregir
-									</Button>
-								)}
-							</Card>
-						))}
-					</div>
-					<ListPagination
-						page={historyPage}
-						total={h.total}
-						pageSize={OWNER_HISTORY_PAGE_SIZE}
-						pending={history.isPlaceholderData}
-						onPageChange={changeHistoryPage}
-						alwaysVisible
-						className="mt-4 rounded-lg border px-4"
-					/>
-				</section>
+				<OwnerHistory
+					key={`${id}:${historyVersion}`}
+					vehicleID={id}
+					userID={me.user.id}
+					bodyType={v.body_type}
+					initialHistory={initial.history}
+					onAddService={() => setManualOpen(true)}
+					onCorrect={setEditing}
+					onViewPart={(part, record) => setViewing({ part, record })}
+				/>
 				<aside className="space-y-5">
 					<Card className="gap-0 p-5 shadow-none">
 						<h2 className="font-bold">Talleres vinculados</h2>
@@ -407,45 +315,11 @@ function Page() {
 				{viewing && (
 					<PartHistory
 						part={viewing.part}
-						records={partsMap.data?.records ?? h.records}
+						records={partsMap.data?.records ?? initial.history.records}
 					/>
 				)}
 			</PartDialog>
 		</main>
-	);
-}
-
-function OwnerHistorySource({ record }: { record: HistoryRecord }) {
-	return (
-		<>
-			<p className="text-sm text-seal">
-				{record.workshop_name ||
-					(record.source === "propietario" ? "Registro personal" : "Taller")}
-				{record.workshop_verified_at && (
-					<span className="ml-2 text-sm text-seal">✓ Taller verificado</span>
-				)}
-			</p>
-			<p className="mt-1 text-xs text-ink-3">
-				{record.source === "propietario"
-					? "Agregado por el propietario"
-					: "Registrado por el taller"}
-			</p>
-		</>
-	);
-}
-
-function OwnerHistoryEmpty({ onAddService }: { onAddService: () => void }) {
-	return (
-		<div className="space-y-2 rounded-xl border border-dashed p-6">
-			<p className="font-medium">Empezá con el último servicio de tu carro</p>
-			<p className="text-sm text-ink-3">
-				Usá una foto del recibo o anotá lo que le hicieron. No necesitás que el
-				taller use Kilora ni completar todo el historial de una vez.
-			</p>
-			<Button type="button" variant="outline" onClick={onAddService}>
-				Guardar mi primer servicio
-			</Button>
-		</div>
 	);
 }
 
