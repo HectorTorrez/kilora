@@ -23,7 +23,7 @@ import {
 	SubmitButton,
 	TextField,
 } from "./form-fields";
-import { formatNit, optionalNit, workshopName } from "./form-schemas";
+import { formatNit, nitLabel, optionalNit, workshopName } from "./form-schemas";
 
 const schema = z.object({ name: workshopName, nit: optionalNit });
 
@@ -118,8 +118,8 @@ function WorkshopForm({
 				{losesVerification && (
 					<Alert>
 						<AlertDescription>
-							Si cambiás el nombre o el NIT, el taller pierde el sello de
-							verificado hasta que lo confirmemos de nuevo.
+							Si cambiás el nombre o el {nitLabel(nit)}, el taller pierde el
+							sello de verificado hasta que lo confirmemos de nuevo.
 						</AlertDescription>
 					</Alert>
 				)}

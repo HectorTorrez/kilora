@@ -167,14 +167,34 @@ export const workshopName = requiredText("Ingresá el nombre del taller").max(
 	"Usá como máximo 100 caracteres",
 );
 
+export type NitKind = "nit" | "dui";
+
+/** Tipo de documento según la forma del valor (los guiones delatan el formato). */
+export function nitKind(value: string): NitKind {
+	const dash = value.indexOf("-");
+	if (dash !== -1) return dash === 8 ? "dui" : "nit";
+	return value.replace(/\D/g, "").length === 9 ? "dui" : "nit";
+}
+
+/** "DUI" o "NIT" según lo que se guardó, para mostrarlo con su nombre. */
+export function nitLabel(value?: string | null) {
+	return value && nitKind(value) === "dui" ? "DUI" : "NIT";
+}
+
+/** Guía visual del formato: `_` es un dígito pendiente. */
+export const nitMask: Record<NitKind, string> = {
+	nit: "____-______-___-_",
+	dui: "________-_",
+};
+
 /**
- * Da formato a un NIT salvadoreño mientras se escribe. Con hasta 9 dígitos
- * se trata como DUI homologado (00000000-0); con más, como NIT de 14 dígitos
- * (0000-000000-000-0).
+ * Da formato a un NIT salvadoreño mientras se escribe: DUI homologado
+ * (00000000-0) o NIT de 14 dígitos (0000-000000-000-0). Sin `kind`, lo
+ * deduce del largo.
  */
-export function formatNit(value: string) {
-	const digits = value.replace(/\D/g, "").slice(0, 14);
-	if (digits.length <= 9)
+export function formatNit(value: string, kind?: NitKind) {
+	const digits = value.replace(/\D/g, "").slice(0, kind === "dui" ? 9 : 14);
+	if (kind === "dui" || (!kind && digits.length <= 9))
 		return digits.length === 9
 			? `${digits.slice(0, 8)}-${digits.slice(8)}`
 			: digits;
@@ -188,17 +208,32 @@ export function formatNit(value: string) {
 		.join("-");
 }
 
+export function validDui(digits: string) {
+	let sum = 0;
+	for (let i = 0; i < 8; i++) sum += Number(digits[i]) * (9 - i);
+	return Number(digits[8]) === (10 - (sum % 10)) % 10;
+}
+
 // NIT de 14 dígitos o DUI homologado de 9, con o sin guiones.
 export const optionalNit = z
 	.string()
 	.trim()
-	.refine((value) => {
-		if (!value) return true;
+	.superRefine((value, ctx) => {
+		if (!value) return;
 		const digits = value.replace(/-/g, "");
-		if (!/^\d+$/.test(digits)) return false;
-		if (digits.length === 14) return true;
-		if (digits.length !== 9) return false;
-		let sum = 0;
-		for (let i = 0; i < 8; i++) sum += Number(digits[i]) * (9 - i);
-		return Number(digits[8]) === (10 - (sum % 10)) % 10;
-	}, "Ingresá un NIT de 14 dígitos o un DUI válido, con o sin guiones");
+		const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+		if (!/^\d+$/.test(digits)) return fail("Usá solo números y guiones");
+		// Sin guiones y a medias no se sabe el tipo; la descripción del campo
+		// ya muestra cuántos dígitos faltan.
+		if (!value.includes("-") && ![9, 14].includes(digits.length))
+			return fail("Faltan dígitos para completar el documento");
+		if (nitKind(value) === "dui") {
+			if (digits.length !== 9)
+				return fail(`El DUI tiene 9 dígitos (llevás ${digits.length})`);
+			if (!validDui(digits))
+				return fail("Este DUI no es válido: revisá el último dígito");
+			return;
+		}
+		if (digits.length !== 14)
+			fail(`El NIT tiene 14 dígitos (llevás ${digits.length})`);
+	});

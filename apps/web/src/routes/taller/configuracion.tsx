@@ -26,7 +26,7 @@ import {
 	SubmitButton,
 	TextField,
 } from "@/components/kilora/form-fields";
-import { emailField } from "@/components/kilora/form-schemas";
+import { emailField, nitLabel } from "@/components/kilora/form-schemas";
 import { EditWorkshopDialog } from "@/components/kilora/workshop-form";
 import {
 	DetailList,
@@ -141,7 +141,7 @@ function SettingsPage() {
 									items={[
 										{ label: "Nombre comercial", value: data?.workshop.name },
 										{
-											label: "NIT",
+											label: nitLabel(data?.workshop.nit),
 											value: data?.workshop.nit,
 											mono: true,
 											empty: "Sin registrar",
@@ -165,9 +165,9 @@ function SettingsPage() {
 								<div className="rounded-md border border-dashed p-3 text-[13px] text-ink-2">
 									<p className="font-semibold">Sin verificar</p>
 									<p className="mt-0.5 text-xs text-ink-3">
-										La verificación es manual: se confirma NIT y nombre
-										comercial con una llamada. El sello aparece en el historial
-										de tus servicios.
+										La verificación es manual: se confirma{" "}
+										{nitLabel(data?.workshop.nit)} y nombre comercial con una
+										llamada. El sello aparece en el historial de tus servicios.
 									</p>
 								</div>
 							)}

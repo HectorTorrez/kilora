@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { nitLabel } from "@/components/kilora/form-schemas";
 import {
 	PrintDocument,
 	useDocumentQr,
@@ -76,7 +77,9 @@ function PrintQuotePage() {
 					<p className="text-xs tracking-[0.16em]">COTIZACIÓN</p>
 					<h1 className="mt-1 text-2xl font-bold">{data.workshop_name}</h1>
 					<p className="text-sm">
-						{data.workshop_nit ? `NIT ${data.workshop_nit} · ` : ""}
+						{data.workshop_nit
+							? `${nitLabel(data.workshop_nit)} ${data.workshop_nit} · `
+							: ""}
 						{data.branch_name}
 					</p>
 					{data.verified_at ? (

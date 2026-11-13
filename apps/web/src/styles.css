@@ -163,6 +163,42 @@
     user-select: none;
     -webkit-user-select: none;
   }
+  /* Todo lo que se puede clickear muestra la manito; lo deshabilitado, no. */
+  button,
+  summary,
+  select,
+  [role="button"],
+  [role="checkbox"],
+  [role="radio"],
+  [role="switch"],
+  [role="tab"],
+  [role="option"],
+  [role="menuitem"],
+  [role="menuitemcheckbox"],
+  [role="menuitemradio"],
+  input[type="checkbox"],
+  input[type="radio"],
+  input[type="file"],
+  input[type="color"],
+  input[type="range"],
+  input[type="button"],
+  input[type="submit"],
+  input[type="reset"],
+  label:has(
+    > input[type="checkbox"],
+    > input[type="radio"],
+    > [role="checkbox"],
+    > [role="radio"]
+  ) {
+    cursor: pointer;
+  }
+  :is(button, select, input, [role]):is(
+      :disabled,
+      [aria-disabled="true"],
+      [data-disabled]
+    ) {
+    cursor: not-allowed;
+  }
   input,
   textarea,
   select {

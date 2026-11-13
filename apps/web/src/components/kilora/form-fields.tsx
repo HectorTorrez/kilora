@@ -1,5 +1,13 @@
-import { ChevronDown, Eye, EyeOff, Loader2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import {
+	AlertTriangle,
+	ChevronDown,
+	CircleCheck,
+	Eye,
+	EyeOff,
+	Info,
+	Loader2,
+} from "lucide-react";
+import { type ReactNode, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import PhoneInput, {
 	type Country,
@@ -30,7 +38,13 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { formatNit } from "./form-schemas";
+import {
+	formatNit,
+	type NitKind,
+	nitKind,
+	nitMask,
+	validDui,
+} from "./form-schemas";
 
 const groupedInputClass =
 	"h-full rounded-none border-0 bg-transparent shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent";
@@ -608,32 +622,255 @@ export function applyFormError(
 	if (options?.toast) toast.error(message);
 }
 
-/** NIT de El Salvador: se formatea solo como NIT o como DUI homologado. */
+const nitKinds: Record<
+	NitKind,
+	{ title: string; label: string; hint: string; length: number; done: string }
+> = {
+	nit: {
+		title: "NIT",
+		label: "NIT",
+		hint: "14 dígitos, de tu tarjeta",
+		length: 14,
+		done: "NIT completo",
+	},
+	dui: {
+		title: "DUI homologado",
+		label: "DUI",
+		hint: "9 dígitos, de tu DUI",
+		length: 9,
+		done: "DUI válido",
+	},
+};
+
+/**
+ * NIT de El Salvador. El usuario elige si escribe un NIT o su DUI homologado;
+ * el campo guía el formato, avisa cuánto falta y valida el DUI en vivo.
+ */
 export function NitField({
 	name = "nit",
-	label = "NIT",
-	...props
+	label,
+	optional,
+	required,
+	className,
+	autoFocus,
 }: Partial<Pick<SharedField, "name" | "label">> &
 	Omit<SharedField, "name" | "label" | "description" | "placeholder">) {
 	const form = useFormContext();
-	const digits = String(form.watch(name) ?? "").replace(/\D/g, "").length;
+	const inputRef = useRef<HTMLInputElement | null>(null);
+	const [kind, setKind] = useState<NitKind>(() =>
+		nitKind(String(form.getValues(name) ?? "")),
+	);
+	const [note, setNote] = useState("");
+
+	function apply(next: NitKind, raw: string, why = "") {
+		setKind(next);
+		setNote(why);
+		form.setValue(name, formatNit(raw, next), {
+			shouldDirty: true,
+			shouldValidate:
+				form.formState.isSubmitted || !!form.getFieldState(name).error,
+		});
+	}
+
 	return (
-		<TextField
-			{...props}
+		<FormField
+			control={form.control}
 			name={name}
-			label={label}
-			inputMode="numeric"
-			autoComplete="off"
-			maxLength={17}
-			normalize={formatNit}
-			placeholder="0614-010190-101-1"
-			description={
-				digits === 0
-					? "NIT de 14 dígitos, o tu DUI si lo tenés homologado."
-					: digits <= 9
-						? `DUI homologado · ${digits} de 9 dígitos`
-						: `NIT · ${digits} de 14 dígitos`
-			}
+			render={({ field, fieldState }) => {
+				const value = String(field.value ?? "");
+				const digits = value.replace(/\D/g, "");
+				const spec = nitKinds[kind];
+				const complete = digits.length === spec.length;
+				const valid = complete && (kind === "nit" || validDui(digits));
+				const mismatch = complete && !valid;
+
+				let status: ReactNode;
+				if (note)
+					status = (
+						<span className="flex items-center gap-1.5 text-seal">
+							<Info className="size-3.5 shrink-0" />
+							{note}
+						</span>
+					);
+				else if (valid)
+					status = (
+						<span className="flex items-center gap-1.5 text-ok">
+							<CircleCheck className="size-3.5 shrink-0" />
+							{spec.done}
+						</span>
+					);
+				else if (mismatch)
+					status = (
+						<span className="flex items-center gap-1.5 text-warn">
+							<AlertTriangle className="size-3.5 shrink-0" />
+							El último dígito no coincide. Revisá que el DUI esté bien escrito.
+						</span>
+					);
+				else if (digits.length === 0)
+					status = `Escribí los ${spec.length} dígitos; los guiones se ponen solos.`;
+				else {
+					const left = spec.length - digits.length;
+					status = `Falta${left === 1 ? "" : "n"} ${left} dígito${left === 1 ? "" : "s"}`;
+				}
+
+				return (
+					<FieldShell
+						{...{ className, required, optional }}
+						label={label ?? spec.label}
+						description={
+							fieldState.error ? null : (
+								<span className="flex flex-col gap-1.5">
+									{digits.length > 0 && !note && (
+										<span
+											aria-hidden
+											className="block h-1 overflow-hidden rounded-full bg-muted"
+										>
+											<span
+												className={cn(
+													"block h-full rounded-full transition-[width,background-color] duration-300 ease-out",
+													valid ? "bg-ok" : mismatch ? "bg-warn" : "bg-seal",
+												)}
+												style={{
+													width: `${(digits.length / spec.length) * 100}%`,
+												}}
+											/>
+										</span>
+									)}
+									<span aria-live="polite">{status}</span>
+								</span>
+							)
+						}
+					>
+						<fieldset
+							aria-label="Tipo de documento"
+							className="grid grid-cols-2 gap-2"
+						>
+							{(Object.keys(nitKinds) as NitKind[]).map((option) => {
+								const selected = option === kind;
+								return (
+									<label
+										key={option}
+										className={cn(
+											"flex cursor-pointer items-start gap-2.5 rounded-md border px-3 py-2.5 transition-[border-color,background-color,box-shadow]",
+											"has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring/50",
+											selected
+												? "border-seal bg-seal-soft dark:bg-accent"
+												: "border-input hover:border-ink-3/50 hover:bg-muted/60",
+										)}
+									>
+										<input
+											type="radio"
+											className="sr-only"
+											name={`${name}-kind`}
+											value={option}
+											checked={selected}
+											onChange={() => apply(option, value)}
+											// Solo con el mouse: con flechas el foco se queda en las opciones.
+											onClick={(event) => {
+												if (event.detail > 0) inputRef.current?.focus();
+											}}
+										/>
+										<span
+											aria-hidden
+											className={cn(
+												"mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border transition-colors",
+												selected ? "border-seal" : "border-input",
+											)}
+										>
+											<span
+												className={cn(
+													"size-2 rounded-full bg-seal transition-transform duration-200 ease-out",
+													selected ? "scale-100" : "scale-0",
+												)}
+											/>
+										</span>
+										<span className="min-w-0">
+											<span className="block text-sm font-medium text-foreground">
+												{nitKinds[option].title}
+											</span>
+											<span className="block text-xs text-muted-foreground">
+												{nitKinds[option].hint}
+											</span>
+										</span>
+									</label>
+								);
+							})}
+						</fieldset>
+						<div className="relative">
+							<FormControl>
+								<Input
+									inputMode="numeric"
+									autoComplete="off"
+									spellCheck={false}
+									autoFocus={autoFocus}
+									aria-label={`Número de ${spec.title}`}
+									maxLength={nitMask[kind].length + 4}
+									name={field.name}
+									ref={(element) => {
+										field.ref(element);
+										inputRef.current = element;
+									}}
+									onBlur={field.onBlur}
+									value={value}
+									className="pr-9 font-mono tracking-wide tabular-nums"
+									onPaste={(event) => {
+										const pasted = event.clipboardData
+											.getData("text")
+											.replace(/\D/g, "");
+										const detected =
+											pasted.length === 9
+												? "dui"
+												: pasted.length === 14
+													? "nit"
+													: null;
+										if (!detected) return;
+										event.preventDefault();
+										apply(
+											detected,
+											pasted,
+											detected === kind
+												? ""
+												: `Detectamos un ${nitKinds[detected].title}: tiene ${pasted.length} dígitos.`,
+										);
+									}}
+									onChange={(event) => {
+										const raw = event.target.value;
+										if (kind === "dui" && raw.replace(/\D/g, "").length > 9)
+											return apply(
+												"nit",
+												raw,
+												"Pasamos a NIT porque tiene más de 9 dígitos.",
+											);
+										setNote("");
+										field.onChange(formatNit(raw, kind));
+									}}
+								/>
+							</FormControl>
+							<span
+								aria-hidden
+								className="pointer-events-none absolute inset-0 flex items-center overflow-hidden border border-transparent px-3 font-mono text-base tracking-wide whitespace-pre tabular-nums md:text-sm"
+							>
+								<span className="invisible">{value}</span>
+								<span className="text-muted-foreground/50">
+									{nitMask[kind].slice(value.length)}
+								</span>
+							</span>
+							{(valid || mismatch) && (
+								<span
+									aria-hidden
+									className="pointer-events-none absolute inset-y-0 right-3 flex items-center animate-in fade-in zoom-in-75 duration-200"
+								>
+									{valid ? (
+										<CircleCheck className="size-4 text-ok" />
+									) : (
+										<AlertTriangle className="size-4 text-warn" />
+									)}
+								</span>
+							)}
+						</div>
+					</FieldShell>
+				);
+			}}
 		/>
 	);
 }
