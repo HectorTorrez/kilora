@@ -450,6 +450,12 @@ function SidebarContent({
 					</DropdownMenuLabel>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem asChild>
+						<Link to="/mis-vehiculos/cuenta">
+							<UserRound className="size-4" />
+							Mi cuenta
+						</Link>
+					</DropdownMenuItem>
+					<DropdownMenuItem asChild>
 						<Link to="/mis-vehiculos">
 							<UserRound className="size-4" />
 							Mis vehículos

@@ -99,3 +99,42 @@ export function useCreateWorkshop() {
 		onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
 	});
 }
+
+export function useUpdateProfile() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: async (body: Schemas["UpdateProfile"]) => {
+			const { error, response } = await api.PATCH("/api/v1/auth/me", { body });
+			if (!response.ok) throw apiError(error, response.status);
+		},
+		onSuccess: () => qc.invalidateQueries({ queryKey: ["me"] }),
+	});
+}
+
+export function useAccountCredentials() {
+	const qc = useQueryClient();
+	return useMutation({
+		mutationFn: async (input: {
+			deleting: boolean;
+			current_password: string;
+			password?: string;
+		}) => {
+			const result = input.deleting
+				? await api.DELETE("/api/v1/auth/me", {
+						body: { current_password: input.current_password },
+					})
+				: await api.POST("/api/v1/auth/change-password", {
+						body: {
+							current_password: input.current_password,
+							password: input.password ?? "",
+						},
+					});
+			if (!result.response.ok)
+				throw apiError(result.error, result.response.status);
+		},
+		onSuccess: () => {
+			qc.setQueryData(["me"], null);
+			qc.removeQueries({ predicate: (q) => q.queryKey[0] !== "me" });
+		},
+	});
+}

@@ -87,6 +87,9 @@ function Layout() {
 										<Link to="/taller">Panel del taller</Link>
 									</DropdownMenuItem>
 								)}
+								<DropdownMenuItem asChild>
+									<Link to="/mis-vehiculos/cuenta">Mi cuenta</Link>
+								</DropdownMenuItem>
 								<DropdownMenuSeparator />
 								<DropdownMenuItem
 									onSelect={() => {

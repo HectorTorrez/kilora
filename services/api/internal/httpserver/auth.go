@@ -25,6 +25,7 @@ type userResponse struct {
 	Email           string     `json:"email"`
 	FullName        string     `json:"full_name"`
 	EmailVerifiedAt *time.Time `json:"email_verified_at"`
+	Phone           *string    `json:"phone"`
 }
 
 func (s *server) setCookie(w http.ResponseWriter, token string) {
@@ -171,7 +172,7 @@ func (s *server) me(w http.ResponseWriter, r *http.Request) error {
 	for _, row := range rows {
 		memberships = append(memberships, map[string]any{"workshop_id": row.WorkshopID, "workshop_name": row.WorkshopName, "branch_id": row.BranchID, "branch_name": row.BranchName, "role": row.Role})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"user": userResponse{u.ID, u.Email, u.FullName, u.VerifiedAt}, "memberships": memberships})
+	writeJSON(w, http.StatusOK, map[string]any{"user": userResponse{u.ID, u.Email, u.FullName, u.VerifiedAt, u.Phone}, "memberships": memberships})
 	return nil
 }
 

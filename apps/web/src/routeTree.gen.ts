@@ -22,6 +22,7 @@ import { Route as CTokenRouteImport } from './routes/c/$token'
 import { Route as InvitacionTokenRouteImport } from './routes/invitacion/$token'
 import { Route as MisVehiculosIndexRouteImport } from './routes/mis-vehiculos/index'
 import { Route as MisVehiculosVehicleIdRouteImport } from './routes/mis-vehiculos/$vehicleId'
+import { Route as MisVehiculosCuentaRouteImport } from './routes/mis-vehiculos/cuenta'
 import { Route as RTokenRouteImport } from './routes/r/$token'
 import { Route as TallerIndexRouteImport } from './routes/taller/index'
 import { Route as TallerActividadRouteImport } from './routes/taller/actividad'
@@ -102,6 +103,11 @@ const MisVehiculosIndexRoute = MisVehiculosIndexRouteImport.update({
 const MisVehiculosVehicleIdRoute = MisVehiculosVehicleIdRouteImport.update({
   id: '/$vehicleId',
   path: '/$vehicleId',
+  getParentRoute: () => MisVehiculosRoute,
+} as any)
+const MisVehiculosCuentaRoute = MisVehiculosCuentaRouteImport.update({
+  id: '/cuenta',
+  path: '/cuenta',
   getParentRoute: () => MisVehiculosRoute,
 } as any)
 const RTokenRoute = RTokenRouteImport.update({
@@ -203,6 +209,7 @@ export interface FileRoutesByFullPath {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/mis-vehiculos/cuenta': typeof MisVehiculosCuentaRoute
   '/r/$token': typeof RTokenRoute
   '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
@@ -232,6 +239,7 @@ export interface FileRoutesByTo {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/mis-vehiculos/cuenta': typeof MisVehiculosCuentaRoute
   '/r/$token': typeof RTokenRoute
   '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
@@ -264,6 +272,7 @@ export interface FileRoutesById {
   '/c/$token': typeof CTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
+  '/mis-vehiculos/cuenta': typeof MisVehiculosCuentaRoute
   '/r/$token': typeof RTokenRoute
   '/taller/actividad': typeof TallerActividadRoute
   '/taller/configuracion': typeof TallerConfiguracionRoute
@@ -297,6 +306,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/mis-vehiculos/cuenta'
     | '/r/$token'
     | '/taller/actividad'
     | '/taller/configuracion'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/mis-vehiculos/cuenta'
     | '/r/$token'
     | '/taller/actividad'
     | '/taller/configuracion'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/invitacion/$token'
     | '/mis-vehiculos/$vehicleId'
+    | '/mis-vehiculos/cuenta'
     | '/r/$token'
     | '/taller/actividad'
     | '/taller/configuracion'
@@ -484,6 +496,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MisVehiculosVehicleIdRouteImport
       parentRoute: typeof MisVehiculosRoute
     }
+    '/mis-vehiculos/cuenta': {
+      id: '/mis-vehiculos/cuenta'
+      path: '/cuenta'
+      fullPath: '/mis-vehiculos/cuenta'
+      preLoaderRoute: typeof MisVehiculosCuentaRouteImport
+      parentRoute: typeof MisVehiculosRoute
+    }
     '/r/$token': {
       id: '/r/$token'
       path: '/r/$token'
@@ -601,11 +620,13 @@ declare module '@tanstack/react-router' {
 
 interface MisVehiculosRouteChildren {
   MisVehiculosVehicleIdRoute: typeof MisVehiculosVehicleIdRoute
+  MisVehiculosCuentaRoute: typeof MisVehiculosCuentaRoute
   MisVehiculosIndexRoute: typeof MisVehiculosIndexRoute
 }
 
 const MisVehiculosRouteChildren: MisVehiculosRouteChildren = {
   MisVehiculosVehicleIdRoute: MisVehiculosVehicleIdRoute,
+  MisVehiculosCuentaRoute: MisVehiculosCuentaRoute,
   MisVehiculosIndexRoute: MisVehiculosIndexRoute,
 }
 

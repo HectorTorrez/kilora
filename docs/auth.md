@@ -45,3 +45,31 @@ Run it against a migrated test database:
 cd services/api
 TEST_DATABASE_URL=postgres://kilora:kilora@localhost:5432/kilora?sslmode=disable go test ./...
 ```
+
+## Account settings
+
+Owners can open **Mi cuenta** from the user menu at
+`/mis-vehiculos/cuenta`. Workshop users can reach the same page from their user
+menu. `PATCH /api/v1/auth/me` updates the full name and optional phone; the
+verified email remains read-only. Names and phones use the same validation as
+registration and customer profiles. Profile changes refresh the account menu.
+
+`POST /api/v1/auth/change-password` requires `current_password` and a new
+`password` of at least eight characters. It revokes all sessions and outstanding
+auth tokens, including password recovery links, and returns the user to login.
+Credential operations are limited to ten attempts per account per 15 minutes.
+Demo accounts cannot update their profile, change passwords, or delete themselves.
+
+`DELETE /api/v1/auth/me` requires `current_password`, with a separate confirmation
+screen in the UI. Accounts with workshop memberships must resolve those
+memberships before deletion. Deletion anonymizes the user row (name, email,
+phone, password and verification), revokes sessions and auth tokens, and unlinks
+owned vehicles. Archived vehicles remain archived. Shared reports stop resolving
+because their creator no longer owns the vehicle. The user's old email can be
+registered again, without restoring the old account or its vehicles.
+
+The anonymous user ID and existing service history, corrections and audit
+records remain to preserve the append-only service record and foreign keys.
+This does not erase workshop customer records or personal information previously
+entered into service descriptions. All account mutations create an audit event
+in the same database transaction.

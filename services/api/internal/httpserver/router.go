@@ -84,6 +84,9 @@ func NewRouter(d Deps) http.Handler {
 		r.Group(func(r chi.Router) {
 			r.Use(requireUser)
 			r.Get("/auth/me", s.handle(s.me))
+			r.Patch("/auth/me", s.handle(s.updateProfile))
+			r.Post("/auth/change-password", s.handle(s.changePassword))
+			r.Delete("/auth/me", s.handle(s.deleteAccount))
 			r.Post("/invitations/{token}/accept", s.handle(s.acceptInvitation))
 			r.Post("/workshops", s.handle(s.createWorkshop))
 			r.Post("/assistant/chat", s.handle(s.assistantChat))

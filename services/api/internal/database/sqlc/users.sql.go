@@ -11,6 +11,16 @@ import (
 	"github.com/google/uuid"
 )
 
+const anonymizeUser = `-- name: AnonymizeUser :exec
+UPDATE app_user SET full_name = 'Cuenta eliminada', phone = NULL,
+ email = id::text || '@deleted.kilora.invalid', password_hash = '', email_verified_at = NULL WHERE id = $1
+`
+
+func (q *Queries) AnonymizeUser(ctx context.Context, id uuid.UUID) error {
+	_, err := q.db.Exec(ctx, anonymizeUser, id)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO app_user (email, password_hash, full_name, phone) VALUES ($1, $2, $3, $4) RETURNING id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at
 `
@@ -41,6 +51,15 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (AppUser
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const deleteUserAuthTokens = `-- name: DeleteUserAuthTokens :exec
+DELETE FROM auth_token WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUserAuthTokens(ctx context.Context, userID uuid.UUID) error {
+	_, err := q.db.Exec(ctx, deleteUserAuthTokens, userID)
+	return err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
@@ -83,6 +102,26 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (AppUser, error
 	return i, err
 }
 
+const lockAccount = `-- name: LockAccount :one
+SELECT id, email, password_hash, full_name, phone, email_verified_at, created_at, updated_at FROM app_user WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) LockAccount(ctx context.Context, id uuid.UUID) (AppUser, error) {
+	row := q.db.QueryRow(ctx, lockAccount, id)
+	var i AppUser
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.PasswordHash,
+		&i.FullName,
+		&i.Phone,
+		&i.EmailVerifiedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const markUserEmailVerified = `-- name: MarkUserEmailVerified :execrows
 UPDATE app_user SET email_verified_at = COALESCE(email_verified_at, now()) WHERE id = $1
 `
@@ -93,6 +132,15 @@ func (q *Queries) MarkUserEmailVerified(ctx context.Context, id uuid.UUID) (int6
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const unlinkOwnerVehicles = `-- name: UnlinkOwnerVehicles :exec
+UPDATE vehicle SET owner_user_id = NULL, status = CASE WHEN status = 'vinculado' THEN 'provisional'::vehicle_status ELSE status END WHERE owner_user_id = $1
+`
+
+func (q *Queries) UnlinkOwnerVehicles(ctx context.Context, ownerUserID *uuid.UUID) error {
+	_, err := q.db.Exec(ctx, unlinkOwnerVehicles, ownerUserID)
+	return err
 }
 
 const updateUserPassword = `-- name: UpdateUserPassword :execrows
@@ -110,4 +158,19 @@ func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPassword
 		return 0, err
 	}
 	return result.RowsAffected(), nil
+}
+
+const updateUserProfile = `-- name: UpdateUserProfile :exec
+UPDATE app_user SET full_name = $2, phone = $3 WHERE id = $1
+`
+
+type UpdateUserProfileParams struct {
+	ID       uuid.UUID `json:"id"`
+	FullName string    `json:"full_name"`
+	Phone    *string   `json:"phone"`
+}
+
+func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error {
+	_, err := q.db.Exec(ctx, updateUserProfile, arg.ID, arg.FullName, arg.Phone)
+	return err
 }
