@@ -833,6 +833,26 @@ type QuoteItem struct {
 	Brand       *string        `json:"brand"`
 }
 
+type QuoteTemplate struct {
+	ID         uuid.UUID          `json:"id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
+	Name       string             `json:"name"`
+	CreatedBy  uuid.UUID          `json:"created_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
+type QuoteTemplateItem struct {
+	TemplateID  uuid.UUID      `json:"template_id"`
+	Position    int32          `json:"position"`
+	Kind        QuoteItemKind  `json:"kind"`
+	Description string         `json:"description"`
+	Quantity    pgtype.Numeric `json:"quantity"`
+	UnitPrice   pgtype.Numeric `json:"unit_price"`
+	Part        *string        `json:"part"`
+	Brand       *string        `json:"brand"`
+}
+
 type Recommendation struct {
 	ID          uuid.UUID            `json:"id"`
 	VehicleID   uuid.UUID            `json:"vehicle_id"`
@@ -895,23 +915,34 @@ type VehicleReport struct {
 }
 
 type WorkOrder struct {
-	ID            uuid.UUID          `json:"id"`
-	WorkshopID    uuid.UUID          `json:"workshop_id"`
-	BranchID      uuid.UUID          `json:"branch_id"`
-	VehicleID     uuid.UUID          `json:"vehicle_id"`
-	Number        int32              `json:"number"`
-	Status        WorkOrderStatus    `json:"status"`
-	Reason        string             `json:"reason"`
-	OdometerKm    *int32             `json:"odometer_km"`
-	InternalNotes *string            `json:"internal_notes"`
-	ReceivedAt    pgtype.Timestamptz `json:"received_at"`
-	CompletedAt   pgtype.Timestamptz `json:"completed_at"`
-	CancelledAt   pgtype.Timestamptz `json:"cancelled_at"`
-	CancelReason  *string            `json:"cancel_reason"`
-	CreatedBy     uuid.UUID          `json:"created_by"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-	PublicNotes   *string            `json:"public_notes"`
+	ID                uuid.UUID          `json:"id"`
+	WorkshopID        uuid.UUID          `json:"workshop_id"`
+	BranchID          uuid.UUID          `json:"branch_id"`
+	VehicleID         uuid.UUID          `json:"vehicle_id"`
+	Number            int32              `json:"number"`
+	Status            WorkOrderStatus    `json:"status"`
+	Reason            string             `json:"reason"`
+	OdometerKm        *int32             `json:"odometer_km"`
+	InternalNotes     *string            `json:"internal_notes"`
+	ReceivedAt        pgtype.Timestamptz `json:"received_at"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CancelReason      *string            `json:"cancel_reason"`
+	CreatedBy         uuid.UUID          `json:"created_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	PublicNotes       *string            `json:"public_notes"`
+	CustomerUpdate    *string            `json:"customer_update"`
+	EstimatedReadyAt  pgtype.Timestamptz `json:"estimated_ready_at"`
+	TrackingUpdatedAt pgtype.Timestamptz `json:"tracking_updated_at"`
+}
+
+type WorkOrderTrackingShare struct {
+	WorkOrderID uuid.UUID          `json:"work_order_id"`
+	TokenHash   string             `json:"token_hash"`
+	SharedAt    pgtype.Timestamptz `json:"shared_at"`
+	ExpiresAt   pgtype.Timestamptz `json:"expires_at"`
+	CreatedBy   uuid.UUID          `json:"created_by"`
 }
 
 type Workshop struct {

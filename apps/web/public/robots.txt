@@ -9,6 +9,7 @@ Disallow: /mis-vehiculos
 Disallow: /onboarding
 Disallow: /c/
 Disallow: /r/
+Disallow: /estado/
 Disallow: /invitacion/
 Disallow: /restablecer
 Disallow: /verificar

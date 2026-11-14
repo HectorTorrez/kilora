@@ -1,7 +1,7 @@
 import type { components } from "@kilora/contracts";
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { FileText, Plus } from "lucide-react";
+import { FileText, LayoutTemplate, Plus } from "lucide-react";
 import { useState } from "react";
 import {
 	type DateRange,
@@ -101,12 +101,20 @@ function QuotesPage() {
 				title="Cotizaciones"
 				description="Presupuestos de mostrador para clientes que todavía no dejan el vehículo. Si aceptan, se convierten en orden."
 				actions={
-					<Button asChild>
-						<Link to="/taller/cotizaciones/nueva">
-							<Plus className="size-4" />
-							Nueva cotización
-						</Link>
-					</Button>
+					<div className="flex flex-wrap gap-2">
+						<Button asChild variant="outline">
+							<Link to="/taller/cotizaciones/plantillas">
+								<LayoutTemplate className="size-4" />
+								Plantillas
+							</Link>
+						</Button>
+						<Button asChild>
+							<Link to="/taller/cotizaciones/nueva">
+								<Plus className="size-4" />
+								Nueva cotización
+							</Link>
+						</Button>
+					</div>
 				}
 			/>
 			<Card className="gap-0 overflow-hidden py-0 shadow-none">

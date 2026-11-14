@@ -44,9 +44,13 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			start := time.Now()
 			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 			next.ServeHTTP(ww, r)
+			path := r.URL.Path
+			if strings.HasPrefix(path, "/api/v1/public/order-tracking/") {
+				path = "/api/v1/public/order-tracking/{token}"
+			}
 			logger.Info("request",
 				"method", r.Method,
-				"path", r.URL.Path,
+				"path", path,
 				"status", ww.Status(),
 				"bytes", ww.BytesWritten(),
 				"duration_ms", time.Since(start).Milliseconds(),

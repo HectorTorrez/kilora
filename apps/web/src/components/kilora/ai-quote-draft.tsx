@@ -74,7 +74,7 @@ export function AIQuoteDraft({
 	};
 
 	return (
-		<div className="space-y-2 rounded-md border border-dashed bg-muted/30 p-3">
+		<div className="w-full space-y-2 rounded-md border border-dashed bg-muted/30 p-3">
 			<div className="flex items-center justify-between gap-2">
 				<p className="flex items-center gap-1.5 text-sm font-medium">
 					<Sparkles className="size-4 text-primary" aria-hidden />
