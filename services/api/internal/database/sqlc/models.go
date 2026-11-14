@@ -833,6 +833,26 @@ type QuoteItem struct {
 	Brand       *string        `json:"brand"`
 }
 
+type QuoteTemplate struct {
+	ID         uuid.UUID          `json:"id"`
+	WorkshopID uuid.UUID          `json:"workshop_id"`
+	Name       string             `json:"name"`
+	CreatedBy  uuid.UUID          `json:"created_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
+}
+
+type QuoteTemplateItem struct {
+	TemplateID  uuid.UUID      `json:"template_id"`
+	Position    int32          `json:"position"`
+	Kind        QuoteItemKind  `json:"kind"`
+	Description string         `json:"description"`
+	Quantity    pgtype.Numeric `json:"quantity"`
+	UnitPrice   pgtype.Numeric `json:"unit_price"`
+	Part        *string        `json:"part"`
+	Brand       *string        `json:"brand"`
+}
+
 type Recommendation struct {
 	ID          uuid.UUID            `json:"id"`
 	VehicleID   uuid.UUID            `json:"vehicle_id"`

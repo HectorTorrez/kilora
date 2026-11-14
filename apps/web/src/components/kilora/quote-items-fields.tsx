@@ -22,6 +22,7 @@ import {
 	requiredText,
 } from "./form-schemas";
 import { PartField } from "./part-picker";
+import { QuoteTemplateMenu } from "./quote-template-menu";
 
 export const quoteItemSchema = z.object({
 	kind: z.enum(["repuesto", "mano_de_obra"]),
@@ -101,13 +102,16 @@ export function QuoteItemsFields({
 	initialUnitPrice = "",
 	workshopID,
 	vehicle,
+	templates = true,
 }: {
 	initialUnitPrice?: string;
-	/** Con taller, ofrece describir el trabajo con IA. */
+	/** Con taller, ofrece describir el trabajo con IA y usar plantillas. */
 	workshopID?: string;
 	vehicle?: string;
+	/** Ofrece usar y guardar plantillas de cotización. */
+	templates?: boolean;
 }) {
-	const { control, formState, getValues, setValue } = useFormContext<{
+	const { control, formState, getValues, setValue, trigger } = useFormContext<{
 		items: QuoteItemValues[];
 	}>();
 	const rows = useFieldArray({ control, name: "items" });
@@ -120,26 +124,38 @@ export function QuoteItemsFields({
 		else parts += cents;
 	}
 	const add = () => rows.append(blankQuoteItem(initialUnitPrice));
-	const addDraft = (draft: QuoteDraftItem[]) => {
-		const next = draft.map((item) => draftItemValues(item, initialUnitPrice));
-		// Si solo hay ítems vacíos, el borrador los reemplaza; si no, se suma.
+	const insert = (next: QuoteItemValues[]) => {
+		// Si solo hay ítems vacíos, los nuevos los reemplazan; si no, se suman.
 		const empty = getValues("items").every(
 			(item) => !item.description.trim() && !item.part && !item.brand.trim(),
 		);
 		if (empty) rows.replace(next);
 		else rows.append(next);
 	};
+	const addDraft = (draft: QuoteDraftItem[]) =>
+		insert(draft.map((item) => draftItemValues(item, initialUnitPrice)));
+	const validItems = async () =>
+		(await trigger("items")) ? getValues("items") : null;
 	const hiddenLabel = "@2xl:[&>[data-slot=form-label]]:sr-only";
 	const error =
 		formState.errors.items?.root?.message ?? formState.errors.items?.message;
 	return (
 		<div className="@container space-y-3">
 			{workshopID ? (
-				<AIQuoteDraft
-					workshopID={workshopID}
-					vehicle={vehicle}
-					onItems={addDraft}
-				/>
+				<div className="flex flex-wrap items-start gap-2">
+					{templates && (
+						<QuoteTemplateMenu
+							workshopID={workshopID}
+							onItems={insert}
+							getItems={validItems}
+						/>
+					)}
+					<AIQuoteDraft
+						workshopID={workshopID}
+						vehicle={vehicle}
+						onItems={addDraft}
+					/>
+				</div>
 			) : null}
 			<div
 				className={cn(

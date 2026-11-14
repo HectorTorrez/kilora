@@ -18,6 +18,8 @@ Kilora turns completed services into a lasting vehicle history. Owners can under
 
 - **Manage service orders.** Register vehicles, track work from intake to completion, and record jobs, parts, and mileage.
 - **Prepare quotes before or during a service.** Create a counter quote without registering a vehicle, convert an accepted quote into an order, or prepare an estimate within an existing order. Share a read-only link through WhatsApp, record the customer’s verbal decision, and compare the quote with the final charge.
+- **Reuse common quotes.** Save frequent jobs such as a 5,000 km service as quote templates with their items and prices, then pick *Usar plantilla* in any quote editor to copy them in and adjust. Templates are shared across the workshop; reception and admins manage them, and editing a template never changes quotes already made from it.
+- **Keep customers updated.** Share a 30-day tracking link by WhatsApp that shows only the order status, a message from the workshop, and the estimated ready time. A new link replaces the old one, and staff can turn it off at any time.
 - **Track the parts installed.** Record part brands alongside quote items and service work, preserving those details in the owner’s history.
 - **Start before the owner signs up.** Create a provisional vehicle record, then invite its owner to connect it to their account.
 - **Coordinate your team.** Give administrators, reception staff, and mechanics access according to their roles and assigned branches.
