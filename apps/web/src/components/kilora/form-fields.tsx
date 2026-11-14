@@ -401,7 +401,8 @@ export function TextareaField({
 	autoFocus,
 	placeholder,
 	rows = 3,
-}: SharedField & { rows?: number }) {
+	maxLength = 2000,
+}: SharedField & { rows?: number; maxLength?: number }) {
 	const form = useFormContext();
 	return (
 		<FormField
@@ -412,7 +413,7 @@ export function TextareaField({
 					<FormControl>
 						<Textarea
 							rows={rows}
-							maxLength={2000}
+							maxLength={maxLength}
 							autoFocus={autoFocus}
 							placeholder={placeholder}
 							name={field.name}

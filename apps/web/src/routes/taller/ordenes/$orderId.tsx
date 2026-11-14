@@ -24,6 +24,7 @@ import {
 	PartDialog,
 } from "@/components/kilora/order-dialogs";
 import { OrderQuoteCard } from "@/components/kilora/order-quote-card";
+import { OrderTrackingCard } from "@/components/kilora/order-tracking-card";
 import { OwnerInvitation } from "@/components/kilora/owner-invitation";
 import { RecommendationsCard } from "@/components/kilora/recommendations";
 import {
@@ -279,6 +280,7 @@ function OrderDetail({
 
 			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
 				<div className="min-w-0 space-y-6">
+					<OrderTrackingCard workshopID={workshopID} order={order} />
 					<JobsCard workshopID={workshopID} order={order} locked={closed} />
 					<OrderQuoteCard
 						workshopID={workshopID}

@@ -69,7 +69,7 @@ const createWorkOrder = `-- name: CreateWorkOrder :one
 INSERT INTO work_order (workshop_id, branch_id, vehicle_id, number, reason, odometer_km, internal_notes, created_by)
 SELECT $1, $2, $3, $4, $5, $6, $7, $8
 WHERE EXISTS (SELECT 1 FROM vehicle_link WHERE vehicle_id = $3 AND workshop_id = $1)
-RETURNING id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes
+RETURNING id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes, customer_update, estimated_ready_at, tracking_updated_at
 `
 
 type CreateWorkOrderParams struct {
@@ -113,12 +113,15 @@ func (q *Queries) CreateWorkOrder(ctx context.Context, arg CreateWorkOrderParams
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublicNotes,
+		&i.CustomerUpdate,
+		&i.EstimatedReadyAt,
+		&i.TrackingUpdatedAt,
 	)
 	return i, err
 }
 
 const editWorkOrder = `-- name: EditWorkOrder :one
-UPDATE work_order SET reason = $1, odometer_km = $2, public_notes = $3, internal_notes = $4 WHERE id = $5 AND workshop_id = $6 RETURNING id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes
+UPDATE work_order SET reason = $1, odometer_km = $2, public_notes = $3, internal_notes = $4 WHERE id = $5 AND workshop_id = $6 RETURNING id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes, customer_update, estimated_ready_at, tracking_updated_at
 `
 
 type EditWorkOrderParams struct {
@@ -158,6 +161,9 @@ func (q *Queries) EditWorkOrder(ctx context.Context, arg EditWorkOrderParams) (W
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublicNotes,
+		&i.CustomerUpdate,
+		&i.EstimatedReadyAt,
+		&i.TrackingUpdatedAt,
 	)
 	return i, err
 }
@@ -174,7 +180,7 @@ func (q *Queries) GetHistoryIDByOrder(ctx context.Context, workOrderID *uuid.UUI
 }
 
 const getWorkOrder = `-- name: GetWorkOrder :one
-SELECT id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes FROM work_order WHERE id = $1 AND workshop_id = $2
+SELECT id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes, customer_update, estimated_ready_at, tracking_updated_at FROM work_order WHERE id = $1 AND workshop_id = $2
 `
 
 type GetWorkOrderParams struct {
@@ -203,12 +209,15 @@ func (q *Queries) GetWorkOrder(ctx context.Context, arg GetWorkOrderParams) (Wor
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublicNotes,
+		&i.CustomerUpdate,
+		&i.EstimatedReadyAt,
+		&i.TrackingUpdatedAt,
 	)
 	return i, err
 }
 
 const listWorkOrdersByWorkshop = `-- name: ListWorkOrdersByWorkshop :many
-SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status, wo.reason, wo.odometer_km, wo.internal_notes, wo.received_at, wo.completed_at, wo.cancelled_at, wo.cancel_reason, wo.created_by, wo.created_at, wo.updated_at, wo.public_notes, v.plate, v.make, v.model FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id WHERE wo.workshop_id = $1 AND wo.branch_id = ANY($2::uuid[]) AND ($3::work_order_status IS NULL OR wo.status = $3) AND ($4::uuid IS NULL OR wo.branch_id = $4) ORDER BY wo.received_at DESC
+SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status, wo.reason, wo.odometer_km, wo.internal_notes, wo.received_at, wo.completed_at, wo.cancelled_at, wo.cancel_reason, wo.created_by, wo.created_at, wo.updated_at, wo.public_notes, wo.customer_update, wo.estimated_ready_at, wo.tracking_updated_at, v.plate, v.make, v.model FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id WHERE wo.workshop_id = $1 AND wo.branch_id = ANY($2::uuid[]) AND ($3::work_order_status IS NULL OR wo.status = $3) AND ($4::uuid IS NULL OR wo.branch_id = $4) ORDER BY wo.received_at DESC
 `
 
 type ListWorkOrdersByWorkshopParams struct {
@@ -219,26 +228,29 @@ type ListWorkOrdersByWorkshopParams struct {
 }
 
 type ListWorkOrdersByWorkshopRow struct {
-	ID            uuid.UUID          `json:"id"`
-	WorkshopID    uuid.UUID          `json:"workshop_id"`
-	BranchID      uuid.UUID          `json:"branch_id"`
-	VehicleID     uuid.UUID          `json:"vehicle_id"`
-	Number        int32              `json:"number"`
-	Status        WorkOrderStatus    `json:"status"`
-	Reason        string             `json:"reason"`
-	OdometerKm    *int32             `json:"odometer_km"`
-	InternalNotes *string            `json:"internal_notes"`
-	ReceivedAt    pgtype.Timestamptz `json:"received_at"`
-	CompletedAt   pgtype.Timestamptz `json:"completed_at"`
-	CancelledAt   pgtype.Timestamptz `json:"cancelled_at"`
-	CancelReason  *string            `json:"cancel_reason"`
-	CreatedBy     uuid.UUID          `json:"created_by"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
-	PublicNotes   *string            `json:"public_notes"`
-	Plate         *string            `json:"plate"`
-	Make          string             `json:"make"`
-	Model         string             `json:"model"`
+	ID                uuid.UUID          `json:"id"`
+	WorkshopID        uuid.UUID          `json:"workshop_id"`
+	BranchID          uuid.UUID          `json:"branch_id"`
+	VehicleID         uuid.UUID          `json:"vehicle_id"`
+	Number            int32              `json:"number"`
+	Status            WorkOrderStatus    `json:"status"`
+	Reason            string             `json:"reason"`
+	OdometerKm        *int32             `json:"odometer_km"`
+	InternalNotes     *string            `json:"internal_notes"`
+	ReceivedAt        pgtype.Timestamptz `json:"received_at"`
+	CompletedAt       pgtype.Timestamptz `json:"completed_at"`
+	CancelledAt       pgtype.Timestamptz `json:"cancelled_at"`
+	CancelReason      *string            `json:"cancel_reason"`
+	CreatedBy         uuid.UUID          `json:"created_by"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	PublicNotes       *string            `json:"public_notes"`
+	CustomerUpdate    *string            `json:"customer_update"`
+	EstimatedReadyAt  pgtype.Timestamptz `json:"estimated_ready_at"`
+	TrackingUpdatedAt pgtype.Timestamptz `json:"tracking_updated_at"`
+	Plate             *string            `json:"plate"`
+	Make              string             `json:"make"`
+	Model             string             `json:"model"`
 }
 
 func (q *Queries) ListWorkOrdersByWorkshop(ctx context.Context, arg ListWorkOrdersByWorkshopParams) ([]ListWorkOrdersByWorkshopRow, error) {
@@ -273,6 +285,9 @@ func (q *Queries) ListWorkOrdersByWorkshop(ctx context.Context, arg ListWorkOrde
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.PublicNotes,
+			&i.CustomerUpdate,
+			&i.EstimatedReadyAt,
+			&i.TrackingUpdatedAt,
 			&i.Plate,
 			&i.Make,
 			&i.Model,
@@ -288,7 +303,7 @@ func (q *Queries) ListWorkOrdersByWorkshop(ctx context.Context, arg ListWorkOrde
 }
 
 const listWorkOrdersPage = `-- name: ListWorkOrdersPage :many
-SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status, wo.reason, wo.odometer_km, wo.internal_notes, wo.received_at, wo.completed_at, wo.cancelled_at, wo.cancel_reason, wo.created_by, wo.created_at, wo.updated_at, wo.public_notes, v.plate, v.make, v.model
+SELECT wo.id, wo.workshop_id, wo.branch_id, wo.vehicle_id, wo.number, wo.status, wo.reason, wo.odometer_km, wo.internal_notes, wo.received_at, wo.completed_at, wo.cancelled_at, wo.cancel_reason, wo.created_by, wo.created_at, wo.updated_at, wo.public_notes, wo.customer_update, wo.estimated_ready_at, wo.tracking_updated_at, v.plate, v.make, v.model
 FROM work_order wo JOIN vehicle v ON v.id = wo.vehicle_id
 WHERE wo.workshop_id = $1
   AND wo.branch_id = ANY($2::uuid[])
@@ -357,6 +372,9 @@ func (q *Queries) ListWorkOrdersPage(ctx context.Context, arg ListWorkOrdersPage
 			&i.WorkOrder.CreatedAt,
 			&i.WorkOrder.UpdatedAt,
 			&i.WorkOrder.PublicNotes,
+			&i.WorkOrder.CustomerUpdate,
+			&i.WorkOrder.EstimatedReadyAt,
+			&i.WorkOrder.TrackingUpdatedAt,
 			&i.Plate,
 			&i.Make,
 			&i.Model,
@@ -372,7 +390,7 @@ func (q *Queries) ListWorkOrdersPage(ctx context.Context, arg ListWorkOrdersPage
 }
 
 const lockWorkOrder = `-- name: LockWorkOrder :one
-SELECT id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes FROM work_order WHERE id = $1 AND workshop_id = $2 FOR UPDATE
+SELECT id, workshop_id, branch_id, vehicle_id, number, status, reason, odometer_km, internal_notes, received_at, completed_at, cancelled_at, cancel_reason, created_by, created_at, updated_at, public_notes, customer_update, estimated_ready_at, tracking_updated_at FROM work_order WHERE id = $1 AND workshop_id = $2 FOR UPDATE
 `
 
 type LockWorkOrderParams struct {
@@ -401,6 +419,9 @@ func (q *Queries) LockWorkOrder(ctx context.Context, arg LockWorkOrderParams) (W
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.PublicNotes,
+		&i.CustomerUpdate,
+		&i.EstimatedReadyAt,
+		&i.TrackingUpdatedAt,
 	)
 	return i, err
 }
@@ -418,7 +439,7 @@ func (q *Queries) NextWorkOrderNumber(ctx context.Context, workshopID uuid.UUID)
 }
 
 const transitionWorkOrderStatus = `-- name: TransitionWorkOrderStatus :execrows
-UPDATE work_order SET status = $1, completed_at = $2, cancelled_at = $3, cancel_reason = $4 WHERE id = $5 AND workshop_id = $6 AND status = $7
+UPDATE work_order SET tracking_updated_at = now(), status = $1, completed_at = $2, cancelled_at = $3, cancel_reason = $4 WHERE id = $5 AND workshop_id = $6 AND status = $7
 `
 
 type TransitionWorkOrderStatusParams struct {
