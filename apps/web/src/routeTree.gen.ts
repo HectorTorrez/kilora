@@ -22,6 +22,7 @@ import { Route as VerificarRouteImport } from './routes/verificar'
 import { Route as CTokenRouteImport } from './routes/c/$token'
 import { Route as EstadoTokenRouteImport } from './routes/estado/$token'
 import { Route as InvitacionTokenRouteImport } from './routes/invitacion/$token'
+import { Route as MTokenRouteImport } from './routes/m/$token'
 import { Route as MisVehiculosIndexRouteImport } from './routes/mis-vehiculos/index'
 import { Route as MisVehiculosVehicleIdRouteImport } from './routes/mis-vehiculos/$vehicleId'
 import { Route as MisVehiculosCuentaRouteImport } from './routes/mis-vehiculos/cuenta'
@@ -106,6 +107,11 @@ const EstadoTokenRoute = EstadoTokenRouteImport.update({
 const InvitacionTokenRoute = InvitacionTokenRouteImport.update({
   id: '/invitacion/$token',
   path: '/invitacion/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MTokenRoute = MTokenRouteImport.update({
+  id: '/m/$token',
+  path: '/m/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MisVehiculosIndexRoute = MisVehiculosIndexRouteImport.update({
@@ -229,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/c/$token': typeof CTokenRoute
   '/estado/$token': typeof EstadoTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
+  '/m/$token': typeof MTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
   '/mis-vehiculos/cuenta': typeof MisVehiculosCuentaRoute
   '/r/$token': typeof RTokenRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/c/$token': typeof CTokenRoute
   '/estado/$token': typeof EstadoTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
+  '/m/$token': typeof MTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
   '/mis-vehiculos/cuenta': typeof MisVehiculosCuentaRoute
   '/r/$token': typeof RTokenRoute
@@ -298,6 +306,7 @@ export interface FileRoutesById {
   '/c/$token': typeof CTokenRoute
   '/estado/$token': typeof EstadoTokenRoute
   '/invitacion/$token': typeof InvitacionTokenRoute
+  '/m/$token': typeof MTokenRoute
   '/mis-vehiculos/$vehicleId': typeof MisVehiculosVehicleIdRoute
   '/mis-vehiculos/cuenta': typeof MisVehiculosCuentaRoute
   '/r/$token': typeof RTokenRoute
@@ -335,6 +344,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/estado/$token'
     | '/invitacion/$token'
+    | '/m/$token'
     | '/mis-vehiculos/$vehicleId'
     | '/mis-vehiculos/cuenta'
     | '/r/$token'
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/estado/$token'
     | '/invitacion/$token'
+    | '/m/$token'
     | '/mis-vehiculos/$vehicleId'
     | '/mis-vehiculos/cuenta'
     | '/r/$token'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/c/$token'
     | '/estado/$token'
     | '/invitacion/$token'
+    | '/m/$token'
     | '/mis-vehiculos/$vehicleId'
     | '/mis-vehiculos/cuenta'
     | '/r/$token'
@@ -439,6 +451,7 @@ export interface RootRouteChildren {
   CTokenRoute: typeof CTokenRoute
   EstadoTokenRoute: typeof EstadoTokenRoute
   InvitacionTokenRoute: typeof InvitacionTokenRoute
+  MTokenRoute: typeof MTokenRoute
   RTokenRoute: typeof RTokenRoute
 }
 
@@ -533,6 +546,13 @@ declare module '@tanstack/react-router' {
       path: '/invitacion/$token'
       fullPath: '/invitacion/$token'
       preLoaderRoute: typeof InvitacionTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/m/$token': {
+      id: '/m/$token'
+      path: '/m/$token'
+      fullPath: '/m/$token'
+      preLoaderRoute: typeof MTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mis-vehiculos/': {
@@ -750,6 +770,7 @@ const rootRouteChildren: RootRouteChildren = {
   CTokenRoute: CTokenRoute,
   EstadoTokenRoute: EstadoTokenRoute,
   InvitacionTokenRoute: InvitacionTokenRoute,
+  MTokenRoute: MTokenRoute,
   RTokenRoute: RTokenRoute,
 }
 export const routeTree = rootRouteImport

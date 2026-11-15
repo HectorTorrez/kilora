@@ -48,6 +48,9 @@ func requestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 			if strings.HasPrefix(path, "/api/v1/public/order-tracking/") {
 				path = "/api/v1/public/order-tracking/{token}"
 			}
+			if strings.HasPrefix(path, "/api/v1/public/mechanic-shares/") {
+				path = "/api/v1/public/mechanic-shares/{token}"
+			}
 			logger.Info("request",
 				"method", r.Method,
 				"path", path,

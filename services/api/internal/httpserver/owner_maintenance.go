@@ -70,48 +70,7 @@ func loadOwnerMaintenance(ctx context.Context, q *sqlc.Queries, vehicle, user uu
 		out.LastOdometerAt = &readings[0].ReadAt.Time
 		out.OdometerStale = !out.LastOdometerAt.After(now.AddDate(0, 0, -30))
 	}
-	makeItem := func(category string) ownerMaintenanceItem {
-		iv := maintenance.Intervals[category]
-		custom, ok := overrides[category]
-		if ok {
-			iv = custom
-		}
-		return ownerMaintenanceItem{Category: category, Label: maintenance.Labels[category], IntervalKm: iv.Km, IntervalMonths: iv.Months, CustomInterval: ok, Status: "sin_historial"}
-	}
-	seen := map[string]bool{}
-	local := now.In(values.Location)
-	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
-	for _, d := range maintenance.Forecast(records, out.CurrentKm, today, overrides) {
-		item := makeItem(d.Category)
-		seen[d.Category] = true
-		item.Status = "programado"
-		if d.DueDate.IsZero() && d.DueKm == nil {
-			item.Status = "sin_kilometraje"
-		}
-		if d.Wear >= maintenance.SoonAt {
-			item.Status = "proximo"
-		}
-		if d.Overdue() {
-			item.Status = "vencido"
-		}
-		last := d.LastOn.Format(values.DateLayout)
-		item.LastOn, item.LastSummary, item.LastKm, item.DueKm = &last, &d.LastSummary, d.LastKm, d.DueKm
-		if !d.DueDate.IsZero() {
-			due := d.DueDate.Format(values.DateLayout)
-			item.DueDate = &due
-		}
-		out.Items = append(out.Items, item)
-	}
-	unknown := []string{}
-	for category := range maintenance.Intervals {
-		if !seen[category] {
-			unknown = append(unknown, category)
-		}
-	}
-	sort.Strings(unknown)
-	for _, category := range unknown {
-		out.Items = append(out.Items, makeItem(category))
-	}
+	out.Items = maintenanceItems(records, out.CurrentKm, now, overrides)
 	return out, nil
 }
 
@@ -197,4 +156,51 @@ func (s *server) setOwnerMaintenanceInterval(w http.ResponseWriter, r *http.Requ
 	}
 	w.WriteHeader(http.StatusNoContent)
 	return nil
+}
+
+func maintenanceItems(records []history.Projected, currentKm *int32, now time.Time, overrides map[string]maintenance.Interval) []ownerMaintenanceItem {
+	items := []ownerMaintenanceItem{}
+	makeItem := func(category string) ownerMaintenanceItem {
+		iv := maintenance.Intervals[category]
+		custom, ok := overrides[category]
+		if ok {
+			iv = custom
+		}
+		return ownerMaintenanceItem{Category: category, Label: maintenance.Labels[category], IntervalKm: iv.Km, IntervalMonths: iv.Months, CustomInterval: ok, Status: "sin_historial"}
+	}
+	seen := map[string]bool{}
+	local := now.In(values.Location)
+	today := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+	for _, d := range maintenance.Forecast(records, currentKm, today, overrides) {
+		item := makeItem(d.Category)
+		seen[d.Category] = true
+		item.Status = "programado"
+		if d.DueDate.IsZero() && d.DueKm == nil {
+			item.Status = "sin_kilometraje"
+		}
+		if d.Wear >= maintenance.SoonAt {
+			item.Status = "proximo"
+		}
+		if d.Overdue() {
+			item.Status = "vencido"
+		}
+		last := d.LastOn.Format(values.DateLayout)
+		item.LastOn, item.LastSummary, item.LastKm, item.DueKm = &last, &d.LastSummary, d.LastKm, d.DueKm
+		if !d.DueDate.IsZero() {
+			due := d.DueDate.Format(values.DateLayout)
+			item.DueDate = &due
+		}
+		items = append(items, item)
+	}
+	unknown := []string{}
+	for category := range maintenance.Intervals {
+		if !seen[category] {
+			unknown = append(unknown, category)
+		}
+	}
+	sort.Strings(unknown)
+	for _, category := range unknown {
+		items = append(items, makeItem(category))
+	}
+	return items
 }

@@ -8,6 +8,7 @@ Disallow: /taller/
 Disallow: /mis-vehiculos
 Disallow: /onboarding
 Disallow: /c/
+Disallow: /m/
 Disallow: /r/
 Disallow: /estado/
 Disallow: /invitacion/

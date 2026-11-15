@@ -28,7 +28,9 @@ import {
 } from "@/components/kilora/form-schemas";
 import { PartHistory } from "@/components/kilora/history-parts";
 import { ListPagination } from "@/components/kilora/list-pagination";
+import { MechanicShare } from "@/components/kilora/mechanic-share";
 import { OwnerHistory } from "@/components/kilora/owner-history";
+import { OwnerLastServices } from "@/components/kilora/owner-last-services";
 import { OwnerMaintenanceCard } from "@/components/kilora/owner-maintenance";
 import { OwnerServiceDialog } from "@/components/kilora/owner-service-dialog";
 import { ResaleReport } from "@/components/kilora/resale-report";
@@ -182,6 +184,7 @@ function Page() {
 					<Gauge />
 					Actualizar kilometraje
 				</Button>
+				<MechanicShare vehicleID={id} />
 				<ResaleReport vehicleID={id} />
 			</div>
 			{manualOpen && (
@@ -215,6 +218,10 @@ function Page() {
 					<AlertDescription>{warning}</AlertDescription>
 				</Alert>
 			)}
+			<OwnerLastServices
+				vehicleID={id}
+				onAddService={() => setManualOpen(true)}
+			/>
 			<OwnerMaintenanceCard
 				vehicleID={id}
 				email={me.user.email}

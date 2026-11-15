@@ -7269,6 +7269,225 @@
           }
         ]
       }
+    },
+    "/api/v1/me/vehicles/{vehicleID}/mechanic-share": {
+      "get": {
+        "summary": "Consultar enlace para el mecánico",
+        "description": "Enlace independiente del reporte de venta, válido por 7 días. Solo comparte los servicios seleccionados; crear uno nuevo revoca el anterior.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MechanicShareState"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "Compartir servicios con un mecánico",
+        "description": "Enlace independiente del reporte de venta, válido por 7 días. Solo comparte los servicios seleccionados; crear uno nuevo revoca el anterior.",
+        "responses": {
+          "201": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MechanicShareCreated"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MechanicShareInput"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Desactivar enlace para el mecánico",
+        "description": "Enlace independiente del reporte de venta, válido por 7 días. Solo comparte los servicios seleccionados; crear uno nuevo revoca el anterior.",
+        "responses": {
+          "204": {
+            "description": "Desactivado"
+          },
+          "401": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "vehicleID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "session": []
+          }
+        ]
+      }
+    },
+    "/api/v1/public/mechanic-shares/{token}": {
+      "get": {
+        "summary": "Antecedentes compartidos con un mecánico",
+        "description": "Sin cuenta. Servicios seleccionados y corregidos, sin montos, notas ni comprobantes. Mantenimiento opcional basado solo en los servicios compartidos; no incluye preferencias de correo ni datos de contacto.",
+        "responses": {
+          "200": {
+            "description": "Respuesta exitosa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PublicMechanicShare"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -11527,6 +11746,204 @@
             }
           }
         }
+      },
+      "MechanicShareInput": {
+        "type": "object",
+        "properties": {
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 200,
+            "uniqueItems": true
+          },
+          "include_maintenance": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "record_ids",
+          "include_maintenance"
+        ]
+      },
+      "MechanicShareStatus": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 200,
+            "uniqueItems": true
+          },
+          "include_maintenance": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "created_at",
+          "expires_at",
+          "record_ids",
+          "include_maintenance"
+        ]
+      },
+      "MechanicShareCreated": {
+        "type": "object",
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "record_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 200,
+            "uniqueItems": true
+          },
+          "include_maintenance": {
+            "type": "boolean"
+          },
+          "url": {
+            "type": "string"
+          },
+          "whatsapp_url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "created_at",
+          "expires_at",
+          "record_ids",
+          "include_maintenance",
+          "url",
+          "whatsapp_url"
+        ]
+      },
+      "MechanicShareState": {
+        "type": "object",
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MechanicShareStatus"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "active"
+        ]
+      },
+      "PublicMechanicShare": {
+        "type": "object",
+        "properties": {
+          "vehicle": {
+            "type": "object",
+            "properties": {
+              "make": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "year": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "plate": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "body_type": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/BodyType"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "make",
+              "model",
+              "year",
+              "plate",
+              "body_type"
+            ]
+          },
+          "records": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HistoryRecord"
+            }
+          },
+          "maintenance": {
+            "anyOf": [
+              {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OwnerMaintenanceItem"
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "current_odometer_km": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "vehicle",
+          "records",
+          "maintenance",
+          "current_odometer_km",
+          "created_at",
+          "expires_at"
+        ]
       }
     }
   }

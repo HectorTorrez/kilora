@@ -30,6 +30,8 @@ Kilora turns completed services into a lasting vehicle history. Owners can under
 - **Keep your history across workshops.** Find linked workshop services in one vehicle record.
 - **Find a past service.** Search descriptions, parts, brands, workshops, and visible corrections, and combine date, workshop, and category filters across the complete vehicle history.
 - **Understand your maintenance.** Review service dates, mileage, work performed, parts, and charges.
+- **Check the last recorded work.** See oil, brakes, and battery at a glance, with other maintenance categories expandable. Dates, mileage, and descriptions use the complete history and its corrections; an inspection does not imply a replacement.
+- **Share with your mechanic.** Select up to 200 services and optionally include maintenance estimates based only on that selection. Share a seven-day link through WhatsApp; the mechanic needs no account. Charges, notes, and receipts stay private.
 - **Plan the next service.** See upcoming maintenance dates and mileage based on recorded services, with adjustable intervals for each vehicle.
 - **Choose email reminders.** Opt in per vehicle for maintenance digests and prompts to refresh an old mileage reading.
 - **Resume unfinished entries.** Keep an unfinished service and its receipt as a draft in the same browser, with resume and discard controls.
@@ -222,6 +224,37 @@ before its database commit.
 
 Apply migrations through `00018_receipt_content_hash.sql` with `pnpm db:migrate` before starting
 the updated API. No additional cron service or AI API key is required.
+
+## Sharing with a mechanic
+
+On an owner's vehicle page, **Compartir con mi mecánico** lets them select services
+across history pages and optionally include maintenance estimates and the latest
+odometer reading. The link (`/m/<token>`) expires after seven days, can be revoked,
+and is independent of the resale report. Creating a replacement revokes the old
+mechanic link. Only the token hash is stored, and the URL is returned only when
+created. Anyone holding the link can read it without an account.
+
+The public API applies the existing `ViewerReport` projection before returning
+selected records, including visible corrections. No charges, workshop or internal
+notes, correction reasons/authors, receipt metadata, or receipt files are shared.
+New services never join an existing selection automatically. Corrections to the
+selected services remain visible. Optional maintenance uses only selected services,
+the owner's intervals, and the latest mileage; unselected history cannot affect it.
+It is an estimate, not a diagnosis or a complete vehicle history. Account unlinking
+or deletion also removes public access. Responses disable caching and indexing;
+API request logs redact mechanic tokens. The public view rechecks access every
+minute while open and on focus. Revocation prevents subsequent reads; it cannot
+remove copies already saved or printed by a recipient.
+
+**Últimos servicios por categoría** reuses the existing owner maintenance query,
+which evaluates the complete corrected history before choosing the last recorded
+service. Oil, brakes, and battery appear first, with other tracked categories in
+an expandable section. Missing history or mileage is explicitly shown.
+
+Apply migration `00021_mechanic_shares.sql` with `pnpm db:migrate` before running
+the updated API. Database-backed tests cover selection isolation, projection and
+receipt privacy, corrections, expiration, revocation, replacement, concurrent link
+creation, and summaries beyond the first 100 records.
 
 ## Development reference
 

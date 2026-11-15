@@ -153,7 +153,7 @@ func Forecast(records []history.Projected, currentKm *int32, today time.Time, ov
 	}
 	latest := map[string]last{}
 	for _, r := range records {
-		r = effectiveRecord(r)
+		r = EffectiveRecord(r)
 		on, err := time.Parse(time.DateOnly, r.PerformedOn)
 		if err != nil {
 			continue
@@ -202,7 +202,8 @@ func ValidInterval(category string, iv Interval) bool {
 	return ok && iv.Km >= 0 && iv.Km <= 1000000 && iv.Months >= 0 && iv.Months <= 120 && (iv.Km > 0 || iv.Months > 0)
 }
 
-func effectiveRecord(r history.Projected) history.Projected {
+// EffectiveRecord applies dated visible corrections without modifying the original record.
+func EffectiveRecord(r history.Projected) history.Projected {
 	corrections := append([]history.ProjectedCorrection(nil), r.Corrections...)
 	sort.SliceStable(corrections, func(i, j int) bool { return corrections[i].CreatedAt.Before(corrections[j].CreatedAt) })
 	for _, c := range corrections {
