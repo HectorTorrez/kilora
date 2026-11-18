@@ -20,6 +20,7 @@ import {
 	quoteItemValues,
 } from "./quote-items-fields";
 import { QuoteOutcomePicker } from "./quote-outcome";
+import { WhatsAppNotification } from "./whatsapp-notification";
 import { CopyField, SectionCard } from "./workshop-ui";
 
 type S = components["schemas"];
@@ -74,6 +75,7 @@ export function OrderQuoteCard({
 					/>
 					<div className="flex flex-wrap gap-2">
 						<Button
+							loading={quote.isPending}
 							disabled={quote.isPending || (!!order.quote && !isDirty)}
 							onClick={form.handleSubmit(({ items }) =>
 								quote.mutate(
@@ -91,6 +93,7 @@ export function OrderQuoteCard({
 						</Button>
 						<Button
 							variant="outline"
+							loading={share.isPending}
 							disabled={!order.quote || isDirty || share.isPending}
 							title={
 								!order.quote || isDirty
@@ -101,16 +104,11 @@ export function OrderQuoteCard({
 								try {
 									const result = await share.mutateAsync();
 									setUrl(result.url);
-									window.open(
-										result.whatsapp_url,
-										"_blank",
-										"noopener,noreferrer",
-									);
 								} catch {}
 							}}
 						>
 							<MessageCircle className="size-4" />
-							Compartir por WhatsApp
+							Crear enlace para compartir
 						</Button>
 						<AIQuoteMessage
 							disabled={!order.quote || isDirty}
@@ -127,7 +125,16 @@ export function OrderQuoteCard({
 							onShared={setUrl}
 						/>
 					</div>
-					{url && <CopyField value={url} label="Enlace de la cotización" />}
+					{url && (
+						<div className="space-y-3">
+							<CopyField value={url} label="Enlace de la cotización" />
+							<WhatsAppNotification
+								workshopID={workshopID}
+								url={url}
+								kind="quote"
+							/>
+						</div>
+					)}
 					{order.quote && (
 						<QuoteOutcomePicker
 							value={order.quote.outcome}

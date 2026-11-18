@@ -89,6 +89,7 @@ export function OwnerHistory({
 						<Button
 							type="button"
 							variant="link"
+							loading={history.isFetching}
 							onClick={() => history.refetch()}
 						>
 							Reintentar

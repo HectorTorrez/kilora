@@ -112,6 +112,7 @@ export function AIQuoteMessage({
 						<Button
 							type="button"
 							variant="outline"
+							loading={pending === "generate"}
 							disabled={pending !== null}
 							onClick={draft}
 						>
@@ -119,6 +120,7 @@ export function AIQuoteMessage({
 						</Button>
 						<Button
 							type="button"
+							loading={pending === "share"}
 							disabled={!text.trim() || pending !== null}
 							onClick={send}
 						>

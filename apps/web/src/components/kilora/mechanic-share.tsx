@@ -1,5 +1,5 @@
 import type { components } from "@kilora/contracts";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, MessageCircle, Share2 } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
@@ -54,7 +54,10 @@ function MechanicShareDialog({ vehicleID }: { vehicleID: string }) {
 	);
 	const revoke = useOwnerMutation(() => mechanicShareActions.revoke(vehicleID));
 	const active = created ?? status.data?.active;
-	const pending = create.isPending || revoke.isPending;
+	const selectAll = useSelectAllServices(vehicleID, setSelected);
+	const pending = [create, revoke, selectAll].some(
+		(action) => action.isPending,
+	);
 	const toggleSelection = (id: string, checked: boolean) =>
 		setSelected((previous) => {
 			const next = new Set(previous);
@@ -79,7 +82,11 @@ function MechanicShareDialog({ vehicleID }: { vehicleID: string }) {
 				<Alert variant="destructive">
 					<AlertDescription>
 						No pudimos consultar el enlace.{" "}
-						<Button variant="link" onClick={() => status.refetch()}>
+						<Button
+							variant="link"
+							loading={status.isFetching}
+							onClick={() => status.refetch()}
+						>
 							Reintentar
 						</Button>
 					</AlertDescription>
@@ -103,13 +110,33 @@ function MechanicShareDialog({ vehicleID }: { vehicleID: string }) {
 							}
 						/>
 					)}
+					<div className="flex flex-wrap gap-2">
+						<Button
+							type="button"
+							variant="outline"
+							loading={selectAll.isPending}
+							disabled={pending}
+							onClick={selectAll.select}
+						>
+							{selectAll.isPending ? "Seleccionando…" : "Seleccionar todos"}
+						</Button>
+						<Button
+							type="button"
+							variant="ghost"
+							disabled={pending || selected.size === 0}
+							onClick={() => setSelected(new Set())}
+						>
+							Limpiar selección
+						</Button>
+					</div>
 					<fieldset disabled={pending} className="min-w-0 space-y-3">
 						<legend className="mb-2 text-sm font-semibold">
 							Servicios para compartir
 						</legend>
 						<p className="text-xs text-ink-3">
-							La selección se conserva al cambiar de página. Hasta 200
-							servicios; los servicios nuevos no se agregan solos.
+							La selección se conserva al cambiar de página. Seleccionar todos
+							incluye hasta los 200 servicios más recientes de todas las
+							páginas. Los servicios nuevos no se agregan solos.
 						</p>
 						<ServiceSelection
 							vehicleID={vehicleID}
@@ -140,10 +167,12 @@ function MechanicShareDialog({ vehicleID }: { vehicleID: string }) {
 					<output className="text-sm text-ink-3" aria-live="polite">
 						{selected.size} servicios seleccionados
 					</output>
-					<Button
-						type="button"
-						disabled={pending || selected.size === 0}
-						onClick={() =>
+					<CreateMechanicLinkButton
+						pending={pending}
+						creating={create.isPending}
+						hasSelection={selected.size > 0}
+						hasActiveLink={!!active}
+						onCreate={() =>
 							create.mutate(
 								{
 									record_ids: [...selected],
@@ -155,17 +184,77 @@ function MechanicShareDialog({ vehicleID }: { vehicleID: string }) {
 								},
 							)
 						}
-					>
-						{create.isPending
-							? "Creando enlace…"
-							: active
-								? "Crear enlace nuevo con esta selección"
-								: "Crear enlace con esta selección"}
-					</Button>
+					/>
 				</>
 			)}
 		</DialogContent>
 	);
+}
+
+function CreateMechanicLinkButton({
+	pending,
+	creating,
+	hasSelection,
+	hasActiveLink,
+	onCreate,
+}: {
+	pending: boolean;
+	creating: boolean;
+	hasSelection: boolean;
+	hasActiveLink: boolean;
+	onCreate: () => void;
+}) {
+	return (
+		<Button
+			type="button"
+			disabled={pending || !hasSelection}
+			loading={creating}
+			onClick={onCreate}
+		>
+			{creating
+				? "Creando enlace…"
+				: hasActiveLink
+					? "Crear enlace nuevo con esta selección"
+					: "Crear enlace con esta selección"}
+		</Button>
+	);
+}
+
+function useSelectAllServices(
+	vehicleID: string,
+	onSelected: (ids: Set<string>) => void,
+) {
+	const queryClient = useQueryClient();
+	const [isPending, setIsPending] = useState(false);
+	const select = async () => {
+		setIsPending(true);
+		try {
+			const first = await queryClient.fetchQuery(ownerHistoryQuery(vehicleID));
+			const count = Math.min(first.total, 200);
+			const remaining = await Promise.all(
+				Array.from(
+					{
+						length: Math.max(0, Math.ceil(count / OWNER_HISTORY_PAGE_SIZE) - 1),
+					},
+					(_, index) =>
+						queryClient.fetchQuery(ownerHistoryQuery(vehicleID, index + 2)),
+				),
+			);
+			const records = [first, ...remaining]
+				.flatMap((page) => page.records)
+				.slice(0, 200);
+			onSelected(new Set(records.map((record) => record.id)));
+			if (first.total > 200)
+				toast.info(
+					"Seleccionamos los 200 servicios más recientes, el máximo por enlace.",
+				);
+		} catch (error) {
+			toast.error(errorMessage(error));
+		} finally {
+			setIsPending(false);
+		}
+	};
+	return { isPending, select };
 }
 
 function ServiceSelection({
@@ -186,7 +275,11 @@ function ServiceSelection({
 				<Alert variant="destructive">
 					<AlertDescription>
 						No pudimos cargar los servicios.{" "}
-						<Button variant="link" onClick={() => history.refetch()}>
+						<Button
+							variant="link"
+							loading={history.isFetching}
+							onClick={() => history.refetch()}
+						>
 							Reintentar
 						</Button>
 					</AlertDescription>
@@ -299,6 +392,7 @@ function ActiveMechanicLink({
 				type="button"
 				variant="outline"
 				disabled={pending}
+				loading={revoking}
 				onClick={onRevoke}
 			>
 				{revoking ? "Desactivando…" : "Desactivar enlace"}

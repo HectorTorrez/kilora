@@ -82,6 +82,7 @@ export function Demo({ demo }: { demo: components["schemas"]["DemoInfo"] }) {
 									variant={
 										a.role === "taller_competencia" ? "outline" : "default"
 									}
+									loading={busy === a.role}
 									disabled={!!busy}
 									onClick={() => enter(a.role)}
 								>

@@ -70,6 +70,7 @@ type assistantInput struct {
 		Content string `json:"content"`
 	} `json:"messages"`
 	WorkshopID *string `json:"workshop_id"`
+	BranchID   string  `json:"branch_id"`
 	Page       *string `json:"page"`
 }
 
@@ -111,10 +112,10 @@ func (s *server) assistantChat(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	session := assistant.Session{UserName: user.FullName, Now: time.Now().In(elSalvador)}
+	session := assistant.Session{UserName: user.FullName, ActiveBranchID: in.BranchID, Now: time.Now().In(elSalvador)}
 	for _, row := range rows {
 		id := row.WorkshopID.String()
-		session.Memberships = append(session.Memberships, assistant.Membership{WorkshopID: id, WorkshopName: row.WorkshopName, BranchName: row.BranchName, Role: string(row.Role)})
+		session.Memberships = append(session.Memberships, assistant.Membership{WorkshopID: id, WorkshopName: row.WorkshopName, BranchID: row.BranchID.String(), BranchName: row.BranchName, Role: string(row.Role)})
 		if in.WorkshopID != nil && *in.WorkshopID == id {
 			session.ActiveWorkshopID = id
 		}
@@ -142,7 +143,10 @@ func (s *server) assistantChat(w http.ResponseWriter, r *http.Request) error {
 		send(map[string]string{"type": "error", "text": "El asistente no pudo responder. Intenta de nuevo."})
 		return nil
 	}
-	send(map[string]any{"type": "done", "reply": reply.Text})
+	send(struct {
+		Type string `json:"type"`
+		assistant.Reply
+	}{"done", reply})
 	return nil
 }
 

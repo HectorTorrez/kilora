@@ -48,7 +48,11 @@ export function OwnerLastServices({
 					<Alert variant="destructive">
 						<AlertDescription>
 							No pudimos cargar los últimos servicios.{" "}
-							<Button variant="link" onClick={() => plan.refetch()}>
+							<Button
+								variant="link"
+								loading={plan.isFetching}
+								onClick={() => plan.refetch()}
+							>
 								Reintentar
 							</Button>
 						</AlertDescription>

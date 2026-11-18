@@ -204,6 +204,7 @@ function OrderDetail({
 						)}
 						{nextStatus && (
 							<Button
+								loading={status.isPending}
 								disabled={status.isPending}
 								onClick={() =>
 									status.mutate(
@@ -525,6 +526,7 @@ function JobsCard({
 													className="size-8 text-ink-3 hover:text-destructive"
 													aria-label={`Quitar pieza ${p.name}`}
 													title="Quitar pieza"
+													loading={deletePart.isPending}
 													disabled={deletePart.isPending}
 													onClick={() =>
 														deletePart.mutate(
@@ -597,6 +599,7 @@ function JobsCard({
 						</Button>
 						<Button
 							variant="destructive"
+							loading={deleteJob.isPending}
 							disabled={deleteJob.isPending}
 							onClick={() =>
 								removing &&

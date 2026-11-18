@@ -228,6 +228,7 @@ export function RecommendationsCard({
 					<Button
 						variant="ghost"
 						size="sm"
+						loading={suggest.isPending}
 						disabled={suggest.isPending}
 						title="Revisa el historial y el kilometraje para proponer trabajos"
 						onClick={() =>
@@ -296,6 +297,7 @@ export function RecommendationsCard({
 											className="size-8 text-ok hover:bg-ok-soft hover:text-ok"
 											aria-label={`Agregar: ${s.description}`}
 											title="Agregar recomendación"
+											loading={create.isPending}
 											disabled={create.isPending}
 											onClick={() =>
 												create.mutate(
@@ -360,6 +362,11 @@ export function RecommendationsCard({
 									className="size-8 text-ok hover:bg-ok-soft hover:text-ok"
 									aria-label={`Marcar como hecha: ${r.description}`}
 									title="Marcar como hecha"
+									loading={
+										resolve.isPending &&
+										resolve.variables?.id === r.id &&
+										resolve.variables.status === "hecha"
+									}
 									disabled={resolve.isPending}
 									onClick={() => resolve.mutate({ id: r.id, status: "hecha" })}
 								>
@@ -371,6 +378,11 @@ export function RecommendationsCard({
 									className="size-8 text-ink-3"
 									aria-label={`Descartar: ${r.description}`}
 									title="Descartar"
+									loading={
+										resolve.isPending &&
+										resolve.variables?.id === r.id &&
+										resolve.variables.status === "descartada"
+									}
 									disabled={resolve.isPending}
 									onClick={() =>
 										resolve.mutate({ id: r.id, status: "descartada" })

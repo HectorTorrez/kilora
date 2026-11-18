@@ -24,6 +24,7 @@ import {
 } from "@/features/taller/vehicles";
 import { shortDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { WhatsAppNotification } from "./whatsapp-notification";
 
 const INVITATIONS_PAGE_SIZE = 5;
 
@@ -134,6 +135,11 @@ export function OwnerInvitation({
 							Invitación creada. Compartila por WhatsApp o mostrá el QR.
 						</p>
 						<CopyField value={invite.data.url} label="Enlace de invitación" />
+						<WhatsAppNotification
+							workshopID={workshopID}
+							url={invite.data.url}
+							kind="invitation"
+						/>
 						<Button asChild variant="outline" className="w-full">
 							<a
 								href={invite.data.whatsapp_url}
@@ -141,7 +147,7 @@ export function OwnerInvitation({
 								rel="noreferrer"
 							>
 								<MessageCircle className="size-4" />
-								Compartir por WhatsApp
+								Abrir WhatsApp
 							</a>
 						</Button>
 						{qr && (

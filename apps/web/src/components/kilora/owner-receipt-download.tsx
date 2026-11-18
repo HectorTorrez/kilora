@@ -55,7 +55,7 @@ export function OwnerReceiptDownload({
 				type="button"
 				variant="outline"
 				size="sm"
-				disabled={pending}
+				loading={pending}
 				onClick={() => void download()}
 				aria-label={`Descargar comprobante ${receipt.filename}`}
 			>

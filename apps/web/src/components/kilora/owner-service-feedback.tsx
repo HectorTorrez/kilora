@@ -165,7 +165,7 @@ export function DuplicateServiceDialog({
 				>
 					Volver y revisar
 				</Button>
-				<Button type="button" disabled={pending} onClick={onConfirm}>
+				<Button type="button" loading={pending} onClick={onConfirm}>
 					{pending ? "Guardando…" : "Guardar de todos modos"}
 				</Button>
 			</div>

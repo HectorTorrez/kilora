@@ -310,3 +310,63 @@ use shared edge limits when running multiple replicas.
 
 For single-VPS Docker deployment, HTTPS routing, backup/restore and release checks,
 see [the production runbook](docs/production.md).
+
+## WhatsApp notifications with Kapso
+
+Workshops can send quote links (including counter quotes), order tracking links,
+and owner invitations directly from Kilora. Create the share link, then choose
+**Enviar por WhatsApp**. Existing copy/link sharing remains available without
+Kapso. Messages go to the customer's saved phone, resolved on the server; callers
+cannot provide arbitrary recipients or message text. Eight-digit local numbers
+use El Salvador's `503` country code; other numbers need an international code.
+
+To activate later:
+
+1. Apply migrations with `pnpm db:migrate` (includes `00022_whatsapp_notifications.sql`).
+2. Connect a sender number in Kapso and set `KAPSO_API_KEY` and
+   `KAPSO_PHONE_NUMBER_ID` on the API service.
+3. Create and obtain approval for three WhatsApp utility templates. Each must have
+   exactly two **positional body text parameters**, no header/button parameters:
+   `{{1}}` is the workshop name and `{{2}}` is the full share URL. Suggested bodies:
+   - Quote: `{{1}} te comparte tu cotización. Consultala aquí: {{2}}`
+   - Tracking: `{{1}} te comparte el seguimiento de tu reparación. Consultalo aquí: {{2}}`
+   - Invitation: `{{1}} te invita a vincular tu vehículo en Kilora. Abrí este enlace: {{2}}`
+4. Set their exact names in `KAPSO_QUOTE_TEMPLATE`, `KAPSO_TRACKING_TEMPLATE`, and
+   `KAPSO_INVITATION_TEMPLATE`; set `KAPSO_TEMPLATE_LANGUAGE` to their approved
+   locale (default `es`). Restart the API. Each notification kind enables only
+   when its configuration is complete. Keep credentials on the backend.
+
+Templates allow initiating a notification outside the 24-hour customer service
+window. See [Kapso's Messages API](https://docs.kapso.ai/api/meta/whatsapp/messages/send-a-message)
+and [template guidance](https://kapso.com/blog/whatsapp-message-templates-for-developers).
+The client uses `X-API-Key` and the v24.0 template message endpoint.
+
+`internal/notifications` owns the provider adapter, phone normalization, and
+PostgreSQL outbox. The API authorizes the workshop and branch, verifies the active
+share token, and commits the queued message with an audit event. One notification
+per share link is enforced by a database unique constraint, including repeated
+requests after reconnects. A background worker starts with the API, claims rows
+with `FOR UPDATE SKIP LOCKED`, and rechecks link validity and the saved recipient
+before sending. Revoked, replaced, expired, accepted invitation links, or changed
+phone numbers cancel pending notifications. No automatic messages are sent on
+order status changes; the shared tracking page always reflects the latest status.
+
+The states are `queued`, `sending`, `accepted`, `failed`, `unknown`, and `cancelled`.
+`accepted` means Kapso returned a message ID; it does **not** confirm delivery or
+read status. Delivery webhooks are not implemented. Explicit HTTP 429 rejections
+retry with exponential backoff, up to five attempts. Network errors, HTTP 408/5xx,
+malformed success responses, and interrupted in-flight sends become `unknown`
+without automatic resend, because the provider may already have accepted them.
+Check the sender's WhatsApp conversation before sharing again after an unknown
+result. There is no claim of exactly-once delivery across the provider boundary.
+
+Recipient numbers and raw capability URLs are retained only while queued or in
+flight and cleared when a notification reaches a terminal state. Status reads
+return only the notification ID, status, and a sanitized error code. Database
+backups must be protected since pending payloads contain active share links.
+Public demo accounts cannot use direct sending.
+
+Validation: provider HTTP tests use a local fake Kapso server. Database tests use
+`TEST_DATABASE_URL` and cover tenant/branch permissions, duplicate enqueue,
+concurrent workers, cancellation, retry backoff, and ambiguous outcomes. Actual
+Kapso sending and template approval need the later credentials and setup.

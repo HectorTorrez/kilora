@@ -366,6 +366,7 @@ function NewOrderPage() {
 							type="submit"
 							form="new-order"
 							className="mt-5 w-full"
+							loading={create.isPending}
 							disabled={!chosen || !reason || create.isPending}
 						>
 							{create.isPending ? "Registrando…" : "Registrar orden"}

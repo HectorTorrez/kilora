@@ -16,6 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/notifications"
 )
 
 const testOrigin = "http://localhost:3300"
@@ -28,7 +29,9 @@ type testAPI struct {
 	mail *fakeMailer
 }
 
-func newTestAPI(t *testing.T) *testAPI {
+func newTestAPI(t *testing.T) *testAPI { return newTestAPIWithWhatsApp(t, notifications.Config{}) }
+
+func newTestAPIWithWhatsApp(t *testing.T, whatsapp notifications.Config) *testAPI {
 	t.Helper()
 	url := os.Getenv("TEST_DATABASE_URL")
 	if url == "" {
@@ -40,7 +43,7 @@ func newTestAPI(t *testing.T) *testAPI {
 	}
 	t.Cleanup(db.Close)
 	mail := &fakeMailer{}
-	srv := httptest.NewServer(NewRouter(Deps{DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: testOrigin, Mailer: mail}))
+	srv := httptest.NewServer(NewRouter(Deps{WhatsApp: whatsapp, DB: db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: testOrigin, Mailer: mail}))
 	t.Cleanup(srv.Close)
 	return &testAPI{t: t, db: db, q: sqlc.New(db), srv: srv, mail: mail}
 }

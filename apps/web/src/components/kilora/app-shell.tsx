@@ -312,6 +312,9 @@ export function AppShell({ children }: { children: ReactNode }) {
 					</BranchProvider>
 				</WorkshopProvider>
 				<AssistantChat
+					key={JSON.stringify([me.user.id, activeWorkshopID, activeBranchID])}
+					userID={me.user.id}
+					branchId={activeBranchID || undefined}
 					mode="taller"
 					userName={me.user.full_name}
 					workshopId={active?.workshop_id}

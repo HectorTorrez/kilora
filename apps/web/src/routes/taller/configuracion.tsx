@@ -441,6 +441,7 @@ function TeamCard({
 						</Button>
 						<Button
 							variant="destructive"
+							loading={remove.isPending}
 							disabled={remove.isPending}
 							onClick={() =>
 								removing &&

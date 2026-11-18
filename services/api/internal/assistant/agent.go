@@ -24,13 +24,14 @@ const (
 type Fetcher func(ctx context.Context, path string) (status int, body []byte, err error)
 
 type Membership struct {
-	WorkshopID, WorkshopName, BranchName, Role string
+	WorkshopID, WorkshopName, BranchID, BranchName, Role string
 }
 
 type Session struct {
 	UserName         string
 	Memberships      []Membership
 	ActiveWorkshopID string
+	ActiveBranchID   string
 	Page             string
 	Now              time.Time
 }
@@ -40,8 +41,9 @@ type Source struct {
 }
 
 type Reply struct {
-	Text    string   `json:"reply"`
-	Sources []Source `json:"sources"`
+	Proposal *Proposal `json:"proposal,omitempty"`
+	Text     string    `json:"reply"`
+	Sources  []Source  `json:"sources"`
 }
 
 type Agent struct {
@@ -66,7 +68,7 @@ Reglas:
 - Para preguntas sobre datos (vehículos, órdenes, cotizaciones, clientes, historial) usa las herramientas de datos. Nunca inventes datos, fechas, montos ni IDs.
 - Las herramientas devuelven solo lo que este usuario puede ver; los datos ya vienen filtrados por permisos. Si algo no aparece, explica que no tienes acceso o que no existe, sin especular.
 - Nunca inventes marcas, modelos, viscosidades ni especificaciones de repuestos. Menciónalos solo si están explícitamente registrados para ese ítem; si falta la marca y te preguntan, di que no está registrada. La marca del vehículo no determina la de sus repuestos.
-- Eres de solo lectura: no puedes crear, editar ni borrar nada. Si el usuario quiere hacer algo, explícale dónde hacerlo en la aplicación.
+- Si te piden crear un registro y tienes la herramienta prepare correspondiente, prepara un borrador. Usa datos verificados y pregunta por cualquier dato obligatorio o destino ambiguo. El usuario guarda con el botón del chat. Nunca afirmes que guardaste algo. Si un mensaje anterior tuyo termina con "Borrador verificado: {JSON}", ese es el borrador vigente: para modificarlo, vuelve a llamar a la herramienta prepare con esos mismos IDs y los cambios pedidos, sin volver a buscar al cliente ni al vehículo. Nunca escribas esa línea ni su JSON en tus respuestas. Para otras acciones, explica dónde hacerlas.
 - No muestres IDs internos (UUID) salvo que el usuario los pida; usa placas, números de orden y nombres.
 - Presenta los estados, resultados, categorías y roles como etiquetas legibles en español, con espacios, tildes y mayúscula inicial cuando sean etiquetas de una lista. Nunca copies claves internas con guiones bajos en la respuesta; conserva esas claves solo en los argumentos de las herramientas.
 - Estados de órdenes: recibido → Recibido; diagnostico → Diagnóstico; en_reparacion → En reparación; listo → Listo; cancelado → Cancelado. Usa estas etiquetas también al resumir los totales por estado (counts).
@@ -77,7 +79,7 @@ Reglas:
 	fmt.Fprintf(&b, "\nFecha y hora actual: %s.\n", s.Now.Format("Monday 2006-01-02 15:04 MST"))
 	fmt.Fprintf(&b, "Usuario: %s.\n", s.UserName)
 	if len(s.Memberships) == 0 {
-		b.WriteString("El usuario no pertenece a ningún taller; solo puede consultar sus propios vehículos como propietario.\n")
+		b.WriteString("El usuario no pertenece a ningún taller; accede a sus propios vehículos como propietario.\n")
 	} else {
 		b.WriteString("Talleres del usuario (workshop_id — taller — sucursal — rol):\n")
 		for _, m := range s.Memberships {
@@ -137,6 +139,10 @@ func (a *Agent) Run(ctx context.Context, s Session, history []Message, fetch Fet
 	}
 	messages := append([]Message{{Role: "system", Content: text(systemPrompt(s))}}, history...)
 	tools := toolDefinitions(len(s.Memberships) > 0)
+	action := actionTool(s)
+	if action != nil {
+		tools = append(tools, *action)
+	}
 	sources := []Source{}
 	seen := map[string]bool{}
 	var full strings.Builder
@@ -174,6 +180,14 @@ func (a *Agent) Run(ctx context.Context, s Session, history []Message, fetch Fet
 		for _, call := range msg.ToolCalls {
 			if label, ok := toolLabels[call.Function.Name]; ok {
 				emit(Event{Type: "status", Text: label})
+			}
+			if action != nil && call.Function.Name == action.Function.Name {
+				proposal, review, err := prepareAction(ctx, s, call, fetch)
+				if err == nil {
+					return Reply{Text: review, Sources: sources, Proposal: proposal}, nil
+				}
+				messages = append(messages, Message{Role: "tool", ToolCallID: call.ID, Content: text(toolError(err.Error()))})
+				continue
 			}
 			result, found := a.runTool(ctx, call, fetch)
 			for _, f := range found {

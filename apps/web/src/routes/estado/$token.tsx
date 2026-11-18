@@ -114,6 +114,7 @@ function PublicOrderTracking() {
 						type="button"
 						size="sm"
 						variant="outline"
+						loading={query.isFetching}
 						disabled={query.isFetching}
 						onClick={() => query.refetch()}
 					>

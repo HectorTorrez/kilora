@@ -117,3 +117,87 @@ func chatEvents(t *testing.T, base string, c *http.Client, body string) []map[st
 	}
 	return events
 }
+
+// Exercise the streamed drafts and the same authenticated POSTs as the chat buttons.
+func TestAssistantCreateProposals(t *testing.T) {
+	base := newTestAPI(t)
+	admin, owner := base.client(), base.client()
+	path, workshop, branch, _ := base.workshop(admin)
+	base.register(owner)
+	customer := base.obj(admin, "POST", path+"/customers", `{"full_name":"Ana López","phone":"77778888"}`, 201)
+	vehicle := base.obj(owner, "POST", "/api/v1/me/vehicles", `{"make":"Toyota","model":"Yaris"}`, 201)
+	quoteArgs := fmt.Sprintf(`{"customer_id":%q,"vehicle_model":"Corolla","branch_id":%q,"items":[{"kind":"repuesto","description":"Filtro","unit_price":"8.75","quantity":"2"}]}`, customer["id"], branch)
+	serviceArgs := fmt.Sprintf(`{"vehicle_id":%q,"performed_on":"2020-05-02","summary":"Cambio de aceite","total":"22.50","workshop_name_text":"Taller Central","allow_duplicate":true}`, vehicle["id"])
+
+	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var in struct{ Messages []assistant.Message }
+		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+			t.Error(err)
+			return
+		}
+		last := in.Messages[len(in.Messages)-1]
+		msg := assistant.Message{Role: "assistant"}
+		if last.Role == "tool" {
+			msg.Content = last.Content
+		} else {
+			call := assistant.ToolCall{ID: "prepare", Type: "function"}
+			if *last.Content == "Cotizá" {
+				call.Function.Name, call.Function.Arguments = "prepare_counter_quote", quoteArgs
+			} else {
+				call.Function.Name, call.Function.Arguments = "prepare_owner_service", serviceArgs
+			}
+			msg.ToolCalls = []assistant.ToolCall{call}
+		}
+		assistant.StreamTestMessage(w, msg)
+	}))
+	t.Cleanup(fake.Close)
+	srv := httptest.NewServer(NewRouter(Deps{DB: base.db, Logger: slog.New(slog.NewTextHandler(io.Discard, nil)), WebOrigin: testOrigin, AI: &assistant.OpenAI{APIKey: "test", BaseURL: fake.URL, Model: "test"}}))
+	t.Cleanup(srv.Close)
+	ask := func(client *http.Client, page, request string) map[string]any {
+		t.Helper()
+		body := fmt.Sprintf(`{"messages":[{"role":"user","content":%q}],"page":%q,"workshop_id":%q}`, request, page, workshop)
+		events := chatEvents(t, srv.URL, client, body)
+		last := events[len(events)-1]
+		if last["type"] != "done" {
+			t.Fatalf("respuesta incompleta: %v", events)
+		}
+		return last
+	}
+	for _, denied := range []map[string]any{ask(owner, "/taller", "Cotizá"), ask(admin, "/mis-vehiculos", "Registrá")} {
+		if denied["proposal"] != nil {
+			t.Fatalf("borrador sin permiso: %v", denied)
+		}
+	}
+	quote := ask(admin, "/taller", "Cotizá")
+	if !strings.Contains(quote["reply"].(string), "Ana López") || !strings.Contains(quote["reply"].(string), "$17.50") {
+		t.Fatal(quote)
+	}
+	q := quote["proposal"].(map[string]any)
+	if q["workshop_id"] != workshop.String() {
+		t.Fatal(q)
+	}
+	if before := base.obj(admin, "GET", path+"/quotes", "", 200); before["total"] != float64(0) {
+		t.Fatal("La preparación guardó una cotización")
+	}
+	body, _ := json.Marshal(q["quote"])
+	created := base.obj(admin, "POST", path+"/quotes", string(body), 201)
+	if created["customer_id"] != customer["id"] || created["customer_name"] != "Ana López" {
+		t.Fatal(created)
+	}
+	service := ask(owner, "/mis-vehiculos", "Registrá")
+	if !strings.Contains(service["reply"].(string), "Toyota Yaris") {
+		t.Fatal(service)
+	}
+	p := service["proposal"].(map[string]any)
+	if p["vehicle_id"] != vehicle["id"] {
+		t.Fatal(p)
+	}
+	record := p["service"].(map[string]any)
+	if _, bypass := record["allow_duplicate"]; bypass {
+		t.Fatal("El modelo omitió la revisión de duplicados")
+	}
+	body, _ = json.Marshal(record)
+	history := "/api/v1/me/vehicles/" + vehicle["id"].(string) + "/history"
+	base.req(owner, "POST", history, string(body), 201)
+	base.req(owner, "POST", history, string(body), 409)
+}

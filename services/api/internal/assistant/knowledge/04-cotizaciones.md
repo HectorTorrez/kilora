@@ -27,3 +27,7 @@ Junto al botón de WhatsApp, "Mensaje con IA" redacta un mensaje cordial para el
 ## Resultado de la cotización
 
 El recepcionista marca a mano el resultado: Aceptó, Rechazó o No respondió. Mientras no se marque, queda Pendiente. Es la constancia de lo que el cliente decidió.
+
+## Crear una cotización desde el chat
+
+Desde el panel del taller, un administrador puede pedir al asistente una cotización de mostrador. Indica el cliente, el vehículo, los conceptos y sus precios. Si administras varias sucursales, selecciona una o indica su nombre. Revisa el cliente, el vehículo, la sucursal y el total en el chat. Puedes pedir cambios o presionar "Guardar cotización".

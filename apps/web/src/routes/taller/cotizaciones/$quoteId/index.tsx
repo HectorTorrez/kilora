@@ -21,6 +21,7 @@ import {
 	QuoteOutcomePicker,
 } from "@/components/kilora/quote-outcome";
 import { SortableHead, useTableSort } from "@/components/kilora/sortable-table";
+import { WhatsAppNotification } from "@/components/kilora/whatsapp-notification";
 import {
 	BackLink,
 	CopyField,
@@ -154,7 +155,6 @@ function QuoteDetailPage() {
 			const result = await share.mutateAsync();
 			rememberQuoteShare(quote.id, result.url);
 			setUrl(result.url);
-			window.open(result.whatsapp_url, "_blank", "noopener,noreferrer");
 		} catch (shareFailure) {
 			setShareError(
 				shareFailure instanceof Error
@@ -188,11 +188,12 @@ function QuoteDetailPage() {
 						<Button
 							type="button"
 							variant="outline"
+							loading={share.isPending}
 							disabled={share.isPending}
 							onClick={shareQuote}
 						>
 							<MessageCircle className="size-4" />
-							WhatsApp
+							Crear enlace
 						</Button>
 						<AIQuoteMessage
 							generate={async () =>
@@ -247,7 +248,16 @@ function QuoteDetailPage() {
 				</Alert>
 			) : null}
 			<FormError error={shareError} />
-			{url ? <CopyField value={url} label="Enlace de la cotización" /> : null}
+			{url ? (
+				<div className="space-y-3">
+					<CopyField value={url} label="Enlace de la cotización" />
+					<WhatsAppNotification
+						workshopID={workshopID}
+						url={url}
+						kind="quote"
+					/>
+				</div>
+			) : null}
 
 			<div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
 				<SectionCard
@@ -409,6 +419,7 @@ function QuoteDetailPage() {
 						</Button>
 						<Button
 							type="button"
+							loading={convert.isPending}
 							disabled={convert.isPending}
 							onClick={async () => {
 								try {

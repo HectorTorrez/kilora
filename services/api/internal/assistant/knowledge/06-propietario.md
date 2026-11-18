@@ -61,3 +61,7 @@ Mientras completás "Guardar servicio", Kilora conserva automáticamente un borr
 ## Avisos de posibles duplicados
 
 Al guardar un servicio manual, Kilora comprueba si el mismo archivo de comprobante ya está adjunto a un servicio de ese vehículo o si coinciden la fecha original, el taller y el total. No compara solo la fecha y no adivina montos que faltan. Si el archivo fue fotografiado de nuevo puede tener otros bytes; en ese caso se revisan los datos del servicio. El aviso muestra hasta cinco coincidencias que ya podés ver y no guarda nada todavía. "Volver y revisar" conserva tus datos y permite corregirlos. Si es otro servicio real, "Guardar de todos modos" confirma un nuevo registro. Los costos internos, notas privadas y comprobantes de otros propietarios no aparecen en las coincidencias.
+
+## Registrar un servicio desde el chat
+
+Desde "Mis vehículos", indica qué vehículo recibió el servicio, la fecha y el trabajo realizado. Puedes agregar kilometraje, total y nombre del taller. Revisa el resumen y presiona "Guardar servicio" en la conversación para agregarlo al historial.

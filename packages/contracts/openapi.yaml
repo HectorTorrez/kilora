@@ -3255,7 +3255,7 @@
     "/api/v1/assistant/chat": {
       "post": {
         "summary": "Pregunta al asistente de IA",
-        "description": "Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura. La respuesta es un stream SSE: cada evento `data:` es un AssistantEvent.",
+        "description": "Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Puede proponer cotizaciones de mostrador y servicios manuales para confirmar desde el chat. La respuesta es un stream SSE: cada evento `data:` es un AssistantEvent.",
         "requestBody": {
           "required": true,
           "content": {
@@ -7488,6 +7488,165 @@
           }
         ]
       }
+    },
+    "/api/v1/workshops/{workshopID}/whatsapp-notifications/config": {
+      "get": {
+        "summary": "Configuración pública de WhatsApp",
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppConfig"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "WhatsApp not configured"
+          }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/whatsapp-notifications": {
+      "post": {
+        "summary": "Encolar notificación de un enlace activo",
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppNotification"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "WhatsApp not configured"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "url"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "maxLength": 2048
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workshops/{workshopID}/whatsapp-notifications/{notificationID}": {
+      "get": {
+        "summary": "Estado de envío de WhatsApp",
+        "parameters": [
+          {
+            "name": "workshopID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "notificationID",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WhatsAppNotification"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "503": {
+            "description": "WhatsApp not configured"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10666,6 +10825,11 @@
           "page": {
             "type": "string",
             "description": "Ruta abierta, como contexto."
+          },
+          "branch_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Sucursal activa en pantalla."
           }
         },
         "required": [
@@ -10708,6 +10872,43 @@
             "items": {
               "$ref": "#/components/schemas/AssistantSource"
             }
+          },
+          "proposal": {
+            "description": "Borrador para revisar y guardar, presente solo en done.",
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "workshop_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "quote": {
+                    "$ref": "#/components/schemas/CounterQuoteInput"
+                  }
+                },
+                "required": [
+                  "workshop_id",
+                  "quote"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "vehicle_id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "service": {
+                    "$ref": "#/components/schemas/ManualHistoryInput"
+                  }
+                },
+                "required": [
+                  "vehicle_id",
+                  "service"
+                ]
+              }
+            ]
           }
         },
         "required": [
@@ -11944,6 +12145,56 @@
           "created_at",
           "expires_at"
         ]
+      },
+      "WhatsAppNotification": {
+        "type": "object",
+        "required": [
+          "id",
+          "status",
+          "error_code"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "sending",
+              "accepted",
+              "failed",
+              "unknown",
+              "cancelled"
+            ]
+          },
+          "error_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "WhatsAppConfig": {
+        "type": "object",
+        "required": [
+          "quote",
+          "tracking",
+          "invitation"
+        ],
+        "properties": {
+          "quote": {
+            "type": "boolean"
+          },
+          "tracking": {
+            "type": "boolean"
+          },
+          "invitation": {
+            "type": "boolean"
+          }
+        }
       }
     }
   }

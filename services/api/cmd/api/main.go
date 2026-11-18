@@ -15,6 +15,7 @@ import (
 	"kilora/api/internal/config"
 	"kilora/api/internal/database"
 	"kilora/api/internal/httpserver"
+	"kilora/api/internal/notifications"
 )
 
 func main() {
@@ -51,6 +52,17 @@ func run(logger *slog.Logger) error {
 	} else {
 		logger.Info("asistente de IA desactivado: falta OPENAI_API_KEY")
 	}
+	if cfg.WhatsApp.Enabled("quote") || cfg.WhatsApp.Enabled("tracking") || cfg.WhatsApp.Enabled("invitation") {
+		notificationCtx, cancelNotifications := context.WithCancel(ctx)
+		notificationsDone := make(chan struct{})
+		go func() {
+			defer close(notificationsDone)
+			notifications.Run(notificationCtx, pool, &notifications.Kapso{Config: cfg.WhatsApp}, logger)
+		}()
+		defer func() { cancelNotifications(); <-notificationsDone }()
+	} else {
+		logger.Info("WhatsApp desactivado: falta configuración de Kapso")
+	}
 	reminderCtx, cancelReminders := context.WithCancel(ctx)
 	remindersDone := make(chan struct{})
 	go func() {
@@ -61,6 +73,7 @@ func run(logger *slog.Logger) error {
 	srv := &http.Server{
 		Addr: cfg.Addr,
 		Handler: httpserver.NewRouter(httpserver.Deps{
+			WhatsApp:       cfg.WhatsApp,
 			Logger:         logger,
 			DB:             pool,
 			WebOrigin:      cfg.WebOrigin,

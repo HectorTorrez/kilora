@@ -65,7 +65,12 @@ export function OwnerMaintenanceCard({
 			<Alert variant="destructive">
 				<AlertDescription>
 					No pudimos cargar tu plan de mantenimiento.
-					<Button type="button" variant="link" onClick={() => plan.refetch()}>
+					<Button
+						type="button"
+						variant="link"
+						loading={plan.isFetching}
+						onClick={() => plan.refetch()}
+					>
 						Reintentar
 					</Button>
 				</AlertDescription>
@@ -226,6 +231,7 @@ function MaintenanceEmailPreferences({
 					type="button"
 					variant="outline"
 					size="sm"
+					loading={reminders.isPending}
 					disabled={reminders.isPending || !emailsAllowed}
 					onClick={() =>
 						reminders.mutate(!enabled, {
@@ -422,6 +428,7 @@ function IntervalDialog({
 					<Button
 						type="button"
 						variant="ghost"
+						loading={reset.isPending}
 						disabled={pending}
 						onClick={() =>
 							reset.mutate(undefined, {

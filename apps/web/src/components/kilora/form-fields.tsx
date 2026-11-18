@@ -5,7 +5,6 @@ import {
 	Eye,
 	EyeOff,
 	Info,
-	Loader2,
 } from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { useFormContext } from "react-hook-form";
@@ -553,16 +552,10 @@ export function SubmitButton({
 			{...props}
 			type="submit"
 			className={cn("w-full sm:w-auto", className)}
-			disabled={disabled || pending}
+			disabled={disabled}
+			loading={pending}
 		>
-			{pending ? (
-				<>
-					<Loader2 className="animate-spin" />
-					{pendingLabel}
-				</>
-			) : (
-				children
-			)}
+			{pending ? pendingLabel : children}
 		</Button>
 	);
 }

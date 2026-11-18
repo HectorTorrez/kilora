@@ -103,6 +103,7 @@ export function ResaleReport({ vehicleID }: { vehicleID: string }) {
 						<Button
 							type="button"
 							variant={created ? "outline" : "default"}
+							loading={create.isPending}
 							disabled={create.isPending}
 							onClick={generate}
 						>
@@ -113,6 +114,7 @@ export function ResaleReport({ vehicleID }: { vehicleID: string }) {
 								type="button"
 								variant="ghost"
 								className="text-destructive"
+								loading={revoke.isPending}
 								disabled={revoke.isPending}
 								onClick={() =>
 									revoke.mutate(undefined, {

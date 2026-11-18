@@ -1,7 +1,7 @@
 import type { components } from "@kilora/contracts";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, Copy, type LucideIcon } from "lucide-react";
-import { Fragment, type ReactNode } from "react";
+import { Fragment, type ReactNode, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -165,6 +165,7 @@ export function DetailList({
 
 /** Enlace para compartir con botón de copiar. */
 export function CopyField({ value, label }: { value: string; label: string }) {
+	const [copying, setCopying] = useState(false);
 	return (
 		<div className="flex gap-2">
 			<Input
@@ -177,9 +178,17 @@ export function CopyField({ value, label }: { value: string; label: string }) {
 			<Button
 				type="button"
 				variant="outline"
+				loading={copying}
 				onClick={async () => {
-					await navigator.clipboard.writeText(value);
-					toast.success("Enlace copiado");
+					setCopying(true);
+					try {
+						await navigator.clipboard.writeText(value);
+						toast.success("Enlace copiado");
+					} catch {
+						toast.error("No pudimos copiar el enlace. Intentá de nuevo.");
+					} finally {
+						setCopying(false);
+					}
 				}}
 			>
 				<Copy className="size-4" />

@@ -3093,7 +3093,7 @@ export interface paths {
         put?: never;
         /**
          * Pregunta al asistente de IA
-         * @description Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Solo lectura. La respuesta es un stream SSE: cada evento `data:` es un AssistantEvent.
+         * @description Responde dudas sobre Kilora (RAG sobre la ayuda) y sobre los datos que el usuario puede ver. Puede proponer cotizaciones de mostrador y servicios manuales para confirmar desde el chat. La respuesta es un stream SSE: cada evento `data:` es un AssistantEvent.
          */
         post: {
             parameters: {
@@ -7023,6 +7023,233 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workshops/{workshopID}/whatsapp-notifications/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Configuración pública de WhatsApp */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WhatsAppConfig"];
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WhatsApp not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/whatsapp-notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Encolar notificación de un enlace activo */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uri */
+                        url: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description OK */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WhatsAppNotification"];
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WhatsApp not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workshops/{workshopID}/whatsapp-notifications/{notificationID}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Estado de envío de WhatsApp */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workshopID: string;
+                    notificationID: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WhatsAppNotification"];
+                    };
+                };
+                /** @description Invalid request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description WhatsApp not configured */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -7800,6 +8027,11 @@ export interface components {
             workshop_id?: string;
             /** @description Ruta abierta, como contexto. */
             page?: string;
+            /**
+             * Format: uuid
+             * @description Sucursal activa en pantalla.
+             */
+            branch_id?: string;
         };
         AssistantSource: {
             title: string;
@@ -7811,6 +8043,16 @@ export interface components {
             text?: string;
             reply?: string;
             sources?: components["schemas"]["AssistantSource"][];
+            /** @description Borrador para revisar y guardar, presente solo en done. */
+            proposal?: {
+                /** Format: uuid */
+                workshop_id: string;
+                quote: components["schemas"]["CounterQuoteInput"];
+            } | {
+                /** Format: uuid */
+                vehicle_id: string;
+                service: components["schemas"]["ManualHistoryInput"];
+            };
         };
         QuoteDraftInput: {
             /** @description Nota libre con el trabajo a cotizar. */
@@ -8098,6 +8340,18 @@ export interface components {
             created_at: string;
             /** Format: date-time */
             expires_at: string;
+        };
+        WhatsAppNotification: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "queued" | "sending" | "accepted" | "failed" | "unknown" | "cancelled";
+            error_code: string | null;
+        };
+        WhatsAppConfig: {
+            quote: boolean;
+            tracking: boolean;
+            invitation: boolean;
         };
     };
     responses: never;

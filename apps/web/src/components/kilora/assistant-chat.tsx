@@ -32,8 +32,14 @@ import {
 	SheetTitle,
 } from "@/components/ui/sheet";
 import { api, errorMessage, unwrap } from "@/lib/api";
-import { type AssistantSource, streamAssistant } from "@/lib/assistant";
+import {
+	type AssistantEvent,
+	type AssistantSource,
+	streamAssistant,
+} from "@/lib/assistant";
+import { useAssistantConfirmation } from "@/lib/use-assistant-confirmation";
 import { cn } from "@/lib/utils";
+import { DuplicateServiceDialog } from "./owner-service-feedback";
 
 type ChatMessage = {
 	role: "user" | "assistant";
@@ -42,6 +48,7 @@ type ChatMessage = {
 	/** Consultas que hizo el asistente para responder, en orden. */
 	steps?: string[];
 	sources?: AssistantSource[];
+	proposal?: AssistantEvent["proposal"];
 	streaming?: boolean;
 	error?: boolean;
 };
@@ -82,7 +89,7 @@ const suggestions: Record<
 		},
 		{
 			title: "Servicio manual",
-			prompt: "¿Cómo agrego un servicio que hice fuera de Kilora?",
+			prompt: "Quiero registrar un servicio de mi vehículo.",
 		},
 		{
 			title: "Privacidad",
@@ -279,6 +286,20 @@ function AssistantMessage({
 	);
 }
 
+/**
+ * Adjunta al historial el borrador vigente con sus IDs verificados, para que
+ * el asistente pueda modificarlo sin volver a buscar cliente ni vehículo. El
+ * usuario nunca ve esta línea; el servidor vuelve a validar todo al preparar
+ * y al guardar.
+ */
+function withProposal(content: string, proposal: ChatMessage["proposal"]) {
+	const context = proposal
+		? `\nBorrador verificado: ${JSON.stringify(proposal)}`
+		: "";
+	if (context.length > MAX_LENGTH / 2) return content.slice(0, MAX_LENGTH);
+	return content.slice(0, MAX_LENGTH - context.length) + context;
+}
+
 const storageKey = (mode: string) => `kilora-assistant-${mode}`;
 
 function loadMessages(mode: string): ChatMessage[] {
@@ -296,12 +317,17 @@ function loadMessages(mode: string): ChatMessage[] {
 export function AssistantChat({
 	mode,
 	userName,
+	userID,
+	branchId,
 	workshopId,
 }: {
 	mode: "taller" | "propietario";
 	userName: string;
+	userID: string;
+	branchId?: string;
 	workshopId?: string;
 }) {
+	const scope = JSON.stringify([mode, userID, workshopId, branchId]);
 	const assistant = useAssistantRequest();
 	const queryClient = useQueryClient();
 	const handledRequest = useRef<ServiceQuestion | null>(null);
@@ -317,13 +343,13 @@ export function AssistantChat({
 	const firstName = userName.trim().split(/\s+/)[0] ?? "";
 
 	// La conversación sobrevive a recargas dentro de la pestaña.
-	useEffect(() => setMessages(loadMessages(mode)), [mode]);
+	useEffect(() => setMessages(loadMessages(scope)), [scope]);
 	useEffect(() => {
 		if (busy) return;
 		try {
-			sessionStorage.setItem(storageKey(mode), JSON.stringify(messages));
+			sessionStorage.setItem(storageKey(scope), JSON.stringify(messages));
 		} catch {}
-	}, [messages, busy, mode]);
+	}, [messages, busy, scope]);
 
 	useEffect(() => () => abortRef.current?.abort(), []);
 
@@ -372,6 +398,19 @@ export function AssistantChat({
 		[],
 	);
 
+	const { saving, duplicate, error, confirmProposal, cancelDuplicate } =
+		useAssistantConfirmation(
+			messages.at(-1)?.proposal,
+			mode,
+			workshopId,
+			(message) => {
+				updateLast((m) => ({
+					...m,
+					proposal: undefined,
+					content: `${m.content}\n\n${message}`,
+				}));
+			},
+		);
 	const run = useCallback(
 		async (history: ChatMessage[]) => {
 			abortRef.current?.abort();
@@ -421,18 +460,25 @@ export function AssistantChat({
 					}));
 					return;
 				}
+				const current = [...history]
+					.reverse()
+					.find((m) => m.proposal)?.proposal;
 				await streamAssistant(
 					{
 						messages: history
 							.filter((m) => !m.error && m.content)
 							.slice(-MAX_HISTORY)
-							.map(({ role, content, service }) => ({
+							.map(({ role, content, service, proposal }) => ({
 								role,
 								content: service
 									? `${content}\nContexto del servicio: vehicle_id=${service.vehicleID}, record_id=${service.recordID}.`
-									: content,
+									: withProposal(
+											content,
+											proposal === current ? proposal : undefined,
+										),
 							})),
 						workshop_id: workshopId || undefined,
+						branch_id: branchId,
 						page,
 					},
 					(event) => {
@@ -442,6 +488,9 @@ export function AssistantChat({
 						} else if (event.type === "delta" && event.text) {
 							const delta = event.text;
 							update((m) => ({ ...m, content: m.content + delta }));
+						} else if (event.type === "done" && event.reply) {
+							const content = event.reply;
+							update((m) => ({ ...m, content, proposal: event.proposal }));
 						} else if (event.type === "sources") {
 							update((m) => ({ ...m, sources: event.sources }));
 						}
@@ -461,6 +510,7 @@ export function AssistantChat({
 						...m,
 						streaming: false,
 						error: true,
+						proposal: undefined,
 						content: errorMessage(error),
 					}));
 				}
@@ -468,12 +518,12 @@ export function AssistantChat({
 				if (abortRef.current === controller) abortRef.current = null;
 			}
 		},
-		[page, queryClient, updateLast, workshopId],
+		[page, queryClient, updateLast, workshopId, branchId],
 	);
 
 	useEffect(() => {
 		const request = assistant?.request;
-		if (!request || handledRequest.current === request) return;
+		if (saving || !request || handledRequest.current === request) return;
 		handledRequest.current = request;
 		setOpen(true);
 		setDraft("");
@@ -486,11 +536,11 @@ export function AssistantChat({
 				service: request,
 			},
 		]);
-	}, [assistant?.request, messages, run]);
+	}, [assistant?.request, messages, run, saving]);
 
 	const send = (text: string) => {
 		const content = text.trim().slice(0, MAX_LENGTH);
-		if (!content || abortRef.current) return;
+		if (!content || abortRef.current || saving) return;
 		setDraft("");
 		void run([...messages, { role: "user", content }]);
 	};
@@ -506,6 +556,7 @@ export function AssistantChat({
 		updateLast((m) => ({
 			...m,
 			streaming: false,
+			proposal: undefined,
 			content: m.content || "Respuesta detenida.",
 		}));
 	};
@@ -532,6 +583,12 @@ export function AssistantChat({
 					</span>
 				</Button>
 			)}
+			<DuplicateServiceDialog
+				duplicates={duplicate?.duplicates ?? null}
+				pending={saving}
+				onCancel={cancelDuplicate}
+				onConfirm={() => void confirmProposal(true)}
+			/>
 			<Sheet open={open} onOpenChange={setOpen}>
 				<SheetContent
 					ref={fitViewport}
@@ -563,6 +620,7 @@ export function AssistantChat({
 								className="size-11 shrink-0 touch-manipulation"
 								aria-label="Nueva conversación"
 								title="Nueva conversación"
+								disabled={saving}
 								onClick={reset}
 							>
 								<RotateCcw className="size-4" />
@@ -643,6 +701,26 @@ export function AssistantChat({
 										/>
 									),
 								)}
+								{messages.at(-1)?.proposal && !busy && (
+									<div className="flex flex-col gap-2">
+										<Button
+											type="button"
+											loading={saving}
+											onClick={() => void confirmProposal()}
+										>
+											{saving
+												? "Guardando…"
+												: mode === "taller"
+													? "Guardar cotización"
+													: "Guardar servicio"}
+										</Button>
+										{error && (
+											<p role="alert" className="text-destructive text-sm">
+												{error} Pedime los cambios o volvé a intentarlo.
+											</p>
+										)}
+									</div>
+								)}
 							</div>
 						)}
 					</div>
@@ -693,7 +771,7 @@ export function AssistantChat({
 									size="icon-sm"
 									className="size-11 shrink-0 touch-manipulation rounded-xl bg-seal text-white hover:bg-seal/90"
 									aria-label="Enviar"
-									disabled={!draft.trim()}
+									disabled={!draft.trim() || saving}
 								>
 									<ArrowUp className="size-4" />
 								</Button>

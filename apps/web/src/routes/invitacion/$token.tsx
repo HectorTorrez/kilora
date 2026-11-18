@@ -5,7 +5,6 @@ import {
 	notFound,
 	useNavigate,
 } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -123,6 +122,7 @@ function Page() {
 							</Label>
 							<Button
 								className="w-full sm:w-auto"
+								loading={accept.isPending}
 								disabled={!consent || accept.isPending}
 								onClick={async () => {
 									try {
@@ -138,14 +138,7 @@ function Page() {
 									}
 								}}
 							>
-								{accept.isPending ? (
-									<>
-										<Loader2 className="animate-spin" />
-										Aceptando…
-									</>
-								) : (
-									"Aceptar invitación"
-								)}
+								{accept.isPending ? "Aceptando…" : "Aceptar invitación"}
 							</Button>
 							{accept.error && (
 								<Alert variant="destructive" className="text-destructive">

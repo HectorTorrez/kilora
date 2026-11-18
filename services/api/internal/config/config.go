@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"kilora/api/internal/notifications"
 )
 
 type Config struct {
@@ -22,6 +23,7 @@ type Config struct {
 	Env            string
 	DemoMode       bool
 	TrustedProxies []netip.Prefix
+	WhatsApp       notifications.Config
 	OpenAI         OpenAIConfig
 }
 
@@ -51,6 +53,14 @@ func Load() (Config, error) {
 		EmailFrom:    env("EMAIL_FROM", "no-reply@kilora.com"),
 		Env:          env("APP_ENV", "development"),
 		DemoMode:     strings.EqualFold(os.Getenv("DEMO_MODE"), "true"),
+		WhatsApp: notifications.Config{
+			APIKey:             os.Getenv("KAPSO_API_KEY"),
+			PhoneNumberID:      os.Getenv("KAPSO_PHONE_NUMBER_ID"),
+			Language:           env("KAPSO_TEMPLATE_LANGUAGE", "es"),
+			QuoteTemplate:      os.Getenv("KAPSO_QUOTE_TEMPLATE"),
+			TrackingTemplate:   os.Getenv("KAPSO_TRACKING_TEMPLATE"),
+			InvitationTemplate: os.Getenv("KAPSO_INVITATION_TEMPLATE"),
+		},
 		OpenAI: OpenAIConfig{
 			APIKey:          os.Getenv("OPENAI_API_KEY"),
 			BaseURL:         env("OPENAI_BASE_URL", "https://api.openai.com/v1"),

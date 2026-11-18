@@ -30,6 +30,7 @@ import {
 	TextareaField,
 	TextField,
 } from "./form-fields";
+import { WhatsAppNotification } from "./whatsapp-notification";
 import { CopyField, SectionCard } from "./workshop-ui";
 
 type S = components["schemas"];
@@ -75,7 +76,11 @@ export function OrderTrackingCard({
 				<Alert variant="destructive">
 					<AlertDescription>
 						No pudimos cargar el seguimiento.{" "}
-						<Button variant="link" onClick={() => tracking.refetch()}>
+						<Button
+							variant="link"
+							loading={tracking.isFetching}
+							onClick={() => tracking.refetch()}
+						>
 							Reintentar
 						</Button>
 					</AlertDescription>
@@ -161,6 +166,11 @@ function TrackingLinkControls({
 			{visibleLink && (
 				<div className="space-y-3">
 					<CopyField value={visibleLink.url} label="Enlace de seguimiento" />
+					<WhatsAppNotification
+						workshopID={workshopID}
+						url={visibleLink.url}
+						kind="tracking"
+					/>
 					<div className="flex flex-wrap gap-2">
 						<Button asChild size="sm">
 							<a
@@ -169,7 +179,7 @@ function TrackingLinkControls({
 								rel="noopener noreferrer"
 							>
 								<MessageCircle className="size-4" />
-								Compartir por WhatsApp
+								Abrir WhatsApp
 							</a>
 						</Button>
 						<Button asChild size="sm" variant="outline">
@@ -196,6 +206,7 @@ function TrackingLinkControls({
 					type="button"
 					size="sm"
 					variant="outline"
+					loading={share.isPending}
 					disabled={busy}
 					onClick={() =>
 						share.mutate(undefined, {
@@ -217,6 +228,7 @@ function TrackingLinkControls({
 						type="button"
 						size="sm"
 						variant="ghost"
+						loading={revoke.isPending}
 						disabled={busy}
 						onClick={() =>
 							revoke.mutate(undefined, {

@@ -13,9 +13,11 @@ import (
 	"kilora/api/internal/assistant"
 	"kilora/api/internal/auth"
 	"kilora/api/internal/database/sqlc"
+	"kilora/api/internal/notifications"
 )
 
 type Deps struct {
+	WhatsApp       notifications.Config
 	Logger         *slog.Logger
 	DB             *pgxpool.Pool
 	WebOrigin      string
@@ -28,6 +30,7 @@ type Deps struct {
 }
 
 type server struct {
+	whatsapp notifications.Config
 	db       *pgxpool.Pool
 	logger   *slog.Logger
 	origin   string
@@ -49,7 +52,7 @@ func NewRouter(d Deps) http.Handler {
 	if d.Mailer == nil {
 		d.Mailer = auth.LogMailer{Logger: d.Logger}
 	}
-	s := &server{db: d.DB, logger: d.Logger, origin: d.WebOrigin, secure: d.SecureCookies, mailer: d.Mailer, demoMode: d.DemoMode, limiter: limiter{attempts: make(map[string][]time.Time)}}
+	s := &server{whatsapp: d.WhatsApp, db: d.DB, logger: d.Logger, origin: d.WebOrigin, secure: d.SecureCookies, mailer: d.Mailer, demoMode: d.DemoMode, limiter: limiter{attempts: make(map[string][]time.Time)}}
 	if d.AI != nil {
 		s.ai = d.AI
 		s.assistant = &assistant.Agent{Client: d.AI, Knowledge: &assistant.Knowledge{Queries: sqlc.New(d.DB), Client: d.AI}}
@@ -116,6 +119,9 @@ func NewRouter(d Deps) http.Handler {
 			r.Delete("/me/vehicles/{vehicleID}/report", s.handle(s.revokeReport))
 			r.Route("/workshops/{workshopID}", func(r chi.Router) {
 				r.Use(s.requireWorkshop)
+				r.Get("/whatsapp-notifications/config", s.inWorkshop(s.whatsAppConfig))
+				r.Post("/whatsapp-notifications", s.inWorkshop(s.sendWhatsApp))
+				r.Get("/whatsapp-notifications/{notificationID}", s.inWorkshop(s.getWhatsAppNotification))
 				r.Get("/", s.inWorkshop(s.getWorkshop))
 				r.Patch("/", s.inWorkshop(s.updateWorkshop))
 				r.Post("/work-orders", s.inWorkshop(s.createOrder))

@@ -487,6 +487,7 @@ export function AuthPage({
 												type="button"
 												variant="outline"
 												className="w-full justify-between"
+												loading={login.isPending}
 												disabled={login.isPending}
 											>
 												{login.isPending

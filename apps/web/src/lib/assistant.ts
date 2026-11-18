@@ -10,7 +10,12 @@ export type AssistantTurn = { role: "user" | "assistant"; content: string };
  * llega. openapi-fetch no expone streams, así que se usa fetch directo.
  */
 export async function streamAssistant(
-	body: { messages: AssistantTurn[]; workshop_id?: string; page?: string },
+	body: {
+		messages: AssistantTurn[];
+		workshop_id?: string;
+		branch_id?: string;
+		page?: string;
+	},
 	onEvent: (event: AssistantEvent) => void,
 	signal: AbortSignal,
 ) {

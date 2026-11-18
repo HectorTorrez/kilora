@@ -490,7 +490,7 @@ export function CounterQuoteForm({
 									type="submit"
 									variant="outline"
 									className="w-full"
-									disabled={pending}
+									loading={pending}
 									onClick={() => {
 										intent.current = true;
 									}}

@@ -116,6 +116,7 @@ export function AIQuoteDraft({
 				<Button
 					type="button"
 					size="sm"
+					loading={pending}
 					disabled={!text.trim() || pending}
 					onClick={generate}
 				>

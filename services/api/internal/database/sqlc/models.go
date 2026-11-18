@@ -926,6 +926,23 @@ type VehicleReport struct {
 	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
 }
 
+type WhatsappNotification struct {
+	ID                uuid.UUID          `json:"id"`
+	WorkshopID        uuid.UUID          `json:"workshop_id"`
+	BranchID          *uuid.UUID         `json:"branch_id"`
+	Kind              string             `json:"kind"`
+	TokenHash         string             `json:"token_hash"`
+	Recipient         string             `json:"recipient"`
+	Parameters        []byte             `json:"parameters"`
+	Status            string             `json:"status"`
+	Attempts          int32              `json:"attempts"`
+	AvailableAt       pgtype.Timestamptz `json:"available_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	ProviderMessageID *string            `json:"provider_message_id"`
+	ErrorCode         *string            `json:"error_code"`
+}
+
 type WorkOrder struct {
 	ID                uuid.UUID          `json:"id"`
 	WorkshopID        uuid.UUID          `json:"workshop_id"`

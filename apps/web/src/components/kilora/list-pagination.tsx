@@ -32,6 +32,7 @@ export function ListPagination({
 	const last = Math.min(page * pageSize, total ?? 0);
 	return (
 		<nav
+			aria-busy={pending}
 			aria-label="Paginación"
 			className={cn(
 				"flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3",
@@ -39,11 +40,11 @@ export function ListPagination({
 			)}
 		>
 			<p className="text-xs text-ink-3" aria-live="polite">
-				{total === undefined
-					? pending
-						? "Cargando resultados…"
-						: null
-					: `${first <= last ? `${first}–${last}` : "0"} de ${total} resultados`}
+				{pending
+					? "Cargando resultados…"
+					: total === undefined
+						? null
+						: `${first <= last ? `${first}–${last}` : "0"} de ${total} resultados`}
 			</p>
 			<div className="flex flex-wrap items-center gap-2">
 				<Button
